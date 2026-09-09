@@ -44,7 +44,7 @@ most fun to build.
 
 ## Milestones
 
-### M0 — Domain core `← we are here`
+### M0 — Domain core ✅ done
 
 The rules engine, with no dependencies and no I/O.
 
@@ -68,7 +68,7 @@ means migrating live ticket data. Getting them right now costs a few days.
 
 ---
 
-### M1 — Persistence and API
+### M1 — Persistence and API ✅ done `103 tests green`
 
 **Ships**
 - Drizzle schema for the eleven core entities (architecture §10)
@@ -85,7 +85,7 @@ means migrating live ticket data. Getting them right now costs a few days.
 
 ---
 
-### M2 — Identity and enrolment
+### M2 — Identity and enrolment `← we are here`
 
 **Ships**
 - `identityId` / `personId` / `templateRef` separation enforced by types

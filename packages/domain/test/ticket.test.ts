@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { DAY, applyTicketEvent, canApply, epochMs, isValidForEntry, minor, validateEvent, validateResalePolicy } from '../src/index.js';
+import { DAY, applyTicketEvent, canApply, epochMs, eventId, isValidForEntry, minor, validateEvent, validateResalePolicy } from '../src/index.js';
 import type { TicketState } from '../src/index.js';
 import { BOB, T0, boundPolicy, cappedPolicy, festival, gaTier, ticket } from './fixtures.js';
 
@@ -110,6 +110,12 @@ describe('policy validation', () => {
     // Small allocations, so the capacity check does not fire first and mask this.
     const small = { ...gaTier, allocation: 10 };
     expect(() => validateEvent({ ...festival, tiers: [small, small] })).toThrow(/duplicate tier/);
+  });
+
+  it('refuses a tier that belongs to a different event', () => {
+    expect(() =>
+      validateEvent({ ...festival, tiers: [{ ...gaTier, eventId: eventId('evt_elsewhere') }] }),
+    ).toThrow(/belongs to event/);
   });
 
   it('refuses an event with no tiers', () => {

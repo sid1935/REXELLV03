@@ -1,0 +1,12 @@
+{
+  "name": "@rexell/db",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Schema and repositories. Owns every SQL statement in the system.",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": { ".": { "types": "./dist/index.d.ts", "default": "./dist/index.js" } },
+  "scripts": { "build": "tsc --build" },
+  "dependencies": { "@rexell/domain": "*" }
+}

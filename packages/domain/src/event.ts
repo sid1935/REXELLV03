@@ -156,6 +156,11 @@ export function validateEvent(event: EventDef): void {
   for (const tier of event.tiers) {
     if (seen.has(tier.id)) throw new PolicyError(`duplicate tier id ${tier.id}`);
     seen.add(tier.id);
+    // Caught here rather than by a foreign key three layers down, where the
+    // failure is a 500 and the message names a constraint instead of the mistake.
+    if (tier.eventId !== event.id) {
+      throw new PolicyError(`tier ${tier.id} belongs to event ${tier.eventId}, not ${event.id}`);
+    }
     if (tier.allocation <= 0) throw new PolicyError(`tier ${tier.id} has a non-positive allocation`);
     validateResalePolicy(tier.resale);
   }

@@ -1,0 +1,17 @@
+{
+  "name": "@rexell/api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/server.js",
+  "scripts": {
+    "build": "tsc --build",
+    "dev": "tsx watch src/server.ts",
+    "start": "node dist/server.js"
+  },
+  "dependencies": {
+    "@rexell/db": "*",
+    "@rexell/domain": "*",
+    "fastify": "^5.12.3"
+  }
+}

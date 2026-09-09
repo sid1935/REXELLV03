@@ -2,6 +2,7 @@
   "name": "rexell",
   "version": "0.1.0",
   "private": true,
+  "type": "module",
   "description": "Fraud-proof ticketing: biometric-bound entitlements with organizer-programmable resale.",
   "workspaces": [
     "packages/*",
@@ -13,14 +14,20 @@
     "typecheck": "tsc --build --force && tsc -p packages/domain/tsconfig.test.json",
     "build": "tsc --build",
     "clean": "tsc --build --clean",
-    "check": "npm run typecheck && npm test"
+    "check": "npm run typecheck && npm test",
+    "seed": "tsx scripts/seed.ts",
+    "dev": "npm run build && node apps/api/dist/server.js"
   },
   "engines": {
     "node": ">=20"
   },
   "devDependencies": {
     "@types/node": "^26.5.0",
+    "tsx": "^4.23.13",
     "typescript": "^7.0.2",
     "vitest": "^5.0.0"
+  },
+  "dependencies": {
+    "fastify": "^5.12.3"
   }
 }
