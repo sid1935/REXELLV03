@@ -68,6 +68,23 @@ export class VaultRejected extends Error {
   }
 }
 
+export interface SealedManifestResponse {
+  readonly sealed: {
+    eventId: string;
+    scannerId: string;
+    sequence: number;
+    generatedAt: number;
+    expiresAt: number;
+    count: number;
+    ciphertext: string;
+    iv: string;
+    tag: string;
+  };
+  readonly included: number;
+  /** Identities with no template. They go to the resolution desk, named in advance. */
+  readonly missingTemplates: readonly string[];
+}
+
 export interface VaultClient {
   challenge(): Promise<LivenessChallenge>;
   enrol(input: {
@@ -80,6 +97,24 @@ export interface VaultClient {
   verify(input: { identityId: string; scope: string; probe: number[] }): Promise<MatchResult>;
   identify(input: { scope: string; probe: number[] }): Promise<MatchResult>;
   forget(input: { identityId: string; reason: string }): Promise<DeletionReceipt>;
+  /**
+   * Seal a gate manifest. The only call that causes template material to leave
+   * the vault, and it leaves as ciphertext bound to one device and one night.
+   */
+  sealManifest(input: {
+    scannerId: string;
+    eventId: string;
+    scope: string;
+    sequence: number;
+    expiresAt: number;
+    releaseFrom: number;
+    credentials: readonly object[];
+  }): Promise<SealedManifestResponse>;
+  releaseManifestKey(input: {
+    scannerId: string;
+    eventId: string;
+    expiresAt: number;
+  }): Promise<{ key: string }>;
 }
 
 export function httpVaultClient(baseUrl: string, token?: string): VaultClient {
@@ -115,5 +150,7 @@ export function httpVaultClient(baseUrl: string, token?: string): VaultClient {
     verify: (input) => call<MatchResult>('/v1/verify', input),
     identify: (input) => call<MatchResult>('/v1/identify', input),
     forget: (input) => call<DeletionReceipt>('/v1/forget', input),
+    sealManifest: (input) => call<SealedManifestResponse>('/v1/manifests', input),
+    releaseManifestKey: (input) => call<{ key: string }>('/v1/manifest-keys', input),
   };
 }

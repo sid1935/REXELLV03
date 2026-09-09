@@ -178,3 +178,52 @@ product decision, and it is why a ReXell ticket cannot reach an NFT marketplace.
 agree to the paisa, or an organizer's statement stops matching the chain. The
 contract test imports the TypeScript function and runs both over the same sweep
 of awkward prices — a differential test, not two independent guesses.
+
+## The gate
+
+```bash
+npm run bench:gate   # decision latency against gallery size
+npm run scanner      # the operator PWA, prints a provisioning URL
+```
+
+`packages/gate` is the scanner engine: sealed manifests, local 1:N matching,
+signed attestations, delta sync. It runs identically in Node and, ported, in the
+browser — `packages/gate/test/browser-parity.test.ts` asserts the two produce
+byte-identical bytes to sign, because a drift there would fail every browser
+signature silently and only under real traffic.
+
+### How a manifest reaches a lane
+
+Four properties, each a containment decision:
+
+| | |
+|---|---|
+| **scoped** | one event, one gate group — a stolen scanner yields one night's ticket-holders |
+| **sealed** | AES-256-GCM under a key derived per (scanner, event, expiry); distributable days early over any channel |
+| **keyed separately** | the key is released on a schedule tied to doors-open, and refused outside it |
+| **expiring** | the expiry is authenticated data *and* part of the key derivation, so it cannot be extended by editing the envelope |
+
+This is the one path by which template material leaves the vault, and it leaves
+as ciphertext addressed to one device. The M2 boundary test was extended rather
+than weakened to cover it.
+
+### What the scanner refuses to do
+
+- **Deny on a poor match.** Uncertainty routes to a staffed lane, always. A false
+  reject costs somebody ninety seconds, never their evening.
+- **Apply a delta past a gap.** If delta 6 is missing it will not apply 7, because
+  6 might have been the revocation. It stops and shows the operator how far behind
+  the lane is.
+- **Decide on an expired manifest.** It falls back and erases, reporting the count
+  so the deletion can be audited per device.
+- **Accept an unsigned or unattributable attestation** — that check is server-side,
+  and one forged row would destroy the value of every other row after a disputed
+  night.
+
+### ⚠ The scanner is not fit for a real gate yet
+
+`apps/scanner/public/scanner.js` has a placeholder `embed()` that hashes pixels
+and recognises nobody, and no liveness detection at all — a printed photo would
+pass. Both are marked in the source. The plumbing around them is real and tested;
+the matcher is not, and must be replaced by a licensed SDK with certified
+presentation-attack detection before anyone stands at a turnstile.

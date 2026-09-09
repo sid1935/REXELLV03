@@ -9,6 +9,7 @@ import { commerceRoutes } from './routes/commerce.js';
 import { identityRoutes } from './routes/identity.js';
 import { gateRoutes } from './routes/gate.js';
 import { chainRoutes } from './routes/chain.js';
+import { scannerRoutes } from './routes/scanners.js';
 import { TokenService } from './chain/token-service.js';
 import type { ChainClient } from './chain/client.js';
 import type { VaultClient } from './vault-client.js';
@@ -76,6 +77,7 @@ export function buildApp(options: AppOptions = {}): App {
   commerceRoutes(server, { repo, now, devMode: options.devMode ?? false });
   identityRoutes(server, { repo, now, vault: options.vault });
   gateRoutes(server, { repo, now });
+  scannerRoutes(server, { repo, now, vault: options.vault });
 
   const tokens = options.chain ? new TokenService(repo, options.chain, now) : undefined;
   chainRoutes(server, { tokens, chain: options.chain, now });

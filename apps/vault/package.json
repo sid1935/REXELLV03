@@ -5,6 +5,13 @@
   "type": "module",
   "description": "Biometric vault. Separate process, separate keys, no read path.",
   "main": "./dist/server.js",
-  "scripts": { "build": "tsc --build", "start": "node dist/server.js" },
-  "dependencies": { "@rexell/biometrics": "*", "fastify": "^5.12.3" }
+  "scripts": {
+    "build": "tsc --build",
+    "start": "node dist/server.js"
+  },
+  "dependencies": {
+    "@rexell/biometrics": "*",
+    "fastify": "^5.12.3",
+    "@rexell/gate": "*"
+  }
 }

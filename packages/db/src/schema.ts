@@ -243,6 +243,19 @@ CREATE TABLE IF NOT EXISTS risk_signals (
 );
 CREATE INDEX IF NOT EXISTS risk_signals_by_identity ON risk_signals(identity_id, observed_at);
 
+-- Registered gate devices. The public key is how an uploaded attestation is
+-- attributed to a device that cannot then deny it.
+CREATE TABLE IF NOT EXISTS scanners (
+  scanner_id      TEXT PRIMARY KEY,
+  event_id        TEXT REFERENCES events(event_id),
+  lane            TEXT NOT NULL,
+  gate_group      TEXT NOT NULL,
+  public_key_pem  TEXT NOT NULL,
+  registered_at   INTEGER NOT NULL,
+  last_seen_at    INTEGER
+);
+CREATE INDEX IF NOT EXISTS scanners_by_event ON scanners(event_id);
+
 -- ─── plumbing ────────────────────────────────────────────────────────────────
 
 -- The chain is never on the critical path. A ticket is valid, sellable and

@@ -1,0 +1,10 @@
+{
+  "name": "ReXell Gate",
+  "short_name": "Gate",
+  "start_url": "./index.html",
+  "display": "fullscreen",
+  "orientation": "portrait",
+  "background_color": "#0B1110",
+  "theme_color": "#0B1110",
+  "icons": []
+}

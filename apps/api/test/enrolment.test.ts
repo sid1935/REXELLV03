@@ -296,12 +296,63 @@ describe('the exit criterion: withdrawal deletes the template and returns a rece
 });
 
 describe('the API never sees a template', () => {
-  it('has no vault-client method capable of fetching one', () => {
+  it('has no vault-client method capable of fetching a readable one', () => {
     const client = httpVaultClient(vaultUrl, VAULT_TOKEN) as unknown as Record<string, unknown>;
-    expect(Object.keys(client).sort()).toEqual(['challenge', 'enrol', 'forget', 'identify', 'verify']);
+
+    // This list is a decision, not a snapshot. Adding a method here means adding
+    // a way for the application plane to talk to the vault, and that should cost
+    // somebody a moment's thought and a failing test.
+    //
+    // `sealManifest` is the one call that causes template material to leave the
+    // vault at all (M4). What it returns is ciphertext bound to one device, one
+    // event and one expiry — never a readable vector — and the assertion below
+    // holds it to that.
+    expect(Object.keys(client).sort()).toEqual([
+      'challenge',
+      'enrol',
+      'forget',
+      'identify',
+      'releaseManifestKey',
+      'sealManifest',
+      'verify',
+    ]);
     for (const forbidden of ['getTemplate', 'read', 'export', 'download', 'template']) {
       expect(client[forbidden]).toBeUndefined();
     }
+  });
+
+  it('gets ciphertext, not vectors, from the one call that moves template material', async () => {
+    const id = await newIdentity();
+    await consentTo(id);
+    await enrolThroughApi(id, face(77));
+
+    const client = httpVaultClient(vaultUrl, VAULT_TOKEN);
+    const result = await client.sealManifest({
+      scannerId: 'scn_boundary',
+      eventId: 'evt_boundary',
+      scope: 'global',
+      sequence: 0,
+      expiresAt: T0 + 86_400_000,
+      releaseFrom: T0,
+      credentials: [
+        {
+          ticketId: 'tkt_boundary',
+          identityId: id,
+          tierId: 'tier_ga',
+          gates: [],
+          admitFrom: T0,
+          admitUntil: T0 + 86_400_000,
+          revoked: false,
+        },
+      ],
+    });
+
+    expect(result.included).toBe(1);
+    const body = JSON.stringify(result);
+    // No bare numeric arrays, and no plaintext identity in the sealed envelope.
+    expect(body.match(/\[[-0-9.eE,\s]{200,}\]/g) ?? []).toEqual([]);
+    expect(result.sealed.ciphertext).not.toContain(id);
+    expect(JSON.stringify(result.sealed)).not.toContain('tkt_boundary');
   });
 
   it('stores no template material in the application database', async () => {

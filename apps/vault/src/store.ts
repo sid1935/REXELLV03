@@ -2,6 +2,8 @@ import { DatabaseSync } from 'node:sqlite';
 import { createHmac, randomUUID, timingSafeEqual } from 'node:crypto';
 import type { FaceVector, ModelVersion, SealedTemplate, Thresholds } from '@rexell/biometrics';
 import { PROTOTYPE_THRESHOLDS, fromRow, seal, similarity, unseal } from '@rexell/biometrics';
+import { deriveManifestKey, sealManifest } from '@rexell/gate';
+import type { GateCredential, GateEntry, GateManifest, SealedManifest } from '@rexell/gate';
 
 /**
  * The vault's own database.
@@ -61,6 +63,25 @@ CREATE TABLE IF NOT EXISTS deletion_receipts (
   digest         TEXT NOT NULL
 );
 
+-- Manifest issuance and key release, tracked separately.
+--
+-- Sealing a manifest and releasing its key are two acts on two channels. The
+-- blob can be distributed days early; the key is refused outside its window.
+-- Recording both is how a support engineer answers "which device could open
+-- which night" after an incident.
+CREATE TABLE IF NOT EXISTS manifests (
+  manifest_id      TEXT PRIMARY KEY,
+  scanner_id       TEXT NOT NULL,
+  event_id         TEXT NOT NULL,
+  scope            TEXT NOT NULL,
+  credential_count INTEGER NOT NULL,
+  expires_at       INTEGER NOT NULL,
+  release_from     INTEGER NOT NULL,
+  sealed_at        INTEGER NOT NULL,
+  key_released_at  INTEGER
+);
+CREATE UNIQUE INDEX IF NOT EXISTS manifests_device_event ON manifests(scanner_id, event_id, expires_at);
+
 -- Every operation touching a template, whether or not it succeeded.
 CREATE TABLE IF NOT EXISTS access_log (
   entry_id     TEXT PRIMARY KEY,
@@ -103,12 +124,15 @@ export class VaultStore {
   readonly #db: DatabaseSync;
   readonly #masterKey: Buffer;
   readonly #receiptKey: Buffer;
+  readonly #manifestKey: Buffer;
   readonly #thresholds: Thresholds;
 
   constructor(opts: {
     location?: string;
     masterKey: Buffer;
     receiptKey: Buffer;
+    /** Root of the per-(scanner, event, expiry) manifest key derivation. */
+    manifestKey?: Buffer;
     thresholds?: Thresholds;
   }) {
     this.#db = new DatabaseSync(opts.location ?? ':memory:');
@@ -116,6 +140,7 @@ export class VaultStore {
     this.#db.exec(SCHEMA);
     this.#masterKey = opts.masterKey;
     this.#receiptKey = opts.receiptKey;
+    this.#manifestKey = opts.manifestKey ?? opts.masterKey;
     this.#thresholds = opts.thresholds ?? PROTOTYPE_THRESHOLDS;
   }
 
@@ -343,6 +368,129 @@ export class VaultStore {
     const given = Buffer.from(receipt.digest);
     if (expected.length !== given.length) return false;
     return timingSafeEqual(expected, given);
+  }
+
+  // ─── gate manifests ──────────────────────────────────────────────────────
+
+  /**
+   * Seal an event manifest for one scanner.
+   *
+   * This is the one path by which template material leaves the vault, and it is
+   * the exception that proves the rule: what leaves is ciphertext under a key
+   * derived for one device, one event and one expiry, and the key itself is
+   * released separately and later. A blob intercepted in transit is inert.
+   *
+   * An identity with no template is skipped rather than failing the batch — a
+   * fan who withdrew consent this morning should not stop nine thousand other
+   * people getting in tonight. They go through the resolution desk instead.
+   */
+  sealGateManifest(input: {
+    scannerId: string;
+    eventId: string;
+    scope: string;
+    credentials: readonly GateCredential[];
+    sequence: number;
+    expiresAt: number;
+    releaseFrom: number;
+    now: number;
+  }): { sealed: SealedManifest; included: number; missing: string[] } {
+    const templates = new Map(this.#galleryFor(input.scope).map((g) => [g.identityId, g.vector]));
+
+    const entries: GateEntry[] = [];
+    const missing: string[] = [];
+    for (const c of input.credentials) {
+      const template = templates.get(c.identityId);
+      if (!template) {
+        missing.push(c.identityId);
+        continue;
+      }
+      entries.push({ ...c, template });
+    }
+
+    const manifest: GateManifest = {
+      eventId: input.eventId,
+      scannerId: input.scannerId,
+      sequence: input.sequence,
+      generatedAt: input.now,
+      expiresAt: input.expiresAt,
+      entries,
+    };
+
+    const key = deriveManifestKey(this.#manifestKey, input.scannerId, input.eventId, input.expiresAt);
+    const sealed = sealManifest(manifest, key);
+
+    this.#db
+      .prepare(
+        `INSERT INTO manifests (manifest_id, scanner_id, event_id, scope, credential_count, expires_at, release_from, sealed_at)
+         VALUES (?,?,?,?,?,?,?,?)
+         ON CONFLICT(scanner_id, event_id, expires_at) DO UPDATE SET
+           credential_count = excluded.credential_count, sealed_at = excluded.sealed_at`,
+      )
+      .run(
+        randomUUID(),
+        input.scannerId,
+        input.eventId,
+        input.scope,
+        entries.length,
+        input.expiresAt,
+        input.releaseFrom,
+        input.now,
+      );
+
+    this.#log('seal_manifest', `entries:${entries.length} missing:${missing.length}`, input.now, undefined, input.scope);
+
+    return { sealed, included: entries.length, missing };
+  }
+
+  /**
+   * Release the key for a sealed manifest.
+   *
+   * Refused before its window and after its expiry. This is the control that
+   * makes early distribution safe: a manifest sitting on a device for three days
+   * cannot be opened until the night it is for.
+   */
+  releaseManifestKey(
+    scannerId: string,
+    eventId: string,
+    expiresAt: number,
+    now: number,
+  ): { key: string } | { refused: 'UNKNOWN_MANIFEST' | 'TOO_EARLY' | 'EXPIRED'; releaseFrom?: number } {
+    const row = this.#db
+      .prepare('SELECT release_from, expires_at FROM manifests WHERE scanner_id = ? AND event_id = ? AND expires_at = ?')
+      .get(scannerId, eventId, expiresAt) as { release_from: number; expires_at: number } | undefined;
+
+    if (!row) {
+      this.#log('release_key', 'unknown', now, undefined, eventId);
+      return { refused: 'UNKNOWN_MANIFEST' };
+    }
+    if (now < row.release_from) {
+      this.#log('release_key', 'too_early', now, undefined, eventId);
+      return { refused: 'TOO_EARLY', releaseFrom: row.release_from };
+    }
+    if (now >= row.expires_at) {
+      this.#log('release_key', 'expired', now, undefined, eventId);
+      return { refused: 'EXPIRED' };
+    }
+
+    this.#db
+      .prepare('UPDATE manifests SET key_released_at = ? WHERE scanner_id = ? AND event_id = ? AND expires_at = ?')
+      .run(now, scannerId, eventId, expiresAt);
+    this.#log('release_key', 'released', now, undefined, eventId);
+
+    return { key: deriveManifestKey(this.#manifestKey, scannerId, eventId, expiresAt).toString('base64') };
+  }
+
+  manifestLog() {
+    return this.#db
+      .prepare('SELECT scanner_id, event_id, credential_count, expires_at, release_from, key_released_at FROM manifests')
+      .all() as Array<{
+      scanner_id: string;
+      event_id: string;
+      credential_count: number;
+      expires_at: number;
+      release_from: number;
+      key_released_at: number | null;
+    }>;
   }
 
   isEnrolled(identityId: string, scope: string): boolean {

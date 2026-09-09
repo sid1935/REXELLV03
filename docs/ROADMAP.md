@@ -121,7 +121,7 @@ means migrating live ticket data. Getting them right now costs a few days.
 
 ---
 
-### M4 — The gate `← we are here`
+### M4 — The gate ⚠ two of three done `239 + 42 tests green`
 
 **Ships**
 - Manifest builder: encrypted, event-scoped, TTL-bounded
@@ -131,13 +131,25 @@ means migrating live ticket data. Getting them right now costs a few days.
 - Operator fallback flow with audit records
 
 **Exit criteria**
-- A scanner with the network physically off admits and denies correctly
-- p95 decision latency under 800 ms on a mid-range Android device
-- A resale revokes the seller's credential at every lane within 30 seconds online
+- ✅ A scanner with the network physically off admits and denies correctly
+- ⚠ **p95 decision latency under 800 ms on a mid-range Android device — NOT MET.**
+  There is no Android device in this loop, so it has not been measured where it
+  counts. What is known: our own decision path is 8.3 ms p95 against a
+  12,000-credential gallery and scales linearly (`npm run bench:gate`), leaving
+  ~420 ms for camera, liveness and embedding. Even a phone twenty times slower
+  than this laptop stays inside the budget. That is an argument, not a
+  measurement, and the criterion stays open until somebody runs it on hardware.
+- ✅ A resale revokes the seller's credential at every lane within 30 seconds online
+
+**Also outstanding from the Ships list**
+- The PWA's `embed()` is a placeholder that hashes pixels and recognises nobody,
+  and there is no liveness in the browser at all. Both are marked in the source.
+  The scanner is a working operator console and an untrustworthy matcher, and it
+  must not be pointed at a real queue until a licensed SDK replaces that function.
 
 ---
 
-### M5 — Onsale defence
+### M5 — Onsale defence `← next`
 
 **Ships**
 - Edge fair queue with signed admission tokens

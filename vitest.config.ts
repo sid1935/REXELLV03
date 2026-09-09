@@ -14,6 +14,7 @@ export default defineConfig({
       '@rexell/domain': src('./packages/domain/src/index.ts'),
       '@rexell/db': src('./packages/db/src/index.ts'),
       '@rexell/biometrics': src('./packages/biometrics/src/index.ts'),
+      '@rexell/gate': src('./packages/gate/src/index.ts'),
     },
   },
   test: {

@@ -222,10 +222,12 @@ export function policyHash(event: {
 export class Repo {
   readonly consents: ConsentRepo;
   readonly outbox: OutboxRepo;
+  readonly scanners: ScannerRepo;
 
   constructor(readonly db: Db) {
     this.consents = new ConsentRepo(db);
     this.outbox = new OutboxRepo(db);
+    this.scanners = new ScannerRepo(db);
   }
 
   // ─ organizers & identities ─
@@ -919,5 +921,78 @@ export class OutboxRepo {
 
   setEventChainAddress(eventId: string, address: string): void {
     this.db.run('UPDATE events SET chain_address = ? WHERE event_id = ?', address, eventId);
+  }
+}
+
+// ─── scanners (M4) ───────────────────────────────────────────────────────────
+
+export interface ScannerRow {
+  scanner_id: string;
+  event_id: string | null;
+  lane: string;
+  gate_group: string;
+  public_key_pem: string;
+  registered_at: number;
+  last_seen_at: number | null;
+}
+
+export class ScannerRepo {
+  constructor(private readonly db: Db) {}
+
+  register(s: {
+    scannerId: string;
+    eventId: string;
+    lane: string;
+    gateGroup: string;
+    publicKeyPem: string;
+    now: number;
+  }): void {
+    // Re-registering replaces the key. A device that was wiped and re-provisioned
+    // is the same lane with a new keypair, and refusing that would strand it.
+    this.db.run(
+      `INSERT INTO scanners (scanner_id, event_id, lane, gate_group, public_key_pem, registered_at)
+       VALUES (?,?,?,?,?,?)
+       ON CONFLICT(scanner_id) DO UPDATE SET
+         event_id = excluded.event_id, lane = excluded.lane, gate_group = excluded.gate_group,
+         public_key_pem = excluded.public_key_pem, registered_at = excluded.registered_at`,
+      s.scannerId,
+      s.eventId,
+      s.lane,
+      s.gateGroup,
+      s.publicKeyPem,
+      s.now,
+    );
+  }
+
+  get(scannerId: string): ScannerRow | undefined {
+    return this.db.get<ScannerRow>('SELECT * FROM scanners WHERE scanner_id = ?', scannerId);
+  }
+
+  forEvent(eventId: string): ScannerRow[] {
+    return this.db.all<ScannerRow>('SELECT * FROM scanners WHERE event_id = ? ORDER BY lane', eventId);
+  }
+
+  touch(scannerId: string, now: number): void {
+    this.db.run('UPDATE scanners SET last_seen_at = ? WHERE scanner_id = ?', now, scannerId);
+  }
+
+  /** Credentials for a manifest: every ticket that could open a gate tonight. */
+  credentialsForEvent(eventId: string, doorsOpenAt: number, endsAt: number) {
+    return this.db
+      .all<{ ticket_id: string; owner_identity_id: string; tier_id: string; seat: string | null; state: string }>(
+        `SELECT ticket_id, owner_identity_id, tier_id, seat, state FROM tickets
+         WHERE event_id = ? AND state IN ('issued','listed','redeemed','revoked') ORDER BY created_at`,
+        eventId,
+      )
+      .map((t) => ({
+        ticketId: t.ticket_id,
+        identityId: t.owner_identity_id,
+        tierId: t.tier_id,
+        ...(t.seat !== null ? { seat: t.seat } : {}),
+        gates: [] as string[],
+        admitFrom: doorsOpenAt - 30 * 60_000,
+        admitUntil: endsAt,
+        revoked: t.state === 'revoked',
+      }));
   }
 }

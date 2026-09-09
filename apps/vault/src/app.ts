@@ -31,6 +31,8 @@ export interface VaultOptions {
   location?: string;
   masterKey?: Buffer;
   receiptKey?: Buffer;
+  /** Root of the manifest key derivation. Defaults to the master key. */
+  manifestKey?: Buffer;
   now?: () => number;
   logger?: boolean;
   /** Shared secret the API presents. Stands in for mTLS. */
@@ -52,6 +54,7 @@ export function buildVault(options: VaultOptions = {}): VaultApp {
     ...(options.location !== undefined ? { location: options.location } : {}),
     masterKey: options.masterKey ?? randomBytes(32),
     receiptKey: options.receiptKey ?? randomBytes(32),
+    ...(options.manifestKey !== undefined ? { manifestKey: options.manifestKey } : {}),
   });
   const challenges = new ChallengeStore();
   const serviceToken = options.serviceToken;
@@ -183,6 +186,92 @@ export function buildVault(options: VaultOptions = {}): VaultApp {
       return reply.code(200).send({ flagId: req.params.id, resolved: true });
     },
   );
+
+  /**
+   * Seal an event manifest for one scanner.
+   *
+   * The one path by which template material leaves the vault. What comes back is
+   * ciphertext bound to this device, this event and this expiry — distributable
+   * over any channel, openable by nobody until the key is released.
+   */
+  server.post<{
+    Body: {
+      scannerId: string;
+      eventId: string;
+      scope?: string;
+      sequence?: number;
+      expiresAt: number;
+      releaseFrom: number;
+      credentials: Array<{
+        ticketId: string;
+        identityId: string;
+        tierId: string;
+        seat?: string;
+        gates?: string[];
+        admitFrom: number;
+        admitUntil: number;
+        revoked?: boolean;
+      }>;
+    };
+  }>('/v1/manifests', async (req, reply) => {
+    const b = req.body;
+    if (!b?.scannerId || !b.eventId || !Array.isArray(b.credentials)) {
+      return bad(reply, 400, 'BAD_REQUEST', 'scannerId, eventId and credentials are required.');
+    }
+
+    const result = store.sealGateManifest({
+      scannerId: b.scannerId,
+      eventId: b.eventId,
+      scope: b.scope ?? 'global',
+      sequence: b.sequence ?? 0,
+      expiresAt: b.expiresAt,
+      releaseFrom: b.releaseFrom,
+      now: now(),
+      credentials: b.credentials.map((c) => ({
+        ticketId: c.ticketId,
+        identityId: c.identityId,
+        tierId: c.tierId,
+        ...(c.seat !== undefined ? { seat: c.seat } : {}),
+        gates: c.gates ?? [],
+        admitFrom: c.admitFrom,
+        admitUntil: c.admitUntil,
+        revoked: c.revoked ?? false,
+      })),
+    });
+
+    return reply.code(201).send({
+      sealed: result.sealed,
+      included: result.included,
+      // Named, so an operator knows who to expect at the resolution desk rather
+      // than discovering it one refused fan at a time.
+      missingTemplates: result.missing,
+    });
+  });
+
+  /**
+   * Release a manifest key.
+   *
+   * Refused before the release window and after expiry. This is what makes early
+   * distribution safe: a blob sitting on a device for three days is inert until
+   * the night it is for.
+   */
+  server.post<{ Body: { scannerId: string; eventId: string; expiresAt: number } }>(
+    '/v1/manifest-keys',
+    async (req, reply) => {
+      const b = req.body;
+      if (!b?.scannerId || !b.eventId || typeof b.expiresAt !== 'number') {
+        return bad(reply, 400, 'BAD_REQUEST', 'scannerId, eventId and expiresAt are required.');
+      }
+      const result = store.releaseManifestKey(b.scannerId, b.eventId, b.expiresAt, now());
+      if ('refused' in result) {
+        const status = result.refused === 'UNKNOWN_MANIFEST' ? 404 : 409;
+        return bad(reply, status, result.refused, 'This manifest key cannot be released right now.');
+      }
+      return reply.code(200).send(result);
+    },
+  );
+
+  server.get('/v1/manifests', async () => ({ manifests: store.manifestLog() }));
 
   return { server, store, challenges };
 }

@@ -19,7 +19,9 @@
     "dev": "npm run build && node apps/api/dist/server.js",
     "dev:vault": "npm run build && node apps/vault/dist/server.js",
     "test:contracts": "npm --workspace @rexell/contracts run test",
-    "compile": "npm --workspace @rexell/contracts run compile"
+    "compile": "npm --workspace @rexell/contracts run compile",
+    "bench:gate": "tsx scripts/bench-gate.ts",
+    "scanner": "node apps/scanner/serve.js"
   },
   "engines": {
     "node": ">=20"

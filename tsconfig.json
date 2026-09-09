@@ -8,6 +8,9 @@
       "path": "./packages/biometrics"
     },
     {
+      "path": "./packages/gate"
+    },
+    {
       "path": "./packages/db"
     },
     {

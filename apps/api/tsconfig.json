@@ -3,9 +3,23 @@
   "compilerOptions": {
     "rootDir": "./src",
     "outDir": "./dist",
-    "types": ["node"],
+    "types": [
+      "node"
+    ],
     "tsBuildInfoFile": "./dist/.tsbuildinfo"
   },
-  "include": ["src/**/*.ts"],
-  "references": [{ "path": "../../packages/domain" }, { "path": "../../packages/db" }]
+  "include": [
+    "src/**/*.ts"
+  ],
+  "references": [
+    {
+      "path": "../../packages/domain"
+    },
+    {
+      "path": "../../packages/db"
+    },
+    {
+      "path": "../../packages/gate"
+    }
+  ]
 }

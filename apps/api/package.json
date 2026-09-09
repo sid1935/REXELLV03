@@ -12,6 +12,7 @@
   "dependencies": {
     "@rexell/db": "*",
     "@rexell/domain": "*",
-    "fastify": "^5.12.3"
+    "fastify": "^5.12.3",
+    "@rexell/gate": "*"
   }
 }

@@ -1,0 +1,8 @@
+{
+  "name": "@rexell/scanner",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Offline-first gate scanner PWA.",
+  "scripts": { "dev": "node serve.js" }
+}
