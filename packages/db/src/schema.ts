@@ -245,6 +245,30 @@ CREATE INDEX IF NOT EXISTS risk_signals_by_identity ON risk_signals(identity_id,
 
 -- ─── plumbing ────────────────────────────────────────────────────────────────
 
+-- The chain is never on the critical path. A ticket is valid, sellable and
+-- scannable long before it is minted; this table is how the ledger catches up.
+--
+-- An outbox rather than a direct call, because the alternative is a sale that
+-- fails because an L2 sequencer hiccuped. The database is the source of truth
+-- until a transaction confirms, and it stays authoritative for entry even after.
+CREATE TABLE IF NOT EXISTS chain_outbox (
+  op_id         TEXT PRIMARY KEY,
+  kind          TEXT NOT NULL CHECK (kind IN ('mint','resale','revoke')),
+  event_id      TEXT NOT NULL,
+  ref_id        TEXT NOT NULL,
+  payload       TEXT NOT NULL,
+  state         TEXT NOT NULL CHECK (state IN ('pending','submitted','confirmed','failed')),
+  attempts      INTEGER NOT NULL DEFAULT 0,
+  last_error    TEXT,
+  tx_hash       TEXT,
+  created_at    INTEGER NOT NULL,
+  submitted_at  INTEGER NOT NULL DEFAULT 0,
+  confirmed_at  INTEGER
+);
+CREATE INDEX IF NOT EXISTS outbox_pending ON chain_outbox(state, created_at);
+-- One chain operation per thing. A retry must not mint a second ticket.
+CREATE UNIQUE INDEX IF NOT EXISTS outbox_once ON chain_outbox(kind, ref_id);
+
 -- Every write endpoint is retryable. A fan on a flaky connection at an onsale
 -- will hit "buy" more than once, and must not end up with two tickets.
 CREATE TABLE IF NOT EXISTS idempotency_keys (

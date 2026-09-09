@@ -221,9 +221,11 @@ export function policyHash(event: {
 
 export class Repo {
   readonly consents: ConsentRepo;
+  readonly outbox: OutboxRepo;
 
   constructor(readonly db: Db) {
     this.consents = new ConsentRepo(db);
+    this.outbox = new OutboxRepo(db);
   }
 
   // ─ organizers & identities ─
@@ -817,5 +819,105 @@ export class ConsentRepo {
       'SELECT * FROM consents WHERE identity_id = ? ORDER BY created_at, rowid',
       identityId,
     );
+  }
+}
+
+// ─── chain outbox (M3) ───────────────────────────────────────────────────────
+
+export type OutboxKind = 'mint' | 'resale' | 'revoke';
+export type OutboxState = 'pending' | 'submitted' | 'confirmed' | 'failed';
+
+export interface OutboxRow {
+  op_id: string;
+  kind: OutboxKind;
+  event_id: string;
+  ref_id: string;
+  payload: string;
+  state: OutboxState;
+  attempts: number;
+  last_error: string | null;
+  tx_hash: string | null;
+  created_at: number;
+}
+
+/**
+ * The outbox.
+ *
+ * Writing an intent to a table and draining it later, rather than calling the
+ * chain inline, is what makes "the chain is never on the critical path" true
+ * rather than aspirational. A sale completes by writing a row; if the sequencer
+ * is down for an hour, the row waits.
+ *
+ * The unique index on (kind, ref_id) means a retry cannot enqueue a second mint
+ * for the same ticket, which would put two tokens in circulation for one seat.
+ */
+export class OutboxRepo {
+  constructor(private readonly db: Db) {}
+
+  enqueue(op: { kind: OutboxKind; eventId: string; refId: string; payload: object; now: number }): string | null {
+    const id = newId('attestation').replace('att_', 'cop_');
+    const changed = this.db.run(
+      `INSERT OR IGNORE INTO chain_outbox (op_id, kind, event_id, ref_id, payload, state, created_at)
+       VALUES (?,?,?,?,?,'pending',?)`,
+      id,
+      op.kind,
+      op.eventId,
+      op.refId,
+      JSON.stringify(op.payload),
+      op.now,
+    );
+    // Already enqueued. Not an error — it is the retry working as intended.
+    return changed === 1 ? id : null;
+  }
+
+  /** Oldest first, so a stuck batch does not starve everything behind it. */
+  claimPending(kind: OutboxKind, limit: number): OutboxRow[] {
+    return this.db.all<OutboxRow>(
+      `SELECT * FROM chain_outbox WHERE kind = ? AND state IN ('pending','failed') ORDER BY created_at, rowid LIMIT ?`,
+      kind,
+      limit,
+    );
+  }
+
+  markConfirmed(opId: string, txHash: string, now: number): void {
+    this.db.run(
+      `UPDATE chain_outbox SET state = 'confirmed', tx_hash = ?, confirmed_at = ?, last_error = NULL WHERE op_id = ?`,
+      txHash,
+      now,
+      opId,
+    );
+  }
+
+  markFailed(opId: string, error: string): void {
+    this.db.run(
+      `UPDATE chain_outbox SET state = 'failed', attempts = attempts + 1, last_error = ? WHERE op_id = ?`,
+      error.slice(0, 500),
+      opId,
+    );
+  }
+
+  status(): { pending: number; confirmed: number; failed: number; oldestPendingAt: number | null } {
+    const counts = this.db.all<{ state: OutboxState; n: number }>(
+      'SELECT state, COUNT(*) AS n FROM chain_outbox GROUP BY state',
+    );
+    const by = (s: OutboxState) => counts.find((c) => c.state === s)?.n ?? 0;
+    const oldest = this.db.get<{ created_at: number }>(
+      `SELECT created_at FROM chain_outbox WHERE state IN ('pending','failed') ORDER BY created_at LIMIT 1`,
+    );
+    return {
+      pending: by('pending') + by('failed'),
+      confirmed: by('confirmed'),
+      failed: by('failed'),
+      oldestPendingAt: oldest?.created_at ?? null,
+    };
+  }
+
+  /** Chain state lives on the ticket too, so a support tool can see it in one place. */
+  setTicketMintState(ticketId: string, state: OutboxState, tokenId: string | null): void {
+    this.db.run('UPDATE tickets SET mint_state = ?, token_id = ? WHERE ticket_id = ?', state, tokenId, ticketId);
+  }
+
+  setEventChainAddress(eventId: string, address: string): void {
+    this.db.run('UPDATE events SET chain_address = ? WHERE event_id = ?', address, eventId);
   }
 }

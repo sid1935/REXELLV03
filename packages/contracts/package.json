@@ -1,0 +1,11 @@
+{
+  "name": "@rexell/contracts",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Solidity: TicketNFT, ResaleController, RoyaltySplitter, AccessRegistry.",
+  "scripts": {
+    "compile": "hardhat compile",
+    "test": "hardhat test"
+  }
+}

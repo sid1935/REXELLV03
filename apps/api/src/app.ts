@@ -8,6 +8,9 @@ import { registerIdempotency } from './idempotency.js';
 import { commerceRoutes } from './routes/commerce.js';
 import { identityRoutes } from './routes/identity.js';
 import { gateRoutes } from './routes/gate.js';
+import { chainRoutes } from './routes/chain.js';
+import { TokenService } from './chain/token-service.js';
+import type { ChainClient } from './chain/client.js';
 import type { VaultClient } from './vault-client.js';
 
 export interface AppOptions {
@@ -33,12 +36,15 @@ export interface AppOptions {
    * become enrolled is a real challenge-plus-consent enrolment through the vault.
    */
   devMode?: boolean;
+  /** The chain. Without one, tickets still sell — they simply never mint. */
+  chain?: ChainClient;
 }
 
 export interface App {
   server: FastifyInstance;
   db: Db;
   repo: Repo;
+  tokens?: TokenService;
 }
 
 export function buildApp(options: AppOptions = {}): App {
@@ -71,5 +77,8 @@ export function buildApp(options: AppOptions = {}): App {
   identityRoutes(server, { repo, now, vault: options.vault });
   gateRoutes(server, { repo, now });
 
-  return { server, db, repo };
+  const tokens = options.chain ? new TokenService(repo, options.chain, now) : undefined;
+  chainRoutes(server, { tokens, chain: options.chain, now });
+
+  return tokens ? { server, db, repo, tokens } : { server, db, repo };
 }

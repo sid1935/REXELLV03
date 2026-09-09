@@ -16,5 +16,11 @@ export default defineConfig({
       '@rexell/biometrics': src('./packages/biometrics/src/index.ts'),
     },
   },
-  test: { include: ['**/test/**/*.test.ts'], environment: 'node' },
+  test: {
+    include: ['**/test/**/*.test.ts'],
+    // Contract tests run under hardhat, which supplies the EVM and the type
+    // augmentation vitest has no way to provide. See `npm run test:contracts`.
+    exclude: ['**/node_modules/**', 'packages/contracts/**'],
+    environment: 'node',
+  },
 });

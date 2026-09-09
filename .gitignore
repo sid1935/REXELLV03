@@ -8,3 +8,6 @@ coverage/
 rexell.sqlite
 rexell.sqlite-*
 *.sqlite
+packages/contracts/artifacts/
+packages/contracts/cache/
+packages/contracts/types/

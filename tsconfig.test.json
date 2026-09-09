@@ -26,5 +26,8 @@
     "apps/*/src/**/*.ts",
     "apps/*/test/**/*.ts",
     "scripts/**/*.ts"
+  ],
+  "exclude": [
+    "packages/contracts/**"
   ]
 }

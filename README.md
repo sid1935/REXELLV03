@@ -64,6 +64,7 @@ millisecond.
 ```
 packages/domain/     business rules — no I/O, no dependencies, no clock
 packages/biometrics/ face vectors, thresholds, liveness challenges, template sealing
+packages/contracts/  Solidity — TicketNFT, ResaleController, RoyaltySplitter, AccessRegistry
 packages/db/         schema and repositories — owns every SQL statement
 apps/api/            Fastify HTTP surface over the domain
 apps/vault/          the biometric vault — separate process, separate keys, no read path
@@ -142,3 +143,38 @@ Append-only, purpose-scoped, and versioned. A withdrawal is a new row, never an
 update — the record of what was agreed to and when outlives the permission. Asking
 for biometric consent bundled with anything else is a 422 before it reaches the
 database.
+
+## The chain is never on the critical path
+
+A ticket is valid, sellable and scannable the moment its database row exists.
+Minting happens later, in batches, through an outbox — so an L2 outage delays the
+ledger and nothing else. There is a test that stops the sequencer, then sells a
+ticket, resells it, and opens a gate, all with the chain down the whole time.
+
+```bash
+npm run test:contracts   # 42 contract tests, Hardhat + viem
+npm run check            # typecheck, 197 TS tests, then the contracts
+```
+
+### What the contracts refuse to do
+
+| Attack | Result |
+|---|---|
+| Owner calls `transferFrom` on a bound ticket | reverts `TicketIsBound` |
+| Owner calls `transferFrom` on a capped ticket | reverts `TransfersMustGoThroughController` |
+| The resale controller tries to move a bound ticket | reverts `ResaleDisabled` |
+| Anyone calls `approve` or `setApprovalForAll` | reverts `ApprovalsDisabled` — no marketplace can list it |
+| List one paisa above the ceiling | reverts `PriceAboveCeiling` |
+| Mint to an identity nobody is bound to | reverts `IdentityNotBound` |
+| Two identities bound to one wallet | reverts `AccountInUse` |
+| Deploy tiers allocating more than capacity | reverts `CapacityExceeded` |
+
+There is no `Open` resale mode in the enum. The absence of that third member is a
+product decision, and it is why a ReXell ticket cannot reach an NFT marketplace.
+
+### The splits are checked against each other
+
+`RoyaltySplit.compute` in Solidity and `computeSplits` in `packages/domain` must
+agree to the paisa, or an organizer's statement stops matching the chain. The
+contract test imports the TypeScript function and runs both over the same sweep
+of awkward prices — a differential test, not two independent guesses.

@@ -14,16 +14,21 @@
     "typecheck": "tsc --build --force && tsc -p tsconfig.test.json",
     "build": "tsc --build",
     "clean": "tsc --build --clean",
-    "check": "npm run typecheck && npm test",
+    "check": "npm run typecheck && npm test && npm run test:contracts",
     "seed": "tsx scripts/seed.ts",
     "dev": "npm run build && node apps/api/dist/server.js",
-    "dev:vault": "npm run build && node apps/vault/dist/server.js"
+    "dev:vault": "npm run build && node apps/vault/dist/server.js",
+    "test:contracts": "npm --workspace @rexell/contracts run test",
+    "compile": "npm --workspace @rexell/contracts run compile"
   },
   "engines": {
     "node": ">=20"
   },
   "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox-viem": "^5.0.7",
+    "@openzeppelin/contracts": "^5.6.1",
     "@types/node": "^26.5.0",
+    "hardhat": "^3.16.0",
     "tsx": "^4.23.13",
     "typescript": "^7.0.2",
     "vitest": "^5.0.0"

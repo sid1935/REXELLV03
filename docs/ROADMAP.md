@@ -37,7 +37,7 @@ most fun to build.
 | Web | Next.js (App Router) | Organizer console is read-heavy and SSR-friendly. |
 | Gate client | PWA first, native Android later | A browser PWA proves the flow. Native is required before a real event for camera control, kiosk mode and offline storage guarantees. |
 | Face matching (prototype) | In-browser embedding model | Proves the architecture without a vendor contract. **Replaced by a commercial SDK with certified liveness before any real event** — the prototype matcher has no presentation-attack defence and must never be used at a gate. |
-| Contracts | Solidity + Hardhat | Foundry is not installed and Hardhat is npm-installable. |
+| Contracts | Solidity 0.8.28, Hardhat 3, OpenZeppelin 5, viaIR | Foundry is not installed; Hardhat is npm-installable and fetched solc without trouble. viaIR because TicketNFT's constructor takes four trust-critical addresses plus the tier array and overflows the legacy stack. No EIP-1167 clones: on an L2 a deploy costs a fraction of a cent, which is a good trade for keeping those addresses `immutable`. |
 | Chain | EVM L2 testnet | Chain-agnostic by design; nothing above the Token Service knows which. |
 
 ---
@@ -103,7 +103,7 @@ means migrating live ticket data. Getting them right now costs a few days.
 
 ---
 
-### M3 — Contracts and issuance `← we are here`
+### M3 — Contracts and issuance ✅ done `197 + 42 tests green`
 
 **Ships**
 - `TicketNFT` with bound and capped modes, no free-transfer path
@@ -121,7 +121,7 @@ means migrating live ticket data. Getting them right now costs a few days.
 
 ---
 
-### M4 — The gate
+### M4 — The gate `← we are here`
 
 **Ships**
 - Manifest builder: encrypted, event-scoped, TTL-bounded

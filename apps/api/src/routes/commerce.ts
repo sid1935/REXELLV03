@@ -26,6 +26,12 @@ interface Deps {
   devMode: boolean;
 }
 
+/** Tier index on chain. Tiers are stored in creation order in TicketNFT. */
+function tierIndexOf(repo: Repo, eventId: string, tierId: string): number {
+  const event = repo.getEvent(eventId);
+  return event ? event.tiers.findIndex((t) => t.id === tierId) : 0;
+}
+
 function purchaserContext(repo: Repo, identity: string, eventId: string): PurchaserContext {
   const row = repo.getIdentity(toIdentityId(identity));
   if (!row) throw notFound('identity', identity);
@@ -221,6 +227,21 @@ export function commerceRoutes(app: FastifyInstance, { repo, now, devMode }: Dep
           now: at,
         });
         tickets.push(ticketId);
+        // Enqueue the mint. Nothing waits for it: the ticket is already valid,
+        // sellable and scannable. If the chain is down for an hour, this row
+        // simply waits, and the sale is unaffected.
+        repo.outbox.enqueue({
+          kind: 'mint',
+          eventId: order.event_id,
+          refId: ticketId,
+          payload: {
+            ticketId,
+            eventId: order.event_id,
+            identityId: order.identity_id,
+            tierIndex: tierIndexOf(repo, order.event_id, order.tier_id),
+          },
+          now: at,
+        });
         // The gate learns about the ticket now, not at doors-open. A late sale
         // is just another delta.
         repo.appendDelta(
@@ -365,6 +386,20 @@ export function commerceRoutes(app: FastifyInstance, { repo, now, devMode }: Dep
           },
           at,
         );
+
+        repo.outbox.enqueue({
+          kind: 'resale',
+          eventId: event.id,
+          refId: settlementId,
+          payload: {
+            settlementId,
+            eventId: event.id,
+            ticketId: ticket.id,
+            toIdentityId: buyer.identityId,
+            priceMinor: listing.price,
+          },
+          now: at,
+        });
 
         return { settlementId, split, seq };
       });
