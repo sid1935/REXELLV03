@@ -7,10 +7,14 @@
  *
  *   npm run seed
  */
+import { randomBytes } from 'node:crypto';
 import { rmSync } from 'node:fs';
 import { DAY, HOUR, epochMs, formatMinor } from '@rexell/domain';
 import type { EpochMs } from '@rexell/domain';
 import { buildApp } from '../apps/api/src/app.js';
+import { httpVaultClient } from '../apps/api/src/vault-client.js';
+import { buildVault } from '../apps/vault/src/app.js';
+import { capture, face } from '../apps/vault/test/helpers.js';
 
 const DB_PATH = process.env['REXELL_DB'] ?? 'rexell.sqlite';
 rmSync(DB_PATH, { force: true });
@@ -22,7 +26,20 @@ const DOORS = T0 + 30 * DAY;
 let clock = T0;
 const now = (): EpochMs => epochMs(clock);
 
-const app = buildApp({ location: DB_PATH, now });
+// The vault runs as its own service, on its own port, with its own keys. The API
+// reaches it over HTTP — the same boundary as production, not a function call.
+const vault = buildVault({
+  location: ':memory:',
+  masterKey: randomBytes(32),
+  receiptKey: randomBytes(32),
+  serviceToken: 'seed-token',
+  now: () => clock,
+});
+await vault.server.listen({ port: 0, host: '127.0.0.1' });
+const vaultUrl = `http://127.0.0.1:${vault.server.addresses()[0]?.port}`;
+
+// Note: no devMode. Every fan below enrols for real — consent, challenge, vault.
+const app = buildApp({ location: DB_PATH, now, vault: httpVaultClient(vaultUrl, 'seed-token') });
 await app.server.ready();
 
 const post = (url: string, payload: unknown) => app.server.inject({ method: 'POST', url, payload: payload as object });
@@ -93,16 +110,45 @@ console.log(`  capacity     ${event.capacity.toLocaleString('en-IN')}  ·  GA ${
 
 // ─── fans ────────────────────────────────────────────────────────────────────
 
+/** Consent, challenge, capture, enrol — the real path, for every fan. */
+async function enrolFan(identityId: string, faceVector: ReturnType<typeof face>, jitter = 0.2) {
+  await post(`/v1/identities/${identityId}/consents`, { purposes: ['biometric_enrolment'] });
+  const challenge = (await post(`/v1/identities/${identityId}/enrolment/challenge`, {})).json();
+  return post(`/v1/identities/${identityId}/enrolment`, {
+    scope: 'global',
+    vector: [...capture(faceVector, jitter)],
+    liveness: { challengeId: challenge.id, nonce: challenge.nonce, passiveScore: 0.96, actionCompleted: true },
+  });
+}
+
 const FANS = 40;
 const fans: string[] = [];
+let flagged = 0;
 for (let i = 0; i < FANS; i += 1) {
-  const r = await post('/v1/identities', { ageYears: 19 + (i % 30) });
-  fans.push(r.json().identityId);
+  const id = (await post('/v1/identities', { ageYears: 19 + (i % 30) })).json().identityId;
+  // Fans 30 and 31 are the same person on two accounts — a scalper farming
+  // identities to beat the per-identity purchase cap.
+  const who = i === 31 ? face(30) : face(i);
+  const enrolled = await enrolFan(id, who, i === 31 ? 0.18 : 0.2);
+  if (enrolled.json().dedupe?.status === 'review') flagged += 1;
+  fans.push(id);
 }
-// One fan who never finished enrolment, to exercise the refusal path.
-const unenrolled = (await post('/v1/identities', { enrolled: false })).json().identityId;
 
-console.log(`  ${FANS} enrolled fans, 1 unenrolled`);
+// One fan who gave consent but never completed the capture.
+const unenrolled = (await post('/v1/identities', {})).json().identityId;
+
+// And one who tried to skip the camera entirely by POSTing a template.
+const forged = (await post('/v1/identities', {})).json().identityId;
+await post(`/v1/identities/${forged}/consents`, { purposes: ['biometric_enrolment'] });
+const replay = await post(`/v1/identities/${forged}/enrolment`, {
+  scope: 'global',
+  vector: [...capture(face(1))],
+  liveness: { challengeId: 'chl_invented', nonce: 'made-up', passiveScore: 1, actionCompleted: true },
+});
+
+console.log(`  ${FANS} fans enrolled through the vault, ${flagged} flagged for review`);
+console.log(`  template POSTed without a challenge: ${replay.statusCode} ${replay.json().error?.code}`);
+console.log(`  bundled consent form: ${(await post(`/v1/identities/${unenrolled}/consents`, { purposes: ['terms_of_service', 'biometric_enrolment'] })).json().error?.code}`);
 
 // ─── primary sales ───────────────────────────────────────────────────────────
 
@@ -249,8 +295,27 @@ for (const d of recon.doubleEntries) {
   console.log(`      ${d.ticketId} at ${lanes.join(' then ')}`);
 }
 
+// ─── the right to be forgotten ───────────────────────────────────────────────
+
+const leaver = fans[FANS - 1] as string;
+const withdrawal = (await post(`/v1/identities/${leaver}/consents/biometric_enrolment/withdraw`, {})).json();
+
+console.log(`\n  consent withdrawal`);
+console.log(`    templates destroyed  ${withdrawal.receipt.deletedCount}`);
+console.log(`    receipt              ${withdrawal.receipt.receiptId}`);
+console.log(`    digest verifies      ${vault.store.verifyReceipt(withdrawal.receipt) ? 'yes' : 'NO — investigate'}`);
+console.log(`    tampered digest      ${vault.store.verifyReceipt({ ...withdrawal.receipt, deletedCount: 99 }) ? 'ACCEPTED — BUG' : 'rejected'}`);
+console.log(`    still enrolled       ${vault.store.isEnrolled(leaver, 'global') ? 'YES — BUG' : 'no'}`);
+
+// The consent ledger keeps the grant. What they agreed to, and when, outlives
+// the permission itself — that history is the artefact a regulator asks for.
+const ledger = (await get(`/v1/identities/${leaver}/consents`)).json();
+console.log(`    ledger rows kept     ${ledger.history.length} (grant + withdrawal)`);
+
 console.log(`\n  database written to ${DB_PATH}`);
 console.log(`  start the API against it with:  npm run dev\n`);
 
 await app.server.close();
+await vault.server.close();
+vault.store.close();
 app.db.close();

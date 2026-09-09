@@ -220,7 +220,11 @@ export function policyHash(event: {
 // ─── repositories ────────────────────────────────────────────────────────────
 
 export class Repo {
-  constructor(readonly db: Db) {}
+  readonly consents: ConsentRepo;
+
+  constructor(readonly db: Db) {
+    this.consents = new ConsentRepo(db);
+  }
 
   // ─ organizers & identities ─
 
@@ -759,6 +763,59 @@ export class Repo {
       status,
       body,
       now,
+    );
+  }
+}
+
+// ─── consent (appended for M2) ───────────────────────────────────────────────
+
+export interface ConsentRow {
+  consent_id: string;
+  identity_id: string;
+  purpose: string;
+  text_version: string;
+  granted_at: number | null;
+  withdrawn_at: number | null;
+  created_at: number;
+}
+
+/**
+ * Consent repository methods.
+ *
+ * There is deliberately no `update` and no `delete` here. Consent is an
+ * append-only ledger: a withdrawal is a new row. If a future change needs to
+ * "fix" a consent record, the answer is another row, because the history is the
+ * artefact a regulator asks for.
+ */
+export class ConsentRepo {
+  constructor(private readonly db: Db) {}
+
+  append(record: {
+    id: string;
+    identityId: string;
+    purpose: string;
+    textVersion: string;
+    grantedAt?: number;
+    withdrawnAt?: number;
+    now: number;
+  }): void {
+    this.db.run(
+      `INSERT INTO consents (consent_id, identity_id, purpose, text_version, granted_at, withdrawn_at, created_at)
+       VALUES (?,?,?,?,?,?,?)`,
+      record.id,
+      record.identityId,
+      record.purpose,
+      record.textVersion,
+      record.grantedAt ?? null,
+      record.withdrawnAt ?? null,
+      record.now,
+    );
+  }
+
+  forIdentity(identityId: string): ConsentRow[] {
+    return this.db.all<ConsentRow>(
+      'SELECT * FROM consents WHERE identity_id = ? ORDER BY created_at, rowid',
+      identityId,
     );
   }
 }

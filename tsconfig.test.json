@@ -1,0 +1,30 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "composite": false,
+    "declaration": false,
+    "declarationMap": false,
+    "types": [
+      "node"
+    ],
+    "paths": {
+      "@rexell/domain": [
+        "./packages/domain/src/index.ts"
+      ],
+      "@rexell/db": [
+        "./packages/db/src/index.ts"
+      ],
+      "@rexell/biometrics": [
+        "./packages/biometrics/src/index.ts"
+      ]
+    }
+  },
+  "include": [
+    "packages/*/src/**/*.ts",
+    "packages/*/test/**/*.ts",
+    "apps/*/src/**/*.ts",
+    "apps/*/test/**/*.ts",
+    "scripts/**/*.ts"
+  ]
+}

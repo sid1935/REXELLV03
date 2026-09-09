@@ -6,7 +6,9 @@ import { Db, Repo } from '@rexell/db';
 import { HttpError, errorBody } from './errors.js';
 import { registerIdempotency } from './idempotency.js';
 import { commerceRoutes } from './routes/commerce.js';
+import { identityRoutes } from './routes/identity.js';
 import { gateRoutes } from './routes/gate.js';
+import type { VaultClient } from './vault-client.js';
 
 export interface AppOptions {
   /** Where SQLite lives. `:memory:` for tests. */
@@ -21,6 +23,16 @@ export interface AppOptions {
    */
   now?: () => EpochMs;
   logger?: boolean;
+  /** The biometric vault. Without one, enrolment routes answer 503. */
+  vault?: VaultClient;
+  /**
+   * Dev affordance: lets POST /v1/identities mark an identity enrolled without
+   * going near the vault, so tests about commerce do not have to stand one up.
+   *
+   * Off by default and never set by `server.ts`. With it off, the only way to
+   * become enrolled is a real challenge-plus-consent enrolment through the vault.
+   */
+  devMode?: boolean;
 }
 
 export interface App {
@@ -55,7 +67,8 @@ export function buildApp(options: AppOptions = {}): App {
 
   server.get('/health', async () => ({ ok: true, at: now() }));
 
-  commerceRoutes(server, { repo, now });
+  commerceRoutes(server, { repo, now, devMode: options.devMode ?? false });
+  identityRoutes(server, { repo, now, vault: options.vault });
   gateRoutes(server, { repo, now });
 
   return { server, db, repo };

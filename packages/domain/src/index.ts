@@ -11,6 +11,7 @@ export * from './money.js';
 export * from './ids.js';
 export * from './time.js';
 export * from './result.js';
+export * from './consent.js';
 export * from './event.js';
 export * from './ticket.js';
 export * from './splits.js';

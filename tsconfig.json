@@ -5,7 +5,13 @@
       "path": "./packages/domain"
     },
     {
+      "path": "./packages/biometrics"
+    },
+    {
       "path": "./packages/db"
+    },
+    {
+      "path": "./apps/vault"
     },
     {
       "path": "./apps/api"

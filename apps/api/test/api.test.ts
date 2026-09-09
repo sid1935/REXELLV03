@@ -90,7 +90,9 @@ async function buyTicket(identityId: string, tierId = 'tier_ga'): Promise<string
 
 beforeEach(async () => {
   clock = T0;
-  app = buildApp({ now });
+  // devMode lets these tests mint enrolled identities without standing up a
+  // vault. The enrolment path itself is covered in enrolment.test.ts.
+  app = buildApp({ now, devMode: true });
   await app.server.ready();
   const created = await post('/v1/events', { event: eventPayload() });
   expect(created.statusCode).toBe(201);
@@ -111,7 +113,7 @@ describe('events', () => {
 
     // Same terms, different name → same hash. The hash commits to the deal, not
     // the marketing copy.
-    const second = buildApp({ now });
+    const second = buildApp({ now, devMode: true });
     await second.server.ready();
     const renamed = {
       ...eventPayload(),

@@ -46,6 +46,17 @@ const STATUS: Readonly<Record<RejectionCode, number>> = {
   TOO_LATE: 409,
   WRONG_GATE: 409,
 
+  // consent
+  CONSENT_REQUIRED: 403,
+  CONSENT_WITHDRAWN: 403,
+  CONSENT_STALE: 409,
+  CONSENT_BUNDLED: 422,
+
+  // enrolment
+  LIVENESS_FAILED: 403,
+  ALREADY_ENROLLED: 409,
+  MODEL_VERSION_MISMATCH: 409,
+
   INVALID_POLICY: 400,
 };
 

@@ -44,6 +44,15 @@ export type RejectionCode =
   | 'TOO_EARLY'
   | 'TOO_LATE'
   | 'WRONG_GATE'
+  // consent
+  | 'CONSENT_REQUIRED'
+  | 'CONSENT_WITHDRAWN'
+  | 'CONSENT_STALE'
+  | 'CONSENT_BUNDLED'
+  // enrolment
+  | 'LIVENESS_FAILED'
+  | 'ALREADY_ENROLLED'
+  | 'MODEL_VERSION_MISMATCH'
   // configuration
   | 'INVALID_POLICY';
 

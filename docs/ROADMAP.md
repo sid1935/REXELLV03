@@ -85,14 +85,16 @@ means migrating live ticket data. Getting them right now costs a few days.
 
 ---
 
-### M2 — Identity and enrolment `← we are here`
+### M2 — Identity and enrolment ✅ done `187 tests green`
 
 **Ships**
 - `identityId` / `personId` / `templateRef` separation enforced by types
 - Vault service as a separate process with no read API — only `match()` and `enrol()`
 - Versioned, unbundled consent records with withdrawal
 - 1:N dedupe within a bounded scope, producing review flags rather than blocks
-- In-browser embedding + liveness challenge (prototype grade)
+- Liveness as a server-issued challenge protocol: random nonce, single use, short TTL, constant-time compare
+- Envelope encryption of every template under a master key the application plane never sees
+- **Deferred to M4:** the in-browser camera and embedding model. The challenge protocol and the vector interface are built and tested; wiring an actual model to a webcam belongs with the scanner PWA, which needs the same code, and none of the M2 exit criteria depend on it.
 
 **Exit criteria**
 - No application service can retrieve a template — enforced by an integration test
@@ -101,7 +103,7 @@ means migrating live ticket data. Getting them right now costs a few days.
 
 ---
 
-### M3 — Contracts and issuance
+### M3 — Contracts and issuance `← we are here`
 
 **Ships**
 - `TicketNFT` with bound and capped modes, no free-transfer path

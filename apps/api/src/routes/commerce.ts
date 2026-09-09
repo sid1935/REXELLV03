@@ -23,6 +23,7 @@ export const HOLD_TTL_MS = 8 * MINUTE;
 interface Deps {
   repo: Repo;
   now: () => EpochMs;
+  devMode: boolean;
 }
 
 function purchaserContext(repo: Repo, identity: string, eventId: string): PurchaserContext {
@@ -66,18 +67,22 @@ function tierView(tier: TicketTier, availability: { sold: number; held: number }
   };
 }
 
-export function commerceRoutes(app: FastifyInstance, { repo, now }: Deps): void {
+export function commerceRoutes(app: FastifyInstance, { repo, now, devMode }: Deps): void {
   // ─ identities ─
 
   app.post<{ Body: { enrolled?: boolean; ageYears?: number } }>('/v1/identities', async (req, reply) => {
+    // Outside dev mode a new identity is NOT enrolled, whatever the body says.
+    // Enrolment is a challenge, a consent record and a vault round trip — it is
+    // not a boolean a client can assert about itself.
+    const enrolled = devMode ? req.body?.enrolled !== false : false;
     const id = repo.createIdentity(
       {
-        ...(req.body?.enrolled !== undefined ? { enrolled: req.body.enrolled } : {}),
+        enrolled,
         ...(req.body?.ageYears !== undefined ? { ageYears: req.body.ageYears } : {}),
       },
       now(),
     );
-    return reply.code(201).send({ identityId: id });
+    return reply.code(201).send({ identityId: id, enrolled });
   });
 
   // ─ events ─

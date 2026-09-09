@@ -13,6 +13,7 @@ export default defineConfig({
     alias: {
       '@rexell/domain': src('./packages/domain/src/index.ts'),
       '@rexell/db': src('./packages/db/src/index.ts'),
+      '@rexell/biometrics': src('./packages/biometrics/src/index.ts'),
     },
   },
   test: { include: ['**/test/**/*.test.ts'], environment: 'node' },

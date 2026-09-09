@@ -62,10 +62,12 @@ millisecond.
 ## Layout, as built
 
 ```
-packages/domain/   business rules — no I/O, no dependencies, no clock
-packages/db/       schema and repositories — owns every SQL statement
-apps/api/          Fastify HTTP surface over the two above
-scripts/seed.ts    builds the 12,000-cap festival and drives a night through it
+packages/domain/     business rules — no I/O, no dependencies, no clock
+packages/biometrics/ face vectors, thresholds, liveness challenges, template sealing
+packages/db/         schema and repositories — owns every SQL statement
+apps/api/            Fastify HTTP surface over the domain
+apps/vault/          the biometric vault — separate process, separate keys, no read path
+scripts/seed.ts      builds the 12,000-cap festival and drives a night through it
 ```
 
 ## Try it
@@ -74,10 +76,12 @@ scripts/seed.ts    builds the 12,000-cap festival and drives a night through it
 npm run seed
 ```
 
-Creates the Sunburn Weekender from the business plan, sells 79 tickets, runs ten
-capped resales, refuses a scalper at ₹6,000 and a VIP resale outright, then
-simulates a night at the gate and reconciles it. Every number it prints is
-computed, not hardcoded.
+Stands up the vault on its own port, enrols forty fans through it (consent →
+challenge → capture → dedupe), refuses a template POSTed without a challenge and
+a consent form that bundles biometrics with terms of service, sells 79 tickets,
+runs ten capped resales, refuses a scalper at ₹6,000 and a VIP resale outright,
+simulates a night at the gate, reconciles it, and finally withdraws one fan's
+consent and verifies the deletion receipt. Every number it prints is computed.
 
 ## Where the invariants are enforced
 
@@ -103,3 +107,38 @@ constraints in the schema:
    failure only surfaces at a turnstile.
 3. **Failed responses are never cached against an idempotency key.** A `SOLD_OUT`
    must stay retryable, because a hold expiring puts that inventory back.
+
+## The vault boundary
+
+`apps/vault` is the only thing that ever holds a face template, and it has no
+route that returns one. Not to the API, not to an operator, not to anybody. What
+callers get back is a boolean and a score.
+
+Three tests hold that line, in `apps/vault/test/no-read-path.test.ts`:
+
+1. The router is enumerated at runtime and asserted to contain no read-shaped GET.
+2. Every endpoint response is scanned for vector-shaped data — named fields and
+   bare long numeric arrays alike, because a leak with an innocuous field name is
+   still a leak.
+3. The vault's `package.json` is asserted not to depend on `@rexell/db` or
+   `@rexell/domain`. Without that edge, no future change can join a template to a
+   name by importing its way there.
+
+The API side mirrors it: `VaultClient` declares its own wire types rather than
+importing the vault's, and has no method capable of fetching a template.
+
+### Why templates are not hashed
+
+Two captures of one face produce different vectors — `packages/biometrics` has a
+test asserting exactly that, and exports no equality function at all. Comparison
+is cosine similarity against a stored template, which is why the template has to
+live somewhere, which is why that somewhere is a vault with no read path. Hashing
+a face and putting the hash on chain does not work and would be unrevocable if it
+did.
+
+### Consent
+
+Append-only, purpose-scoped, and versioned. A withdrawal is a new row, never an
+update — the record of what was agreed to and when outlives the permission. Asking
+for biometric consent bundled with anything else is a 422 before it reaches the
+database.
