@@ -32,7 +32,7 @@ most fun to build.
 | Monorepo | npm workspaces | Built into npm 11, zero install. Move to pnpm if install time hurts. |
 | Language | TypeScript, strict | Shared types across api / web / gate is the main win. |
 | Tests | Vitest | Fast, no config, same runner everywhere. |
-| Persistence (dev) | SQLite via Drizzle | No Docker on the dev machine. Schema written Postgres-portable — same Drizzle schema targets Postgres in staging. |
+| Persistence (dev) | SQLite via built-in `node:sqlite`, hand-written SQL | No Docker and no native build on the dev machine. Drizzle was the plan and was dropped: the interesting concurrency in this system is a handful of conditional UPDATEs whose `changes` count is the correctness guard, and an ORM makes those harder to read, not easier. Schema is Postgres-portable by a mechanical translation documented in `schema.ts`. |
 | API | Fastify | Lowest overhead per request; the onsale path is latency-bound. |
 | Web | Next.js (App Router) | Organizer console is read-heavy and SSR-friendly. |
 | Gate client | PWA first, native Android later | A browser PWA proves the flow. Native is required before a real event for camera control, kiosk mode and offline storage guarantees. |
@@ -71,9 +71,9 @@ means migrating live ticket data. Getting them right now costs a few days.
 ### M1 — Persistence and API ✅ done `103 tests green`
 
 **Ships**
-- Drizzle schema for the eleven core entities (architecture §10)
-- Repositories and a unit-of-work boundary
-- Fastify API: events, tiers, orders, tickets, listings, entry
+- Schema for the eleven core entities (architecture §10), with the two money/capacity invariants also enforced as CHECK constraints
+- Repositories and a transaction boundary
+- Fastify API: events, orders, tickets, listings, settlement, manifest, deltas, attestations, reconciliation
 - Idempotency keys on every write endpoint
 - Inventory holds with TTL (in-memory now, Redis later)
 - Seed script producing a realistic 12,000-capacity event
