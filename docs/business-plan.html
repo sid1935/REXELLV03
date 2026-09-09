@@ -1,0 +1,796 @@
+<title>ReXell Business Plan</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap">
+<style>
+:root{
+  --paper:#E8EDEB; --surface:#FCFCFB; --surface-2:#F1F5F3; --sunk:#DFE7E4;
+  --ink:#0E1513; --ink-2:#394744; --ink-3:#6C7C78;
+  --rule:#C4D0CD; --rule-2:#DCE4E1;
+  --teal:#0E6E63; --teal-wash:#DCEAE7;
+  --hot:#C43A12; --hot-wash:#F8E4DC;
+  --ok:#1C7A50;
+  --s1:#0E8C7C; --s2:#D8480F; --s3:#3B5BDB;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --paper:#0B1110; --surface:#131A19; --surface-2:#182120; --sunk:#0E1514;
+    --ink:#E8EEEC; --ink-2:#AFBDB9; --ink-3:#7C8B87;
+    --rule:#2B3634; --rule-2:#212B29;
+    --teal:#4FBFAF; --teal-wash:#11302C;
+    --hot:#FF7A45; --hot-wash:#331810;
+    --ok:#41B87A;
+    --s1:#1E9D8E; --s2:#E8661F; --s3:#6480E8;
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#0B1110; --surface:#131A19; --surface-2:#182120; --sunk:#0E1514;
+  --ink:#E8EEEC; --ink-2:#AFBDB9; --ink-3:#7C8B87;
+  --rule:#2B3634; --rule-2:#212B29;
+  --teal:#4FBFAF; --teal-wash:#11302C;
+  --hot:#FF7A45; --hot-wash:#331810;
+  --ok:#41B87A;
+  --s1:#1E9D8E; --s2:#E8661F; --s3:#6480E8;
+}
+*{box-sizing:border-box}
+body{
+  background:var(--paper); color:var(--ink);
+  font-family:"Source Serif 4",Georgia,"Times New Roman",serif;
+  font-size:17px; line-height:1.62; margin:0;
+  -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:1180px;margin:0 auto;padding:0 28px}
+h1,h2,h3,h4{font-family:Archivo,"Helvetica Neue",Arial,sans-serif;text-wrap:balance}
+.mono,code,th,.tag,.meta dt{font-family:"IBM Plex Mono",ui-monospace,"Courier New",monospace}
+
+.mast{border-bottom:1px solid var(--rule);background:var(--surface)}
+.mast .wrap{padding-top:46px;padding-bottom:34px}
+.eyebrow{font-family:"IBM Plex Mono",monospace;font-size:11.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--teal);display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+.eyebrow span{color:var(--ink-3)}
+h1{font-size:clamp(33px,5.2vw,60px);line-height:1.03;font-weight:800;letter-spacing:-.026em;margin:16px 0 0;max-width:22ch}
+h1 em{font-style:normal;color:var(--teal)}
+.lede{font-size:20px;line-height:1.5;color:var(--ink-2);max-width:63ch;margin:20px 0 0}
+.meta{display:grid;grid-template-columns:repeat(auto-fit,minmax(168px,1fr));margin:34px 0 0;border-top:1px solid var(--rule-2)}
+.meta div{padding:14px 16px 12px 0;border-right:1px solid var(--rule-2)}
+.meta div:last-child{border-right:0}
+.meta dt{font-size:10.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--ink-3);margin:0 0 4px}
+.meta dd{margin:0;font-size:14.5px;font-family:Archivo,sans-serif;font-weight:600;color:var(--ink)}
+
+.perf{position:relative;height:1px;border-top:1.5px dashed var(--rule);margin:14px 0 0}
+.perf::before,.perf::after{content:"";position:absolute;top:-6px;width:11px;height:11px;border-radius:50%;background:var(--paper);border:1.5px dashed var(--rule)}
+.perf::before{left:-5px}
+.perf::after{right:-5px}
+
+main{padding:0 0 90px}
+.sec{display:grid;grid-template-columns:104px minmax(0,1fr);gap:28px;padding:44px 0 8px;border-top:1px solid var(--rule-2)}
+.sec.first{border-top:0}
+.rail{font-family:"IBM Plex Mono",monospace;font-size:11px;letter-spacing:.1em;color:var(--ink-3);text-transform:uppercase;position:sticky;top:16px;align-self:start;line-height:1.5}
+.rail b{display:block;font-weight:600;font-size:22px;color:var(--teal);letter-spacing:0;margin-bottom:6px}
+h2{font-size:29px;font-weight:700;letter-spacing:-.019em;margin:0 0 6px;max-width:30ch}
+h3{font-size:17.5px;font-weight:700;margin:34px 0 8px;color:var(--ink)}
+h3 .n{font-family:"IBM Plex Mono",monospace;color:var(--teal);font-weight:500;margin-right:9px;font-size:15px}
+p{margin:0 0 15px;max-width:70ch}
+.sub{color:var(--ink-3);font-size:15px;max-width:70ch;margin:0 0 22px}
+ul,ol{max-width:70ch;padding-left:20px;margin:0 0 16px}
+li{margin:0 0 8px}
+li::marker{color:var(--ink-3)}
+strong{font-weight:600;color:var(--ink)}
+code{background:var(--surface-2);border:1px solid var(--rule-2);border-radius:3px;padding:1px 5px;font-size:13.5px;color:var(--teal)}
+a{color:var(--teal)}
+.tag{display:inline-block;font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;padding:2px 7px;border-radius:2px;border:1px solid var(--rule);color:var(--ink-2);background:var(--surface-2)}
+.tag.on{border-color:var(--teal);color:var(--teal);background:var(--teal-wash)}
+
+.toc{columns:2;column-gap:40px;list-style:none;padding:0;max-width:none;margin:6px 0 0}
+.toc li{break-inside:avoid;margin:0;border-bottom:1px solid var(--rule-2);padding:7px 0;display:flex;gap:12px;font-size:15px}
+.toc .mono{color:var(--teal);font-size:13px;min-width:22px}
+.toc a{text-decoration:none;color:var(--ink)}
+.toc a:hover{text-decoration:underline}
+
+.tw{overflow-x:auto;margin:0 0 22px;border:1px solid var(--rule);background:var(--surface)}
+table{border-collapse:collapse;width:100%;font-size:14.5px;min-width:560px}
+th{text-align:left;font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;font-weight:600;color:var(--ink-3);padding:11px 14px;border-bottom:1px solid var(--rule);background:var(--surface-2);vertical-align:bottom}
+td{padding:11px 14px;border-bottom:1px solid var(--rule-2);vertical-align:top;color:var(--ink-2);line-height:1.5}
+tr:last-child td{border-bottom:0}
+td:first-child{color:var(--ink);font-family:Archivo,sans-serif;font-weight:600;font-size:14px}
+th.n,td.n{font-variant-numeric:tabular-nums;text-align:right;font-family:"IBM Plex Mono",monospace}
+td.m{font-size:13px;font-family:"IBM Plex Mono",monospace;font-variant-numeric:tabular-nums}
+tr.tot td{background:var(--surface-2);font-weight:600;color:var(--ink);border-top:1px solid var(--rule)}
+caption{caption-side:bottom;text-align:left;font-size:12.5px;color:var(--ink-3);padding:10px 14px;border-top:1px solid var(--rule-2)}
+
+figure{margin:8px 0 26px;background:var(--surface);border:1px solid var(--rule);padding:22px 20px 0}
+figure svg{display:block;width:100%;height:auto}
+figcaption{font-size:13px;color:var(--ink-3);border-top:1px solid var(--rule-2);margin:16px -20px 0;padding:12px 20px;line-height:1.55}
+figcaption b{color:var(--ink-2);font-family:Archivo,sans-serif;font-weight:600}
+.figscroll{overflow-x:auto}
+.legend{display:flex;gap:20px;flex-wrap:wrap;font-family:"IBM Plex Mono",monospace;font-size:11.5px;color:var(--ink-2);margin:0 0 4px;padding:0 0 14px}
+.legend i{display:inline-block;width:11px;height:11px;margin-right:7px;vertical-align:-1px}
+
+.note{border-left:3px solid var(--teal);background:var(--surface);padding:16px 18px;margin:0 0 22px;max-width:74ch}
+.note.warn{border-left-color:var(--hot)}
+.note h4{margin:0 0 6px;font-size:11.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--teal);font-family:"IBM Plex Mono",monospace;font-weight:600}
+.note.warn h4{color:var(--hot)}
+.note p{margin:0;font-size:15.5px;max-width:66ch}
+.note p + p{margin-top:10px}
+
+.kv{display:grid;grid-template-columns:repeat(auto-fit,minmax(148px,1fr));gap:1px;background:var(--rule-2);border:1px solid var(--rule);margin:0 0 24px}
+.kv > div{background:var(--surface);padding:14px 16px}
+.kv dt{font-family:"IBM Plex Mono",monospace;font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3);margin-bottom:5px}
+.kv dd{margin:0;font-family:Archivo,sans-serif;font-weight:700;font-size:22px;letter-spacing:-.015em;font-variant-numeric:tabular-nums}
+.kv dd small{font-weight:500;font-size:12.5px;color:var(--ink-3);display:block;letter-spacing:0;font-family:"Source Serif 4",serif;margin-top:3px;line-height:1.4}
+
+footer{border-top:1px solid var(--rule);background:var(--surface);padding:26px 0 40px;font-size:13.5px;color:var(--ink-3)}
+footer .wrap{display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap}
+:focus-visible{outline:2px solid var(--teal);outline-offset:2px}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+@media (max-width:760px){
+  .sec{grid-template-columns:1fr;gap:10px;padding-top:34px}
+  .rail{position:static;display:flex;gap:10px;align-items:baseline}
+  .rail b{margin:0;font-size:16px}
+  .toc{columns:1}
+  body{font-size:16px}
+}
+</style>
+
+<header class="mast">
+  <div class="wrap">
+    <div class="eyebrow">Business Plan <span>/</span> <span>ReXell Technologies</span> <span>/</span> <span>Pre-seed &middot; 09 Sep 2026</span></div>
+    <h1>The scalper's margin is <em>somebody's revenue</em>. It should be the organizer's.</h1>
+    <p class="lede">Every rupee of scalper markup is money the artist, the venue and the promoter created and did not capture &mdash; and every fake ticket is a fan who will not come back. ReXell makes tickets un-scalpable by binding them to a person, then sells organizers the secondary market they never controlled.</p>
+    <dl class="meta">
+      <div><dt>Stage</dt><dd>Pre-revenue, in build</dd></div>
+      <div><dt>Raising</dt><dd>$750k pre-seed</dd></div>
+      <div><dt>Wedge market</dt><dd>India festivals &amp; sport</dd></div>
+      <div><dt>Contact</dt><dd>contact@rexell.tech</dd></div>
+    </dl>
+  </div>
+</header>
+
+<main class="wrap">
+
+<section class="sec first" id="summary">
+  <div class="rail"><b>00</b>Summary</div>
+  <div>
+    <h2>Executive summary</h2>
+    <div class="kv">
+      <div><dt>Traction</dt><dd>$50k<small>Sponsorship commitments secured by founder-led sales, pre-product</small></dd></div>
+      <div><dt>Wedge</dt><dd>40<small>Target events in the first 12 months of operation</small></dd></div>
+      <div><dt>Take rate</dt><dd>6.7%<small>Blended platform revenue on gross ticket value</small></dd></div>
+      <div><dt>Contribution</dt><dd>81%<small>Per-event margin at steady state, self-serve</small></dd></div>
+    </div>
+
+    <p><strong>The problem.</strong> Live events lose money and goodwill at both ends of the ticket. Counterfeits and duplicated barcodes turn up at the gate; bots and scalpers buy inventory at face value and resell it at multiples, capturing margin that the organizer, the artist and the venue generated. The organizer sees none of that uplift, absorbs the support cost, and takes the reputational damage when a fan is turned away holding a ticket they paid three times over for.</p>
+
+    <p><strong>The product.</strong> ReXell issues each ticket as a blockchain-recorded entitlement bound to the buyer's biometric identity. There is no barcode to copy, no PDF to forward and no screenshot to sell, because the credential is the fan's face. Organizers switch resale on or off per ticket tier; when it is on, they set a price ceiling, a window and a commission, and a smart contract splits every resale automatically. An AI layer scores every purchase request in under 50 milliseconds to keep bot farms out of the queue.</p>
+
+    <p><strong>The business.</strong> Three revenue lines on the same transaction: a per-ticket service fee from the fan, a platform fee on primary gross value from the organizer, and a commission on every resale &mdash; the last of which is revenue that does not exist for the organizer today. At a mid-size festival that is roughly <strong>&#8377;14.4 lakh of revenue on &#8377;2.2 crore of gross ticket value</strong>, at an 81% contribution margin once field operations are self-serve.</p>
+
+    <p><strong>Why now.</strong> Three curves are crossing: biometric verification has become cheap and accurate enough to run on a mid-range Android phone; regulators in multiple markets are actively hostile to bot-driven resale; and live-event attendance in India, Southeast Asia and the Gulf is growing far faster than the ticketing infrastructure serving it. The incumbents in those markets compete on catalogue and discovery, not on trust at the gate.</p>
+
+    <p><strong>The ask.</strong> $750,000 pre-seed for 18 months of runway, to reach 60 events, $12M cumulative gross ticket value, and three anchor organizer contracts &mdash; with the technical co-founder hire as the first and most important use of the money.</p>
+
+    <div class="note warn">
+      <h4>How to read the numbers in this plan</h4>
+      <p>Market sizes marked with a tilde are planning estimates built from public industry reporting and bottom-up event maths, not commissioned research. The unit economics are modelled from a specified event and every input is shown so it can be argued with. Before this plan goes to a term sheet, the market figures should be replaced with sourced, dated citations and the per-event model validated against two real pilot events.</p>
+    </div>
+  </div>
+</section>
+
+<section class="sec" id="toc">
+  <div class="rail"><b>&mdash;</b>Contents</div>
+  <div>
+    <ol class="toc">
+      <li><span class="mono">01</span><a href="#problem">The problem and the leak</a></li>
+      <li><span class="mono">02</span><a href="#market">Market size</a></li>
+      <li><span class="mono">03</span><a href="#product">Product and what is defensible</a></li>
+      <li><span class="mono">04</span><a href="#model">Revenue model and pricing</a></li>
+      <li><span class="mono">05</span><a href="#unit">Unit economics, one event</a></li>
+      <li><span class="mono">06</span><a href="#projection">Three-year projection</a></li>
+      <li><span class="mono">07</span><a href="#gtm">Go-to-market</a></li>
+      <li><span class="mono">08</span><a href="#competition">Competition and positioning</a></li>
+      <li><span class="mono">09</span><a href="#regulatory">Regulatory reality</a></li>
+      <li><span class="mono">10</span><a href="#team">Team and hiring</a></li>
+      <li><span class="mono">11</span><a href="#roadmap">Roadmap and milestones</a></li>
+      <li><span class="mono">12</span><a href="#financials">Financial plan</a></li>
+      <li><span class="mono">13</span><a href="#kpi">Metrics that govern</a></li>
+      <li><span class="mono">14</span><a href="#risks">Risks and mitigations</a></li>
+      <li><span class="mono">15</span><a href="#ask">The ask</a></li>
+    </ol>
+  </div>
+</section>
+
+<div class="perf"></div>
+
+<section class="sec" id="problem">
+  <div class="rail"><b>01</b>Problem</div>
+  <div>
+    <h2>The problem and the leak</h2>
+    <p>Ticketing has an unusual failure: the product works, the money leaks. A sold-out show is a commercial success on paper while a large share of the value it created is harvested by parties who contributed nothing to it. Follow one ticket.</p>
+
+    <figure>
+      <div class="figscroll">
+      <svg viewBox="0 0 980 316" role="img" aria-label="Comparison of the money path for one ticket today, where a scalper captures a 3,800 rupee markup, against the ReXell path where a 220 rupee capped uplift is split between organizer, platform and rights-holder.">
+        <text x="20" y="20" font-family="IBM Plex Mono, monospace" font-size="10.5" fill="var(--hot)">TODAY &mdash; ONE TICKET, FACE VALUE 2,200</text>
+        <g stroke="var(--rule)" fill="var(--surface-2)">
+          <rect x="20" y="34" width="200" height="66"></rect>
+          <rect x="270" y="34" width="200" height="66"></rect>
+        </g>
+        <rect x="520" y="34" width="200" height="66" fill="var(--hot-wash)" stroke="var(--hot)" stroke-width="1.6"></rect>
+        <rect x="770" y="34" width="190" height="66" fill="var(--surface-2)" stroke="var(--rule)"></rect>
+        <g font-family="Archivo, sans-serif" font-size="12.5" font-weight="700" fill="var(--ink)">
+          <text x="34" y="58">Organizer prices it</text>
+          <text x="284" y="58">Bot buys at onsale</text>
+          <text x="534" y="58" fill="var(--hot)">Scalper resells</text>
+          <text x="784" y="58">Fan pays</text>
+        </g>
+        <g font-family="IBM Plex Mono, monospace" font-size="11" fill="var(--ink-3)">
+          <text x="34" y="80">2,200 face value</text><text x="34" y="94">no resale control</text>
+          <text x="284" y="80">2,200 &mdash; in 4 seconds</text><text x="284" y="94">across 60 farmed accounts</text>
+          <text x="534" y="80" fill="var(--hot)">6,000 asking price</text><text x="534" y="94" fill="var(--hot)">3,800 markup captured</text>
+          <text x="784" y="80">6,000, or nothing</text><text x="784" y="94">if the ticket is fake</text>
+        </g>
+        <g stroke="var(--ink-3)" stroke-width="1.2" marker-end="url(#arb)" fill="none">
+          <line x1="220" y1="67" x2="266" y2="67"></line>
+          <line x1="470" y1="67" x2="516" y2="67"></line>
+          <line x1="720" y1="67" x2="766" y2="67"></line>
+        </g>
+        <defs>
+          <marker id="arb" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0,0 L10,5 L0,10 z" fill="var(--ink-3)"></path>
+          </marker>
+        </defs>
+        <text x="20" y="126" font-family="IBM Plex Mono, monospace" font-size="11" fill="var(--hot)">3,800 leaves the industry. The artist, venue and promoter receive nothing, and absorb the support cost when the ticket is refused.</text>
+
+        <text x="20" y="176" font-family="IBM Plex Mono, monospace" font-size="10.5" fill="var(--teal)">WITH REXELL &mdash; SAME TICKET, RESALE CAPPED AT 110%</text>
+        <g stroke="var(--rule)" fill="var(--surface-2)">
+          <rect x="20" y="190" width="200" height="66"></rect>
+          <rect x="270" y="190" width="200" height="66"></rect>
+          <rect x="770" y="190" width="190" height="66"></rect>
+        </g>
+        <rect x="520" y="190" width="200" height="66" fill="var(--teal-wash)" stroke="var(--teal)" stroke-width="1.6"></rect>
+        <g font-family="Archivo, sans-serif" font-size="12.5" font-weight="700" fill="var(--ink)">
+          <text x="34" y="214">Organizer sets policy</text>
+          <text x="284" y="214">Fan buys, face bound</text>
+          <text x="534" y="214" fill="var(--teal)">Capped resale</text>
+          <text x="784" y="214">Second fan pays</text>
+        </g>
+        <g font-family="IBM Plex Mono, monospace" font-size="11" fill="var(--ink-3)">
+          <text x="34" y="236">cap 110%, commission 7%</text><text x="34" y="250">window, cooldown, caps</text>
+          <text x="284" y="236">bot score cleared</text><text x="284" y="250">one ticket per identity</text>
+          <text x="534" y="236" fill="var(--teal)">2,420 ceiling, enforced</text><text x="534" y="250" fill="var(--teal)">by the contract</text>
+          <text x="784" y="236">2,420, and gets in</text><text x="784" y="250">on their own face</text>
+        </g>
+        <g stroke="var(--ink-3)" stroke-width="1.2" marker-end="url(#arb)" fill="none">
+          <line x1="220" y1="223" x2="266" y2="223"></line>
+          <line x1="470" y1="223" x2="516" y2="223"></line>
+          <line x1="720" y1="223" x2="766" y2="223"></line>
+        </g>
+        <text x="20" y="282" font-family="IBM Plex Mono, monospace" font-size="11" fill="var(--teal)">The 220 uplift splits by policy: 169 organizer, 73 platform, 48 rights-holder. Nobody is priced out, and the margin stays in the industry.</text>
+        <text x="20" y="302" font-family="IBM Plex Mono, monospace" font-size="10" fill="var(--ink-3)">The commercial insight is not that scalping is unfair. It is that scalping is an uncaptured revenue line with a known price elasticity.</text>
+      </svg>
+      </div>
+      <figcaption><b>Figure 1.</b> ReXell does not simply suppress the secondary market &mdash; suppressing it destroys value for fans who genuinely cannot attend. It re-prices the secondary market and redirects its margin to the parties who created the event. That reframing is what makes this a revenue product for organizers rather than a compliance cost.</figcaption>
+    </figure>
+
+    <h3><span class="n">1.1</span>Who feels the pain, and how much</h3>
+    <div class="tw"><table>
+      <thead><tr><th style="width:20%">Party</th><th style="width:34%">What it costs them today</th><th>What they will pay to fix</th></tr></thead>
+      <tbody>
+        <tr><td>Promoters and festivals</td><td>Uncaptured resale margin, gate-fraud disputes, refund and chargeback handling, brand damage from a viral turned-away-fan video</td><td>A platform fee, willingly, if the resale commission line more than covers it. This is the buyer.</td></tr>
+        <tr><td>Artists and rights-holders</td><td>Their name drives the markup; they receive none of it, and fans blame them for prices they did not set</td><td>Influence, not money. An artist demanding ReXell of their promoter is the cheapest distribution channel available.</td></tr>
+        <tr><td>Venues and stadiums</td><td>Gate throughput, staffing at entry, liability when a counterfeit holder is refused</td><td>Per-lane hardware and faster entry. A secondary buyer with a real budget.</td></tr>
+        <tr><td>Fans</td><td>Paying multiples of face value, or paying and being refused at the gate</td><td>A modest service fee, in exchange for a ticket that is guaranteed to work. They already pay convenience fees today.</td></tr>
+        <tr><td>Sponsors</td><td>No verified identity behind an attendance number, so activation spend is measured badly</td><td>Verified attendance and audience analytics. A later, high-margin upsell.</td></tr>
+      </tbody>
+      <caption>The founder has already secured $50k of sponsorship commitments pre-product, which is evidence that the sponsor-side value is real and sellable early.</caption>
+    </table></div>
+  </div>
+</section>
+
+<div class="perf"></div>
+
+<section class="sec" id="market">
+  <div class="rail"><b>02</b>Market</div>
+  <div>
+    <h2>Market size</h2>
+    <p class="sub">Sized bottom-up from event counts and average ticket values rather than top-down from an industry headline, because the headline includes cinema and transport ticketing that ReXell does not serve.</p>
+    <div class="tw"><table>
+      <thead><tr><th style="width:12%">Layer</th><th style="width:30%">Definition</th><th class="n">Gross ticket value</th><th class="n">Platform revenue pool</th></tr></thead>
+      <tbody>
+        <tr><td>TAM</td><td>Global live music, festivals and spectator sport ticketing, primary plus secondary</td><td class="n">~$95B</td><td class="n">~$9.5B</td></tr>
+        <tr><td>SAM</td><td>The same categories in India, Southeast Asia and the Gulf &mdash; markets where gate fraud is acute and incumbents compete on catalogue, not trust</td><td class="n">~$6.4B</td><td class="n">~$640M</td></tr>
+        <tr><td>SOM</td><td>ReXell's realistic five-year share, FY31: mid-size festivals, regional leagues and college circuits, plus two enterprise white-label contracts</td><td class="n">~$350M</td><td class="n">~$25M</td></tr>
+      </tbody>
+      <caption>Revenue pool assumes a ~10% blended platform take across primary and secondary. Figures are planning estimates, not commissioned research &mdash; see the note in &sect;00.</caption>
+    </table></div>
+
+    <h3><span class="n">2.1</span>Why the wedge is the wedge</h3>
+    <p>India is the right first market for reasons that have nothing to do with the founder being here. Gate fraud at large domestic events is normalised rather than exceptional; the biggest ticketing platforms are discovery businesses with weak entry infrastructure; smartphone penetration and Android-first assumptions match the technology exactly; and biometric identity is culturally and legally established at national scale, which means face verification at a gate is unremarkable rather than alarming to a mainstream fan.</p>
+    <p>The counterweight is honest: average ticket prices are low, so revenue per event is lower than in Europe or North America, and the business only works at volume. That is precisely why the plan front-loads events over average deal size, and why the second market is the Gulf, where average ticket values are three to five times higher for a similar operational effort.</p>
+  </div>
+</section>
+
+<div class="perf"></div>
+
+<section class="sec" id="product">
+  <div class="rail"><b>03</b>Product</div>
+  <div>
+    <h2>Product and what is defensible</h2>
+    <p>Most of what ReXell does exists somewhere already. Rotating barcodes exist. Capped resale exists. Biometric stadium entry exists. NFT tickets exist. None of the players doing one of those things does the combination, and the combination is what changes the economics.</p>
+
+    <div class="tw"><table>
+      <thead><tr><th style="width:24%">Capability</th><th style="width:38%">What it does for the customer</th><th>How defensible, honestly</th></tr></thead>
+      <tbody>
+        <tr><td>Face as the ticket</td><td>Nothing to copy, forward, screenshot or forge. Entry in under a second. The person who bought it is the person who gets in.</td><td><span class="tag">low</span> The matching technology is licensable by anyone. The defensibility is in the operational track record of running it at a real gate without a queue collapse.</td></tr>
+        <tr><td>Organizer-programmable resale</td><td>A switch and three dials: on or off, price ceiling, window, commission. Enforced in the contract, not in the app.</td><td><span class="tag on">medium</span> Easy to copy technically, hard to copy commercially &mdash; it requires organizer trust and a settlement relationship.</td></tr>
+        <tr><td>Automated commission split</td><td>Resale revenue arrives without an invoice, a reconciliation call or a trust assumption. Independently verifiable.</td><td><span class="tag on">medium</span> The audit trail is a genuine sales asset when negotiating with a promoter who has been burned by a settlement dispute.</td></tr>
+        <tr><td>Bot defense at onsale</td><td>A queue that honest fans can actually win, and bulk acquisition that costs the scalper real money.</td><td><span class="tag on">high, with time</span> Detection improves with labelled outcomes, and only ReXell has the gate-denial and dedupe labels. This is the compounding moat.</td></tr>
+        <tr><td>Verified attendance data</td><td>Sponsors and organizers learn who actually turned up, not who bought.</td><td><span class="tag on">high</span> A dataset no competitor without identity binding can produce, and the highest-margin revenue line in the model.</td></tr>
+      </tbody>
+    </table></div>
+
+    <div class="note">
+      <h4>The defensibility argument in one sentence</h4>
+      <p>The technology is copyable and the moat is the data flywheel it produces: every gate denial, every dedupe link and every chargeback is a label that no competitor without identity binding can generate, and those labels are what make the bot model better each month. The plan should be defended on that basis, not on the biometrics.</p>
+    </div>
+  </div>
+</section>
+
+<div class="perf"></div>
+
+<section class="sec" id="model">
+  <div class="rail"><b>04</b>Model</div>
+  <div>
+    <h2>Revenue model and pricing</h2>
+    <p>Five lines, three of which bill on the same transaction. The pricing deliberately keeps the organizer's marginal cost near zero at signup &mdash; the platform fee is small and the resale commission is money they do not currently have &mdash; so the sales conversation is about upside rather than budget.</p>
+    <div class="tw"><table>
+      <thead><tr><th style="width:22%">Line</th><th style="width:20%">Price</th><th style="width:14%">Paid by</th><th>Note</th></tr></thead>
+      <tbody>
+        <tr><td>Fan service fee</td><td class="m">&#8377;99&ndash;&#8377;249 per ticket</td><td>Fan</td><td>Tiered by face value, roughly 4% effective. Benchmarked at or below prevailing convenience fees, and the fee buys a stated guarantee: a ticket that works or a full refund.</td></tr>
+        <tr><td>Platform fee</td><td class="m">1.5% of primary GMV</td><td>Organizer</td><td>Low by design. Its job is to make the contract a commercial relationship rather than a free pilot.</td></tr>
+        <tr><td>Resale commission</td><td class="m">3% of resale value</td><td>Split at source</td><td>The organizer sets their own 0&ndash;15% on top and keeps it. ReXell's 3% is charged on a transaction that today generates them nothing.</td></tr>
+        <tr><td>Gate kit</td><td class="m">&#8377;3,500 per lane per event</td><td>Organizer or venue</td><td>Rental, including a spare and a trained operator on pilot events. Bundled free in the Pro tier, which is how the tier upsell is sold.</td></tr>
+        <tr><td>Organizer software</td><td class="m">&#8377;0 / &#8377;25k per event / &#8377;6L+ annual</td><td>Organizer</td><td>Starter is free to remove the adoption barrier. Pro adds analytics, priority support and bundled hardware. Enterprise is a white-label annual licence for a league or a venue group.</td></tr>
+        <tr><td>Attendance analytics</td><td class="m">&#8377;15,000 per event</td><td>Organizer / sponsor</td><td>Near-zero marginal cost, sold post-event when the value is self-evident. Expected to become the highest-margin line by FY29.</td></tr>
+      </tbody>
+    </table></div>
+  </div>
+</section>
+
+<div class="perf"></div>
+
+<section class="sec" id="unit">
+  <div class="rail"><b>05</b>Unit economics</div>
+  <div>
+    <h2>Unit economics, one event</h2>
+    <p class="sub">A 12,000-capacity music festival, 85% sell-through, average face value &#8377;2,200, 12% of tickets resold once at the 110% ceiling. Every input is stated so it can be disputed.</p>
+
+    <div class="kv">
+      <div><dt>Gross ticket value</dt><dd>&#8377;2.24 cr<small>10,200 tickets sold plus &#8377;29.6L of resale volume</small></dd></div>
+      <div><dt>ReXell revenue</dt><dd>&#8377;14.36 L<small>6.4% blended take on primary gross value</small></dd></div>
+      <div><dt>Contribution</dt><dd>&#8377;11.62 L<small>81% at steady state; 62% on a staffed pilot event</small></dd></div>
+      <div><dt>Per ticket</dt><dd>&#8377;114<small>Contribution per ticket sold, steady state</small></dd></div>
+    </div>
+
+    <figure>
+      <div class="legend">
+        <span><i style="background:var(--s1)"></i>revenue in</span>
+        <span><i style="background:var(--s2)"></i>cost out</span>
+        <span><i style="background:var(--ink-2)"></i>subtotal</span>
+      </div>
+      <div class="figscroll">
+      <svg viewBox="0 0 980 348" role="img" aria-label="Waterfall of one event: fan service fees 10.10 lakh plus organizer platform fee 3.37 plus resale commission 0.89 gives revenue of 14.36 lakh, less 1.58 for cloud and biometrics, 0.94 for gate operations and 0.22 for support and fraud, leaving contribution of 11.62 lakh.">
+        <text x="20" y="22" font-family="IBM Plex Mono, monospace" font-size="10.5" fill="var(--ink-3)">&#8377; LAKH, ONE EVENT, STEADY-STATE COST BASE</text>
+        <g stroke="var(--rule-2)" stroke-width="1">
+          <line x1="80" y1="300" x2="960" y2="300" stroke="var(--rule)"></line>
+          <line x1="80" y1="248" x2="960" y2="248"></line>
+          <line x1="80" y1="196" x2="960" y2="196"></line>
+          <line x1="80" y1="144" x2="960" y2="144"></line>
+          <line x1="80" y1="92" x2="960" y2="92"></line>
+          <line x1="80" y1="40" x2="960" y2="40"></line>
+        </g>
+        <g font-family="IBM Plex Mono, monospace" font-size="10.5" fill="var(--ink-3)" text-anchor="end">
+          <text x="70" y="304">0</text><text x="70" y="252">3</text><text x="70" y="200">6</text>
+          <text x="70" y="148">9</text><text x="70" y="96">12</text><text x="70" y="44">15</text>
+        </g>
+        <g stroke="var(--ink-3)" stroke-width="1" stroke-dasharray="4 3" opacity="0.6">
+          <line x1="158" y1="125" x2="195" y2="125"></line>
+          <line x1="273" y1="66.5" x2="309" y2="66.5"></line>
+          <line x1="387" y1="51.1" x2="424" y2="51.1"></line>
+          <line x1="502" y1="51.1" x2="538" y2="51.1"></line>
+          <line x1="616" y1="78.5" x2="653" y2="78.5"></line>
+          <line x1="731" y1="94.8" x2="767" y2="94.8"></line>
+          <line x1="845" y1="98.6" x2="882" y2="98.6"></line>
+        </g>
+        <g fill="var(--s1)">
+          <rect x="80" y="125" width="78" height="175"><title>Fan service fees: +10.10 lakh</title></rect>
+          <rect x="195" y="66.5" width="78" height="58.4"><title>Organizer platform fee: +3.37 lakh</title></rect>
+          <rect x="309" y="51.1" width="78" height="15.4"><title>Resale commission: +0.89 lakh</title></rect>
+        </g>
+        <rect x="424" y="51.1" width="78" height="248.9" fill="var(--ink-2)"><title>Total revenue: 14.36 lakh</title></rect>
+        <g fill="var(--s2)">
+          <rect x="538" y="51.1" width="78" height="27.4"><title>Cloud, biometrics and chain: -1.58 lakh</title></rect>
+          <rect x="653" y="78.5" width="78" height="16.3"><title>Gate kit and field operations: -0.94 lakh</title></rect>
+          <rect x="767" y="94.8" width="78" height="3.8"><title>Support and fraud reserve: -0.22 lakh</title></rect>
+        </g>
+        <rect x="882" y="98.6" width="78" height="201.4" fill="var(--ink-2)"><title>Contribution: 11.62 lakh, 81 percent</title></rect>
+        <g font-family="IBM Plex Mono, monospace" font-size="12" fill="var(--ink)" text-anchor="middle" font-weight="500">
+          <text x="119" y="117">+10.10</text>
+          <text x="234" y="58">+3.37</text>
+          <text x="348" y="43">+0.89</text>
+          <text x="463" y="43">14.36</text>
+          <text x="577" y="43">&minus;1.58</text>
+          <text x="692" y="70">&minus;0.94</text>
+          <text x="806" y="87">&minus;0.22</text>
+          <text x="921" y="90">11.62</text>
+        </g>
+        <g font-family="IBM Plex Mono, monospace" font-size="10.5" fill="var(--ink-2)" text-anchor="middle">
+          <text x="119" y="318">Fan service</text><text x="119" y="332">fees</text>
+          <text x="234" y="318">Organizer</text><text x="234" y="332">platform fee</text>
+          <text x="348" y="318">Resale</text><text x="348" y="332">commission</text>
+          <text x="577" y="318">Cloud +</text><text x="577" y="332">biometrics</text>
+          <text x="692" y="318">Gate kit +</text><text x="692" y="332">field ops</text>
+          <text x="806" y="318">Support +</text><text x="806" y="332">fraud</text>
+        </g>
+        <g font-family="Archivo, sans-serif" font-size="11" fill="var(--ink)" text-anchor="middle" font-weight="700">
+          <text x="463" y="320">REVENUE</text>
+          <text x="921" y="320">CONTRIBUTION</text>
+          <text x="921" y="334" font-family="IBM Plex Mono, monospace" font-weight="400" fill="var(--ink-3)">81%</text>
+        </g>
+      </svg>
+      </div>
+      <figcaption><b>Figure 2.</b> The shape of this waterfall is the investment case: a software-margin business with a thin, mostly variable cost base. The one bar that grows dangerously with scale is <b>gate kit and field operations</b> &mdash; on a staffed pilot event it is roughly &#8377;3.4 lakh rather than &#8377;0.94, taking contribution from 81% to 62%. Getting organizers to run their own gates is therefore not a nice-to-have; it is the margin thesis.</figcaption>
+    </figure>
+
+    <h3><span class="n">5.1</span>Inputs and derivation</h3>
+    <div class="tw"><table>
+      <thead><tr><th style="width:40%">Input</th><th class="n">Value</th><th>Derivation</th></tr></thead>
+      <tbody>
+        <tr><td>Capacity &times; sell-through</td><td class="n">10,200</td><td>12,000 &times; 85%</td></tr>
+        <tr><td>Average face value</td><td class="n">&#8377;2,200</td><td>Blended across GA and VIP tiers</td></tr>
+        <tr><td>Primary gross value</td><td class="n">&#8377;224.4 L</td><td>10,200 &times; &#8377;2,200</td></tr>
+        <tr><td>Fan service fee</td><td class="n">&#8377;10.10 L</td><td>10,200 &times; &#8377;99 average</td></tr>
+        <tr><td>Organizer platform fee</td><td class="n">&#8377;3.37 L</td><td>1.5% of &#8377;224.4 L</td></tr>
+        <tr><td>Resale volume</td><td class="n">&#8377;29.6 L</td><td>1,224 resales (12%) &times; &#8377;2,420 ceiling</td></tr>
+        <tr><td>Resale commission to ReXell</td><td class="n">&#8377;0.89 L</td><td>3% of &#8377;29.6 L. The organizer's own 7% (&#8377;2.07 L) is theirs, not revenue here.</td></tr>
+        <tr class="tot"><td>Total revenue</td><td class="n">&#8377;14.36 L</td><td>6.4% of primary gross value</td></tr>
+        <tr><td>Cloud, biometrics, chain</td><td class="n">&#8377;1.58 L</td><td>Onsale burst compute &#8377;0.85 L, liveness and matching at &#8377;6 per enrolment, L2 gas and relayer &#8377;0.12 L</td></tr>
+        <tr><td>Gate kit and field ops</td><td class="n">&#8377;0.94 L</td><td>12 lanes at &#8377;4,500 amortised, plus one remote-supported operator</td></tr>
+        <tr><td>Support and fraud reserve</td><td class="n">&#8377;0.22 L</td><td>0.6% contact rate at &#8377;120 per contact, plus 0.15% chargeback reserve</td></tr>
+        <tr class="tot"><td>Contribution</td><td class="n">&#8377;11.62 L</td><td>81% margin. On a pilot event with three ReXell staff on site: &#8377;8.93 L, 62%.</td></tr>
+      </tbody>
+      <caption>Payment gateway fees are borne by the organizer out of settlement, as is standard, and are excluded from both sides of this model.</caption>
+    </table></div>
+  </div>
+</section>
+
+<div class="perf"></div>
+
+<section class="sec" id="projection">
+  <div class="rail"><b>06</b>Projection</div>
+  <div>
+    <h2>Three-year projection</h2>
+    <p>Growth is driven by event count, not by price. The revenue per event barely moves; what moves is how many gates ReXell is standing at, and how much of the mix comes from resale and analytics rather than primary fees.</p>
+    <figure>
+      <svg viewBox="0 0 700 332" role="img" aria-label="Revenue by fiscal year: 0.48 million dollars in FY27 across 40 events, 2.35 million in FY28 across 180 events, and 7.40 million in FY29 across 520 events.">
+        <text x="80" y="22" font-family="IBM Plex Mono, monospace" font-size="10.5" fill="var(--ink-3)">PLATFORM REVENUE, USD MILLIONS</text>
+        <g stroke="var(--rule-2)" stroke-width="1">
+          <line x1="80" y1="280" x2="660" y2="280" stroke="var(--rule)"></line>
+          <line x1="80" y1="220" x2="660" y2="220"></line>
+          <line x1="80" y1="160" x2="660" y2="160"></line>
+          <line x1="80" y1="100" x2="660" y2="100"></line>
+          <line x1="80" y1="40" x2="660" y2="40"></line>
+        </g>
+        <g font-family="IBM Plex Mono, monospace" font-size="10.5" fill="var(--ink-3)" text-anchor="end">
+          <text x="70" y="284">0</text><text x="70" y="224">2</text><text x="70" y="164">4</text>
+          <text x="70" y="104">6</text><text x="70" y="44">8</text>
+        </g>
+        <g fill="var(--s1)">
+          <rect x="135" y="265.6" width="110" height="14.4"><title>FY27: $0.48M revenue, 40 events</title></rect>
+          <rect x="315" y="209.5" width="110" height="70.5"><title>FY28: $2.35M revenue, 180 events</title></rect>
+          <rect x="495" y="58" width="110" height="222"><title>FY29: $7.40M revenue, 520 events</title></rect>
+        </g>
+        <g font-family="Archivo, sans-serif" font-size="15" font-weight="700" fill="var(--ink)" text-anchor="middle">
+          <text x="190" y="256">$0.48M</text>
+          <text x="370" y="200">$2.35M</text>
+          <text x="550" y="48">$7.40M</text>
+        </g>
+        <g font-family="Archivo, sans-serif" font-size="13" font-weight="700" fill="var(--ink)" text-anchor="middle">
+          <text x="190" y="302">FY27</text><text x="370" y="302">FY28</text><text x="550" y="302">FY29</text>
+        </g>
+        <g font-family="IBM Plex Mono, monospace" font-size="10.5" fill="var(--ink-3)" text-anchor="middle">
+          <text x="190" y="318">40 events</text><text x="370" y="318">180 events</text><text x="550" y="318">520 events</text>
+        </g>
+      </svg>
+      <figcaption><b>Figure 3.</b> Event count roughly 4.5&times; and then 2.9&times;, with revenue per event held flat. The plan should be judged on whether 180 events in FY28 is a credible sales and operations number, because everything else follows from it.</figcaption>
+    </figure>
+
+    <div class="tw"><table>
+      <thead><tr><th style="width:30%">Line</th><th class="n">FY27</th><th class="n">FY28</th><th class="n">FY29</th></tr></thead>
+      <tbody>
+        <tr><td>Events</td><td class="n">40</td><td class="n">180</td><td class="n">520</td></tr>
+        <tr><td>Tickets issued</td><td class="n">0.35M</td><td class="n">1.6M</td><td class="n">4.8M</td></tr>
+        <tr><td>Gross ticket value</td><td class="n">$7.2M</td><td class="n">$34.0M</td><td class="n">$105.0M</td></tr>
+        <tr><td>Primary fees</td><td class="n">$0.41M</td><td class="n">$1.90M</td><td class="n">$5.70M</td></tr>
+        <tr><td>Resale commission</td><td class="n">$0.03M</td><td class="n">$0.24M</td><td class="n">$1.00M</td></tr>
+        <tr><td>Software and analytics</td><td class="n">$0.04M</td><td class="n">$0.21M</td><td class="n">$0.70M</td></tr>
+        <tr class="tot"><td>Total revenue</td><td class="n">$0.48M</td><td class="n">$2.35M</td><td class="n">$7.40M</td></tr>
+        <tr><td>Blended take rate</td><td class="n">6.7%</td><td class="n">6.9%</td><td class="n">7.0%</td></tr>
+      </tbody>
+      <caption>Take rate rises slightly as resale adoption and analytics attach grow, not because pricing changes.</caption>
+    </table></div>
+  </div>
+</section>
+
+<div class="perf"></div>
+
+<section class="sec" id="gtm">
+  <div class="rail"><b>07</b>Go-to-market</div>
+  <div>
+    <h2>Go-to-market</h2>
+    <p>Ticketing is a supply-constrained market: fans go where the tickets are, so the only side worth selling to first is the organizer. That makes this a founder-led enterprise sale with a small number of large, slow, high-value decisions &mdash; and the founder's existing sponsorship track record is the relevant credential.</p>
+
+    <h3><span class="n">7.1</span>Three phases</h3>
+    <div class="tw"><table>
+      <thead><tr><th style="width:16%">Phase</th><th style="width:22%">Target</th><th style="width:28%">Offer</th><th>What it buys</th></tr></thead>
+      <tbody>
+        <tr><td>Prove<br><span class="tag">months 1&ndash;6</span></td><td>College festivals and regional promoters, 2,000&ndash;8,000 capacity</td><td>Free platform fee, ReXell staff on site, a written zero-fake-ticket guarantee with financial backing</td><td>Field data on false-reject rates and gate throughput, and three referenceable names. Revenue is explicitly not the goal here.</td></tr>
+        <tr><td>Land<br><span class="tag">months 7&ndash;18</span></td><td>Mid-size music festivals and regional sports leagues, 8,000&ndash;25,000 capacity</td><td>Standard pricing, resale switched on, bundled gate kit, co-marketed as fraud-proof</td><td>The unit economics at real scale, and the first resale commission revenue &mdash; the number that converts an organizer from pilot to contract.</td></tr>
+        <tr><td>Expand<br><span class="tag">months 19&ndash;36</span></td><td>Stadium operators, league-wide deals, Gulf market entry</td><td>Enterprise white-label annual licence, API, season-ticket identity binding</td><td>Contracted recurring revenue and the multi-year deals that make the Series A story.</td></tr>
+      </tbody>
+    </table></div>
+
+    <h3><span class="n">7.2</span>The sales motion</h3>
+    <ul>
+      <li><strong>Lead with the resale commission, not the biometrics.</strong> A promoter's first question about face scanning is a risk question. Their first question about a new revenue line is a maths question. Open with the maths.</li>
+      <li><strong>Use the artist as the lever.</strong> Artists hate being blamed for scalped prices. An artist or their management asking a promoter to use ReXell converts faster than any outbound sequence, and costs nothing.</li>
+      <li><strong>Sell the guarantee, and mean it.</strong> A financially backed zero-fake-ticket guarantee is a differentiator no incumbent can match without identity binding, and the expected payout is low precisely because the system works. Underwrite it explicitly and put the reserve in the model.</li>
+      <li><strong>Land on one tier, not the whole event.</strong> A promoter will not put 12,000 tickets through an unproven platform. They will put the 800-ticket VIP tier through it, where fraud hurts most and the gate is already staffed.</li>
+      <li><strong>Sponsors fund the pilot.</strong> The founder has already sold $50k of sponsorship pre-product. Sponsor money that pays for a pilot event's field ops turns the riskiest, lowest-margin phase into a self-funding one.</li>
+    </ul>
+  </div>
+</section>
+
+<div class="perf"></div>
+
+<section class="sec" id="competition">
+  <div class="rail"><b>08</b>Competition</div>
+  <div>
+    <h2>Competition and positioning</h2>
+    <p>The honest read is that ReXell has no direct competitor and eight partial ones. Each has solved a piece; the top-right of this map is empty because occupying it requires being simultaneously a ticketing platform, a biometrics operator and a resale marketplace.</p>
+
+    <figure>
+      <svg viewBox="0 0 700 470" role="img" aria-label="Positioning map with resale control on the horizontal axis and identity binding strength on the vertical. StubHub, BookMyShow and Ticketmaster sit low on both; DICE, Tixel and GET Protocol sit high on resale control but mid on identity; CLEAR and Wicket sit high on identity but low on resale control. ReXell occupies the empty top-right.">
+        <rect x="375" y="50" width="285" height="175" fill="var(--teal-wash)"></rect>
+        <text x="652" y="70" font-family="IBM Plex Mono, monospace" font-size="10" fill="var(--teal)" text-anchor="end">PERSON-BOUND + ORGANIZER-CONTROLLED</text>
+        <line x1="90" y1="400" x2="670" y2="400" stroke="var(--rule)" stroke-width="1.2"></line>
+        <line x1="90" y1="400" x2="90" y2="40" stroke="var(--rule)" stroke-width="1.2"></line>
+        <line x1="375" y1="400" x2="375" y2="40" stroke="var(--rule-2)" stroke-dasharray="4 3"></line>
+        <line x1="90" y1="225" x2="670" y2="225" stroke="var(--rule-2)" stroke-dasharray="4 3"></line>
+        <text x="90" y="428" font-family="IBM Plex Mono, monospace" font-size="10.5" fill="var(--ink-3)">open resale</text>
+        <text x="670" y="428" font-family="IBM Plex Mono, monospace" font-size="10.5" fill="var(--ink-3)" text-anchor="end">organizer-programmable resale</text>
+        <text x="90" y="448" font-family="IBM Plex Mono, monospace" font-size="10.5" fill="var(--ink-2)">RESALE CONTROL &rarr;</text>
+        <text x="78" y="400" font-family="IBM Plex Mono, monospace" font-size="10.5" fill="var(--ink-3)" text-anchor="start" transform="rotate(-90 78 400)">barcode or device</text>
+        <text x="58" y="220" font-family="IBM Plex Mono, monospace" font-size="10.5" fill="var(--ink-2)" text-anchor="middle" transform="rotate(-90 58 220)">IDENTITY BINDING &rarr;</text>
+        <g fill="var(--ink-2)">
+          <circle cx="119" cy="372" r="5.5"></circle>
+          <circle cx="204" cy="365" r="5.5"></circle>
+          <circle cx="347" cy="267" r="5.5"></circle>
+          <circle cx="478" cy="348" r="5.5"></circle>
+          <circle cx="589" cy="253" r="5.5"></circle>
+          <circle cx="518" cy="295" r="5.5"></circle>
+          <circle cx="290" cy="218" r="5.5"></circle>
+          <circle cx="136" cy="92" r="5.5"></circle>
+        </g>
+        <circle cx="603" cy="96" r="9" fill="var(--teal)"></circle>
+        <g font-family="IBM Plex Mono, monospace" font-size="11" fill="var(--ink-2)">
+          <text x="131" y="376">StubHub, Viagogo</text>
+          <text x="216" y="382">BookMyShow, District</text>
+          <text x="359" y="271">Ticketmaster SafeTix</text>
+          <text x="490" y="352">Tixel, Twickets</text>
+          <text x="577" y="257" text-anchor="end">DICE</text>
+          <text x="530" y="299">GET Protocol</text>
+          <text x="302" y="222">Tokenproof</text>
+          <text x="150" y="96">CLEAR, Wicket</text>
+        </g>
+        <text x="603" y="74" font-family="Archivo, sans-serif" font-size="14" font-weight="800" fill="var(--teal)" text-anchor="middle">ReXell</text>
+      </svg>
+      <figcaption><b>Figure 4.</b> Axes chosen because they are the two things that actually determine whether a ticket can be scalped. Being high on only one is insufficient: DICE controls resale well but a ticket is still bound to a phone that can be handed over, and CLEAR verifies people superbly but has no say over who bought the ticket.</figcaption>
+    </figure>
+
+    <div class="tw"><table>
+      <thead><tr><th style="width:20%">Player</th><th style="width:26%">What they do well</th><th>The gap ReXell enters through</th></tr></thead>
+      <tbody>
+        <tr><td>Ticketmaster / Live Nation</td><td>Rotating barcodes, unmatched inventory, enterprise trust</td><td>Owns a secondary marketplace, so capping resale margin cannibalises itself. Structurally cannot make ReXell's pitch.</td></tr>
+        <tr><td>DICE</td><td>Paperless entry, waiting lists, genuinely anti-scalper culture and brand</td><td>Ticket binds to a device, not a person, and a device can be handed over. Also concentrated in Western urban music.</td></tr>
+        <tr><td>Tixel / Twickets</td><td>Face-value and capped resale that fans trust</td><td>Resale-only. No control over the primary sale, so bots still win the onsale.</td></tr>
+        <tr><td>GET Protocol / GUTS</td><td>Registered on-chain tickets, real operating volume, credible engineering</td><td>Identity is an account, not a biometric, and the go-to-market has stayed European and mid-market.</td></tr>
+        <tr><td>Tokenproof</td><td>Clean token-gated entry UX for web3-native audiences</td><td>Serves crypto-native events. Not a ticketing platform and not aimed at a mainstream festival.</td></tr>
+        <tr><td>BookMyShow / District</td><td>Dominant Indian distribution and consumer habit</td><td>Discovery and payments business. Weak gate infrastructure and no resale control &mdash; the incumbent to partner with, or to be acquired by.</td></tr>
+        <tr><td>CLEAR / Wicket</td><td>Proven biometric stadium entry at real throughput</td><td>Entry vendors, not ticketing platforms. No influence over inventory, pricing or resale.</td></tr>
+        <tr><td>Seatlab / YellowHeart</td><td>NFT ticketing with collectible and royalty mechanics</td><td>Optimise for the collectible, not the gate. Tickets remain transferable, which reopens scalping.</td></tr>
+      </tbody>
+    </table></div>
+  </div>
+</section>
+
+<div class="perf"></div>
+
+<section class="sec" id="regulatory">
+  <div class="rail"><b>09</b>Regulatory</div>
+  <div>
+    <h2>Regulatory reality</h2>
+    <p>Biometrics plus payments plus a blockchain is three regulated surfaces on one product. None of it is prohibitive; all of it is expensive to get wrong, and two items below are genuine go or no-go decisions for specific geographies.</p>
+    <div class="tw"><table>
+      <thead><tr><th style="width:24%">Regime</th><th style="width:34%">Obligation</th><th>Position</th></tr></thead>
+      <tbody>
+        <tr><td>India DPDP Act, 2023</td><td>Itemised notice, purpose limitation, withdrawable consent, breach notification, named data protection officer</td><td>Designed in: unbundled biometric consent, versioned consent records, verified deletion. Budget for a fractional privacy counsel from month one.</td></tr>
+        <tr><td>GDPR Article 9</td><td>Explicit consent for biometric identification, completed DPIA, data-residency care</td><td>Required before any EU event. Treat as a phase-three cost, not a launch cost.</td></tr>
+        <tr><td>Illinois BIPA and similar</td><td>Written release, published retention schedule, statutory damages per violation, no profiting from biometric data</td><td><strong>Go / no-go.</strong> The class-action exposure is disproportionate to any early revenue. Recommendation: geofence biometric enrolment out of those states and run the non-biometric path there.</td></tr>
+        <tr><td>India virtual digital asset tax</td><td>30% tax on VDA gains plus 1% TDS on transfers</td><td><strong>Go / no-go, resolved by design.</strong> Tickets are never traded as crypto assets and fans never hold tokens; all settlement is in rupees through a licensed aggregator. Requires a written tax opinion before the first resale goes live.</td></tr>
+        <tr><td>Payments and settlement</td><td>Payment-aggregator licensing, escrow and settlement timelines, GST on service fees</td><td>Partner with a licensed aggregator rather than seeking a licence. ReXell never holds fan money on its own balance sheet.</td></tr>
+        <tr><td>Consumer and resale law</td><td>Disclosure of fees, resale caps in several jurisdictions, US BOTS Act</td><td>Tailwind rather than headwind &mdash; regulators are already pushing where ReXell is going. Worth using in sales conversations.</td></tr>
+        <tr><td>Accessibility and non-discrimination</td><td>Equal access for fans who cannot or will not enrol biometrically</td><td>The non-biometric entry path is a product requirement, not a concession, and must never carry a fee or a worse queue.</td></tr>
+      </tbody>
+    </table></div>
+  </div>
+</section>
+
+<div class="perf"></div>
+
+<section class="sec" id="team">
+  <div class="rail"><b>10</b>Team</div>
+  <div>
+    <h2>Team and hiring</h2>
+    <p><strong>Siddharth Pandya, Founder and CEO.</strong> Sales strategist with Web3 event experience, recognised in Model UN circuits, and the person who converted $50,000 of sponsorship commitments before a product existed. In a market where distribution is the constraint and every deal is a relationship, that is the correct founder skill to have first.</p>
+
+    <div class="note warn">
+      <h4>The biggest risk in this plan is on this page</h4>
+      <p>ReXell is a deep-technology product &mdash; biometric matching, offline distributed systems, smart contracts, adversarial machine learning &mdash; with a commercial founder and no technical co-founder yet. Every investor will identify this immediately, so the plan should lead with it rather than be caught by it. The first and largest use of the raise is a technical co-founder or founding CTO with production biometrics or high-throughput payments experience. Until that hire is signed, the honest position is that ReXell is a validated go-to-market with an unbuilt product.</p>
+    </div>
+
+    <div class="tw"><table>
+      <thead><tr><th style="width:28%">Role</th><th style="width:14%">When</th><th>Why this hire, in this order</th></tr></thead>
+      <tbody>
+        <tr><td>Founding CTO</td><td class="m">month 0&ndash;2</td><td>Non-negotiable. Owns architecture, the biometric vendor decision, and hiring the first engineers.</td></tr>
+        <tr><td>Mobile / native engineer</td><td class="m">month 2</td><td>The fan app and the gate scanner are both native problems and both are on the critical path to a pilot.</td></tr>
+        <tr><td>Backend engineer &times;2</td><td class="m">month 3&ndash;5</td><td>Ordering, inventory and entry services. Onsale load is the hardest engineering in the product.</td></tr>
+        <tr><td>ML engineer, fraud</td><td class="m">month 6</td><td>Deliberately after the pilot: the bot model needs real labels, and hiring earlier buys a model trained on nothing.</td></tr>
+        <tr><td>Field operations lead</td><td class="m">month 4</td><td>Runs gates, trains venue staff, and owns the transition from ReXell-staffed to organizer-run. Owns the margin thesis.</td></tr>
+        <tr><td>Organizer sales &times;2</td><td class="m">month 8&ndash;12</td><td>Only once the founder has closed enough deals personally to know what the repeatable pitch is.</td></tr>
+        <tr><td>Privacy counsel, fractional</td><td class="m">month 1</td><td>Cheap now, existential later. Signs off consent design, retention and the VDA tax opinion.</td></tr>
+        <tr><td>Security audit, external</td><td class="m">before mainnet</td><td>Two independent contract audits plus one biometric-pipeline review. Non-optional and non-deferrable.</td></tr>
+      </tbody>
+      <caption>Headcount: 9 at end of FY27, 22 at end of FY28, 41 at end of FY29.</caption>
+    </table></div>
+  </div>
+</section>
+
+<div class="perf"></div>
+
+<section class="sec" id="roadmap">
+  <div class="rail"><b>11</b>Roadmap</div>
+  <div>
+    <h2>Roadmap and milestones</h2>
+    <div class="tw"><table>
+      <thead><tr><th style="width:12%">Quarter</th><th style="width:32%">Delivers</th><th style="width:28%">Gate to the next quarter</th><th>Cumulative</th></tr></thead>
+      <tbody>
+        <tr><td>Q1</td><td>CTO signed, enrolment and purchase flow, bound-mode tickets, first scanner build</td><td>A ReXell employee's face opens a real turnstile in under one second</td><td class="m">0 events</td></tr>
+        <tr><td>Q2</td><td>Three pilot events, 2,000&ndash;8,000 capacity, staffed lanes, staffed fallback desk</td><td>False-reject rate under 2% measured in the field, not in a lab</td><td class="m">3 events</td></tr>
+        <tr><td>Q3</td><td>Contracts on L2, capped resale, commission splits, revocation propagation, organizer console v1</td><td>One resale settles end to end, with the organizer's commission arriving unprompted</td><td class="m">12 events</td></tr>
+        <tr><td>Q4</td><td>Fair queue, inline bot scorer, first genuinely hot onsale defended</td><td>An onsale of 10,000-plus tickets clears with no outage and no detected bot purchase</td><td class="m">28 events</td></tr>
+        <tr><td>Q5</td><td>Organizer-run gates, self-serve onboarding, attendance analytics product</td><td>An event runs with zero ReXell staff on site &mdash; the margin proof</td><td class="m">45 events</td></tr>
+        <tr><td>Q6</td><td>Graph clustering in production, two anchor enterprise contracts, Gulf market pilot</td><td>Seed raise on 60 events, $12M cumulative gross value, zero biometric incidents</td><td class="m">60 events</td></tr>
+      </tbody>
+    </table></div>
+  </div>
+</section>
+
+<div class="perf"></div>
+
+<section class="sec" id="financials">
+  <div class="rail"><b>12</b>Financials</div>
+  <div>
+    <h2>Financial plan</h2>
+    <div class="tw"><table>
+      <thead><tr><th style="width:34%">USD, millions</th><th class="n">FY27</th><th class="n">FY28</th><th class="n">FY29</th></tr></thead>
+      <tbody>
+        <tr><td>Revenue</td><td class="n">0.48</td><td class="n">2.35</td><td class="n">7.40</td></tr>
+        <tr><td>Cost of revenue</td><td class="n">(0.17)</td><td class="n">(0.62)</td><td class="n">(1.55)</td></tr>
+        <tr class="tot"><td>Gross profit</td><td class="n">0.31</td><td class="n">1.73</td><td class="n">5.85</td></tr>
+        <tr><td>Gross margin</td><td class="n">65%</td><td class="n">74%</td><td class="n">79%</td></tr>
+        <tr><td>Team</td><td class="n">(0.52)</td><td class="n">(1.95)</td><td class="n">(3.40)</td></tr>
+        <tr><td>Sales and marketing</td><td class="n">(0.14)</td><td class="n">(0.55)</td><td class="n">(1.05)</td></tr>
+        <tr><td>Infrastructure and tooling</td><td class="n">(0.08)</td><td class="n">(0.25)</td><td class="n">(0.45)</td></tr>
+        <tr><td>Legal, audit, G&amp;A</td><td class="n">(0.12)</td><td class="n">(0.30)</td><td class="n">(0.45)</td></tr>
+        <tr class="tot"><td>EBITDA</td><td class="n">(0.55)</td><td class="n">(1.32)</td><td class="n">0.50</td></tr>
+        <tr><td>Headcount, year end</td><td class="n">9</td><td class="n">22</td><td class="n">41</td></tr>
+      </tbody>
+      <caption>Gross margin improves as field operations shift to organizer-run gates and as analytics, which carries almost no marginal cost, grows in the mix. FY28 requires a seed round of roughly $3.5M; this plan funds FY27 only.</caption>
+    </table></div>
+
+    <h3><span class="n">12.1</span>Use of the $750k pre-seed</h3>
+    <div class="tw"><table>
+      <thead><tr><th style="width:34%">Category</th><th class="n">Share</th><th class="n">Amount</th><th>Buys</th></tr></thead>
+      <tbody>
+        <tr><td>Engineering</td><td class="n">46%</td><td class="n">$345k</td><td>CTO plus four engineers for 18 months, weighted to mobile and backend</td></tr>
+        <tr><td>Biometrics and ML</td><td class="n">14%</td><td class="n">$105k</td><td>Recognition SDK licensing, liveness certification, ML engineer from month six</td></tr>
+        <tr><td>Field ops and gate hardware</td><td class="n">12%</td><td class="n">$90k</td><td>60 scanner units with spares, and the ops lead who makes gates organizer-run</td></tr>
+        <tr><td>Go-to-market</td><td class="n">14%</td><td class="n">$105k</td><td>Pilot subsidies, the fake-ticket guarantee reserve, artist and promoter partnerships</td></tr>
+        <tr><td>Legal, compliance, audits</td><td class="n">8%</td><td class="n">$60k</td><td>Two contract audits, biometric pipeline review, VDA tax opinion, privacy counsel</td></tr>
+        <tr><td>Contingency</td><td class="n">6%</td><td class="n">$45k</td><td>Roughly one month of buffer at peak burn</td></tr>
+      </tbody>
+      <caption>18 months of runway. Peak monthly burn approximately $55k in month 14.</caption>
+    </table></div>
+  </div>
+</section>
+
+<div class="perf"></div>
+
+<section class="sec" id="kpi">
+  <div class="rail"><b>13</b>Metrics</div>
+  <div>
+    <h2>Metrics that govern</h2>
+    <p class="sub">Two of these are the ones the business actually lives or dies on, and they are not the revenue metrics.</p>
+    <div class="tw"><table>
+      <thead><tr><th style="width:30%">Metric</th><th class="n">Target</th><th>Why it governs</th></tr></thead>
+      <tbody>
+        <tr><td>False-reject rate at gate</td><td class="n">under 1.5%</td><td><strong>The company-killer.</strong> Above 3%, the fallback desk becomes the queue, the organizer never renews, and no amount of revenue growth survives the video that gets posted.</td></tr>
+        <tr><td>Organizer-run gate share</td><td class="n">over 80% by FY29</td><td><strong>The margin thesis.</strong> Every event needing ReXell staff on site costs roughly &#8377;2.5 lakh of contribution.</td></tr>
+        <tr><td>Gate throughput</td><td class="n">1,500 per lane-hour</td><td>The number that has to beat a barcode scan, or the whole premise is a downgrade dressed as innovation.</td></tr>
+        <tr><td>Resale attach rate</td><td class="n">10&ndash;15% of tickets</td><td>Drives the highest-margin transactional line and is the metric organizers renew on.</td></tr>
+        <tr><td>Organizer repeat rate</td><td class="n">over 70% by event 3</td><td>Ticketing is a repeat-purchase enterprise business. A one-event customer is a failed sale that happened to invoice.</td></tr>
+        <tr><td>Bot purchase rate at onsale</td><td class="n">under 0.5%</td><td>The product claim. Measured against gate-denial and dedupe labels, not against self-reported model confidence.</td></tr>
+        <tr><td>Fake tickets admitted</td><td class="n">zero</td><td>The guarantee is financially backed, so this is a P&amp;L line as well as a marketing claim.</td></tr>
+        <tr><td>CAC per organizer</td><td class="n">under $2,500</td><td>Against roughly $16k of first-year revenue per mid-size organizer. Founder-led selling keeps this low early and it must not balloon when sales hires land.</td></tr>
+      </tbody>
+    </table></div>
+  </div>
+</section>
+
+<div class="perf"></div>
+
+<section class="sec" id="risks">
+  <div class="rail"><b>14</b>Risks</div>
+  <div>
+    <h2>Risks and mitigations</h2>
+    <div class="tw"><table>
+      <thead><tr><th style="width:22%">Risk</th><th style="width:10%">Severity</th><th style="width:32%">Why it is real</th><th>Mitigation</th></tr></thead>
+      <tbody>
+        <tr><td>No technical co-founder</td><td class="m">critical</td><td>A deep-tech product with a commercial founder does not get built or funded</td><td>First use of the raise. Until signed, ReXell is a go-to-market, not a product &mdash; and the plan says so out loud.</td></tr>
+        <tr><td>Biometric refusal by fans</td><td class="m">high</td><td>A meaningful minority will not scan their face for a concert, and they are vocal</td><td>A first-class non-biometric path with no fee and no worse queue. Measure opt-out rate at every pilot; if it exceeds 15%, the positioning needs rethinking.</td></tr>
+        <tr><td>A gate failure at a marquee event</td><td class="m">high</td><td>One viral queue collapse ends the sales pipeline for a year</td><td>Offline-first scanners, spare hardware, staffed fallback lanes, and a hard rule against taking an event larger than 1.5&times; the biggest one already run.</td></tr>
+        <tr><td>A biometric data breach</td><td class="m">critical</td><td>Face templates cannot be reissued; the regulatory and reputational damage is unbounded</td><td>Isolated vault, no application read path, event-scoped and time-boxed manifests, external audit before launch, and cyber cover carried from the first paid event.</td></tr>
+        <tr><td>Organizers refuse to cap resale</td><td class="m">medium</td><td>Some promoters profit from dynamic pricing and inflated secondary markets today</td><td>Sell the commission line, not the cap. An uncapped-but-identity-bound event still kills counterfeiting and is a valid first sale.</td></tr>
+        <tr><td>An incumbent copies the feature</td><td class="m">medium</td><td>Ticketmaster could ship biometric entry, and has the distribution to make it default</td><td>They own a resale marketplace, so capping resale margin cannibalises them. Move fast in markets where they are weak, and build the label flywheel they cannot retro-fit.</td></tr>
+        <tr><td>Human-farmed scalping</td><td class="m">medium</td><td>Paid humans on real devices with real cards defeat behavioural detection entirely</td><td>The identity binding is the answer, not the model: a farmed ticket still has the wrong face at the gate. Per-identity caps plus biometric dedupe cap the value of any farm.</td></tr>
+        <tr><td>Low average ticket price in the wedge market</td><td class="m">medium</td><td>The model needs volume, and volume needs a sales team the pre-seed does not fund</td><td>Enterprise and league contracts from Q6, and Gulf entry where ticket values are three to five times higher for the same operational effort.</td></tr>
+      </tbody>
+    </table></div>
+  </div>
+</section>
+
+<div class="perf"></div>
+
+<section class="sec" id="ask">
+  <div class="rail"><b>15</b>The ask</div>
+  <div>
+    <h2>The ask</h2>
+    <div class="kv">
+      <div><dt>Raising</dt><dd>$750k<small>Pre-seed, 18 months of runway</small></dd></div>
+      <div><dt>To reach</dt><dd>60<small>Events, and $12M cumulative gross ticket value</small></dd></div>
+      <div><dt>First hire</dt><dd>CTO<small>The largest and most urgent use of funds</small></dd></div>
+      <div><dt>Then</dt><dd>$3.5M<small>Seed, on proven per-event economics</small></dd></div>
+    </div>
+    <p>$750,000 buys eighteen months, a technical co-founder, four engineers, sixty gate kits, and the only evidence that matters: sixty events where a fan walked up to a turnstile, looked at a camera, and walked in &mdash; while the scalper who tried to buy their ticket got nothing, and the organizer received a resale commission they had never seen before.</p>
+    <p>Everything else in this document is an argument. That is a demonstration, and it is the one thing a seed investor cannot get from a deck.</p>
+    <p class="sub">Siddharth Pandya, Founder and CEO &mdash; contact@rexell.tech &mdash; rexelltech.netlify.app</p>
+  </div>
+</section>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <div>ReXell Technologies &mdash; Business Plan &middot; 09 September 2026 &middot; Confidential draft</div>
+    <div>contact@rexell.tech</div>
+  </div>
+</footer>

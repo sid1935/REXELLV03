@@ -1,0 +1,1006 @@
+<title>ReXell Ticketing Architecture</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap">
+<style>
+:root{
+  --paper:#E8EDEB; --surface:#FCFCFB; --surface-2:#F1F5F3; --sunk:#DFE7E4;
+  --ink:#0E1513; --ink-2:#394744; --ink-3:#6C7C78;
+  --rule:#C4D0CD; --rule-2:#DCE4E1;
+  --teal:#0E6E63; --teal-mark:#0E8C7C; --teal-wash:#DCEAE7;
+  --hot:#C43A12; --hot-wash:#F8E4DC;
+  --blue:#3B5BDB; --blue-wash:#E1E6FA;
+  --ok:#1C7A50;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --paper:#0B1110; --surface:#131A19; --surface-2:#182120; --sunk:#0E1514;
+    --ink:#E8EEEC; --ink-2:#AFBDB9; --ink-3:#7C8B87;
+    --rule:#2B3634; --rule-2:#212B29;
+    --teal:#4FBFAF; --teal-mark:#1E9D8E; --teal-wash:#11302C;
+    --hot:#FF7A45; --hot-wash:#331810;
+    --blue:#7B93EE; --blue-wash:#1A2140;
+    --ok:#41B87A;
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#0B1110; --surface:#131A19; --surface-2:#182120; --sunk:#0E1514;
+  --ink:#E8EEEC; --ink-2:#AFBDB9; --ink-3:#7C8B87;
+  --rule:#2B3634; --rule-2:#212B29;
+  --teal:#4FBFAF; --teal-mark:#1E9D8E; --teal-wash:#11302C;
+  --hot:#FF7A45; --hot-wash:#331810;
+  --blue:#7B93EE; --blue-wash:#1A2140;
+  --ok:#41B87A;
+}
+*{box-sizing:border-box}
+body{
+  background:var(--paper); color:var(--ink);
+  font-family:"Source Serif 4",Georgia,"Times New Roman",serif;
+  font-size:17px; line-height:1.62; margin:0;
+  -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:1180px;margin:0 auto;padding:0 28px}
+h1,h2,h3,h4,.disp{font-family:Archivo,"Helvetica Neue",Arial,sans-serif;text-wrap:balance}
+.mono,code,th,.tag,.meta dt{font-family:"IBM Plex Mono",ui-monospace,"Courier New",monospace}
+
+.mast{border-bottom:1px solid var(--rule);background:var(--surface)}
+.mast .wrap{padding-top:46px;padding-bottom:34px}
+.eyebrow{font-family:"IBM Plex Mono",monospace;font-size:11.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--teal);display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+.eyebrow span{color:var(--ink-3)}
+h1{font-size:clamp(33px,5.2vw,60px);line-height:1.03;font-weight:800;letter-spacing:-.026em;margin:16px 0 0;max-width:21ch}
+h1 em{font-style:normal;color:var(--teal)}
+.lede{font-size:20px;line-height:1.5;color:var(--ink-2);max-width:62ch;margin:20px 0 0}
+.meta{display:grid;grid-template-columns:repeat(auto-fit,minmax(168px,1fr));margin:34px 0 0;border-top:1px solid var(--rule-2)}
+.meta div{padding:14px 16px 12px 0;border-right:1px solid var(--rule-2)}
+.meta div:last-child{border-right:0}
+.meta dt{font-size:10.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--ink-3);margin:0 0 4px}
+.meta dd{margin:0;font-size:14.5px;font-family:Archivo,sans-serif;font-weight:600;color:var(--ink)}
+
+.perf{position:relative;height:1px;border-top:1.5px dashed var(--rule);margin:14px 0 0}
+.perf::before,.perf::after{content:"";position:absolute;top:-6px;width:11px;height:11px;border-radius:50%;background:var(--paper);border:1.5px dashed var(--rule)}
+.perf::before{left:-5px}
+.perf::after{right:-5px}
+
+main{padding:0 0 90px}
+.sec{display:grid;grid-template-columns:104px minmax(0,1fr);gap:28px;padding:44px 0 8px;border-top:1px solid var(--rule-2)}
+.sec.first{border-top:0}
+.rail{font-family:"IBM Plex Mono",monospace;font-size:11px;letter-spacing:.1em;color:var(--ink-3);text-transform:uppercase;position:sticky;top:16px;align-self:start;line-height:1.5}
+.rail b{display:block;font-weight:600;font-size:22px;color:var(--teal);letter-spacing:0;margin-bottom:6px}
+h2{font-size:29px;font-weight:700;letter-spacing:-.019em;margin:0 0 6px;max-width:30ch}
+h3{font-size:17.5px;font-weight:700;margin:34px 0 8px;color:var(--ink)}
+h3 .n{font-family:"IBM Plex Mono",monospace;color:var(--teal);font-weight:500;margin-right:9px;font-size:15px}
+p{margin:0 0 15px;max-width:70ch}
+.sub{color:var(--ink-3);font-size:15px;max-width:70ch;margin:0 0 22px}
+ul,ol{max-width:70ch;padding-left:20px;margin:0 0 16px}
+li{margin:0 0 8px}
+li::marker{color:var(--ink-3)}
+strong{font-weight:600;color:var(--ink)}
+code{background:var(--surface-2);border:1px solid var(--rule-2);border-radius:3px;padding:1px 5px;font-size:13.5px;color:var(--teal)}
+a{color:var(--teal)}
+.tag{display:inline-block;font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;padding:2px 7px;border-radius:2px;border:1px solid var(--rule);color:var(--ink-2);background:var(--surface-2)}
+.tag.on{border-color:var(--teal);color:var(--teal);background:var(--teal-wash)}
+.tag.off{border-color:var(--hot);color:var(--hot);background:var(--hot-wash)}
+
+.toc{columns:2;column-gap:40px;list-style:none;padding:0;max-width:none;margin:6px 0 0}
+.toc li{break-inside:avoid;margin:0;border-bottom:1px solid var(--rule-2);padding:7px 0;display:flex;gap:12px;font-size:15px}
+.toc .mono{color:var(--teal);font-size:13px;min-width:22px}
+.toc a{text-decoration:none;color:var(--ink)}
+.toc a:hover{text-decoration:underline}
+
+.tw{overflow-x:auto;margin:0 0 22px;border:1px solid var(--rule);background:var(--surface)}
+table{border-collapse:collapse;width:100%;font-size:14.5px;min-width:560px}
+th{text-align:left;font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;font-weight:600;color:var(--ink-3);padding:11px 14px;border-bottom:1px solid var(--rule);background:var(--surface-2);vertical-align:bottom}
+td{padding:11px 14px;border-bottom:1px solid var(--rule-2);vertical-align:top;color:var(--ink-2);line-height:1.5}
+tr:last-child td{border-bottom:0}
+td:first-child{color:var(--ink);font-family:Archivo,sans-serif;font-weight:600;font-size:14px}
+td.m{text-align:left;font-size:13px;color:var(--ink-2);font-family:"IBM Plex Mono",monospace;font-variant-numeric:tabular-nums}
+th.n,td.n{font-variant-numeric:tabular-nums;text-align:right;font-family:"IBM Plex Mono",monospace}
+caption{caption-side:bottom;text-align:left;font-size:12.5px;color:var(--ink-3);padding:10px 14px;border-top:1px solid var(--rule-2)}
+
+figure{margin:8px 0 26px;background:var(--surface);border:1px solid var(--rule);padding:22px 20px 0}
+figure svg{display:block;width:100%;height:auto}
+figcaption{font-size:13px;color:var(--ink-3);border-top:1px solid var(--rule-2);margin:16px -20px 0;padding:12px 20px;line-height:1.55}
+figcaption b{color:var(--ink-2);font-family:Archivo,sans-serif;font-weight:600}
+.figscroll{overflow-x:auto}
+
+.note{border-left:3px solid var(--teal);background:var(--surface);padding:16px 18px;margin:0 0 22px;max-width:74ch}
+.note.warn{border-left-color:var(--hot)}
+.note h4{margin:0 0 6px;font-size:11.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--teal);font-family:"IBM Plex Mono",monospace;font-weight:600}
+.note.warn h4{color:var(--hot)}
+.note p{margin:0;font-size:15.5px;max-width:66ch}
+.note p + p{margin-top:10px}
+
+.kv{display:grid;grid-template-columns:repeat(auto-fit,minmax(148px,1fr));gap:1px;background:var(--rule-2);border:1px solid var(--rule);margin:0 0 24px}
+.kv > div{background:var(--surface);padding:14px 16px}
+.kv dt{font-family:"IBM Plex Mono",monospace;font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3);margin-bottom:5px}
+.kv dd{margin:0;font-family:Archivo,sans-serif;font-weight:700;font-size:21px;letter-spacing:-.01em;font-variant-numeric:tabular-nums}
+.kv dd small{font-weight:500;font-size:12.5px;color:var(--ink-3);display:block;letter-spacing:0;font-family:"Source Serif 4",serif}
+
+footer{border-top:1px solid var(--rule);background:var(--surface);padding:26px 0 40px;font-size:13.5px;color:var(--ink-3)}
+footer .wrap{display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap}
+:focus-visible{outline:2px solid var(--teal);outline-offset:2px}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+@media (max-width:760px){
+  .sec{grid-template-columns:1fr;gap:10px;padding-top:34px}
+  .rail{position:static;display:flex;gap:10px;align-items:baseline}
+  .rail b{margin:0;font-size:16px}
+  .toc{columns:1}
+  body{font-size:16px}
+}
+</style>
+
+<header class="mast">
+  <div class="wrap">
+    <div class="eyebrow">System Architecture <span>/</span> <span>ReXell Technologies</span> <span>/</span> <span>v1.0 &middot; 09 Sep 2026</span></div>
+    <h1>Two identities, <em>one gate</em>, no transferable ticket.</h1>
+    <p class="lede">ReXell replaces the ticket-as-a-document with a ticket-as-a-binding: an on-chain entitlement fused to a biometric credential, governed by resale rules the organizer writes themselves. This document specifies how that is built, what it must never do, and how it degrades when things break.</p>
+    <dl class="meta">
+      <div><dt>Document status</dt><dd>Draft for review</dd></div>
+      <div><dt>Scope</dt><dd>Web app, gate, chain</dd></div>
+      <div><dt>Audience</dt><dd>Eng, security, counsel</dd></div>
+      <div><dt>Owner</dt><dd>contact@rexell.tech</dd></div>
+    </dl>
+  </div>
+</header>
+
+<main class="wrap">
+
+<section class="sec first" id="toc">
+  <div class="rail"><b>00</b>Contents</div>
+  <div>
+    <h2>What this document covers</h2>
+    <ol class="toc">
+      <li><span class="mono">01</span><a href="#constraints">Constraints that shape everything</a></li>
+      <li><span class="mono">02</span><a href="#map">The system map</a></li>
+      <li><span class="mono">03</span><a href="#identity">Identity: real-world &times; digital</a></li>
+      <li><span class="mono">04</span><a href="#token">The ticket as a token</a></li>
+      <li><span class="mono">05</span><a href="#purchase">Purchase and issuance</a></li>
+      <li><span class="mono">06</span><a href="#gate">The gate: an 800&nbsp;ms budget</a></li>
+      <li><span class="mono">07</span><a href="#resale">Programmable resale</a></li>
+      <li><span class="mono">08</span><a href="#bots">Bot and scalper defense</a></li>
+      <li><span class="mono">09</span><a href="#screenshot">&ldquo;No screenshots&rdquo;, honestly</a></li>
+      <li><span class="mono">10</span><a href="#data">Core data model</a></li>
+      <li><span class="mono">11</span><a href="#nfr">Non-functional requirements</a></li>
+      <li><span class="mono">12</span><a href="#degrade">Degradation ladder</a></li>
+      <li><span class="mono">13</span><a href="#threat">Threat model</a></li>
+      <li><span class="mono">14</span><a href="#privacy">Privacy and compliance</a></li>
+      <li><span class="mono">15</span><a href="#stack">Technology choices</a></li>
+      <li><span class="mono">16</span><a href="#phases">Build phases</a></li>
+      <li><span class="mono">17</span><a href="#open">Open decisions</a></li>
+    </ol>
+  </div>
+</section>
+
+<section class="sec" id="constraints">
+  <div class="rail"><b>01</b>Constraints</div>
+  <div>
+    <h2>Constraints that shape everything</h2>
+    <p class="sub">Architecture is mostly the residue of hard constraints. These are the eight that eliminated the obvious designs.</p>
+    <div class="tw"><table>
+      <thead><tr><th style="width:22%">Constraint</th><th style="width:31%">Why it binds</th><th>Architectural consequence</th></tr></thead>
+      <tbody>
+        <tr><td>Gate throughput</td><td>A 12,000-capacity show clears its queue in roughly 90 minutes across 10&ndash;14 lanes: 1,200&ndash;2,500 scans per lane-hour.</td><td>The verification decision must be <strong>local to the scanner</strong>. No network call, no chain read, no cloud match on the critical path.</td></tr>
+        <tr><td>Venue connectivity</td><td>Stadium and festival-ground cellular collapses under crowd load at exactly the moment the gate needs it.</td><td>Offline-first scanner holding a pre-synced encrypted event manifest, with delta-based revocation sync.</td></tr>
+        <tr><td>Biometrics are irreversible</td><td>A leaked face template cannot be rotated like a password. It is that person, for life.</td><td>Templates never leave a dedicated vault, and never touch application databases, logs, backups, or the chain.</td></tr>
+        <tr><td>Templates are non-deterministic</td><td>Two captures of the same face produce different vectors. The comparison is similarity, never equality.</td><td>You cannot hash a face and compare hashes. This single fact kills the most common web3-ticketing design &mdash; see <a href="#identity">&sect;03</a>.</td></tr>
+        <tr><td>No PII on chain</td><td>Public ledgers are permanent. Erasure rights are not optional in the launch markets.</td><td>On-chain state holds entitlements, policy and settlement proofs only. Identity sits off-chain behind a pseudonymous <code>identityId</code>.</td></tr>
+        <tr><td>Onsale is a thundering herd</td><td>A hot onsale is 50&ndash;500&times; baseline traffic inside 60 seconds &mdash; and it is exactly where the bots are.</td><td>Edge waiting room with fair queueing and signed admission tokens; inventory held in Redis, not by row locks in Postgres.</td></tr>
+        <tr><td>Fans without biometrics must still get in</td><td>Refusal, disability, injury, religious objection, a dead phone, a minor without consent capacity.</td><td>A documented, audited non-biometric path is a first-class feature, not an escape hatch. See <a href="#degrade">&sect;12</a>.</td></tr>
+        <tr><td>Crypto must be invisible</td><td>Fans pay in local currency and will not manage keys or gas, and virtual-asset tax treatment is punitive in the launch market.</td><td>Account abstraction with a sponsored paymaster, custodial-by-default smart accounts, and fiat rails for every rupee that moves.</td></tr>
+      </tbody>
+    </table></div>
+  </div>
+</section>
+
+<div class="perf"></div>
+
+<section class="sec" id="map">
+  <div class="rail"><b>02</b>System map</div>
+  <div>
+    <h2>The system map</h2>
+    <p>Five layers and one hard boundary. Everything above the boundary is hostile territory &mdash; a fan's phone, a scanner in a muddy field, a bot farm's headless browser. Everything below it is ours, and the biometric vault is a further enclave inside that.</p>
+    <figure>
+      <div class="figscroll">
+      <svg viewBox="0 0 980 700" role="img" aria-label="Five-layer architecture: client, edge, service, data and chain layers, with a trust boundary below the edge and the biometric vault isolated inside the data layer.">
+        <defs>
+          <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0,0 L10,5 L0,10 z" fill="var(--ink-3)"></path>
+          </marker>
+        </defs>
+        <g font-family="IBM Plex Mono, monospace" font-size="11" fill="var(--ink-3)" text-anchor="end">
+          <text x="128" y="60">CLIENT</text><text x="128" y="74">LAYER</text>
+          <text x="128" y="176">EDGE</text><text x="128" y="190">LAYER</text>
+          <text x="128" y="330">SERVICE</text><text x="128" y="344">LAYER</text>
+          <text x="128" y="498">DATA</text><text x="128" y="512">LAYER</text>
+          <text x="128" y="612">CHAIN</text><text x="128" y="626">LAYER</text>
+        </g>
+
+        <rect x="150" y="30" width="250" height="76" fill="var(--surface-2)" stroke="var(--rule)"></rect>
+        <rect x="430" y="30" width="250" height="76" fill="var(--surface-2)" stroke="var(--rule)"></rect>
+        <rect x="710" y="30" width="250" height="76" fill="var(--surface-2)" stroke="var(--rule)"></rect>
+        <g font-family="Archivo, sans-serif" font-size="13" font-weight="700" fill="var(--ink)">
+          <text x="164" y="52">Fan app &mdash; iOS / Android</text>
+          <text x="444" y="52">Organizer console &mdash; web</text>
+          <text x="724" y="52">Gate scanner &mdash; Android</text>
+        </g>
+        <g font-family="IBM Plex Mono, monospace" font-size="10" fill="var(--ink-3)">
+          <text x="164" y="72">secure enclave, screen-capture</text><text x="164" y="88">block, on-device embedding</text>
+          <text x="444" y="72">event setup, resale policy,</text><text x="444" y="88">pricing, live analytics</text>
+          <text x="724" y="72">offline manifest, local match,</text><text x="724" y="88">queued signed attestations</text>
+        </g>
+
+        <rect x="150" y="146" width="250" height="62" fill="var(--surface-2)" stroke="var(--rule)"></rect>
+        <rect x="430" y="146" width="250" height="62" fill="var(--surface-2)" stroke="var(--rule)"></rect>
+        <rect x="710" y="146" width="250" height="62" fill="var(--surface-2)" stroke="var(--rule)"></rect>
+        <g font-family="Archivo, sans-serif" font-size="13" font-weight="700" fill="var(--ink)">
+          <text x="164" y="170">CDN + WAF</text>
+          <text x="444" y="170">Bot management</text>
+          <text x="724" y="170">Fair queue</text>
+        </g>
+        <g font-family="IBM Plex Mono, monospace" font-size="10" fill="var(--ink-3)">
+          <text x="164" y="190">TLS 1.3, mTLS for scanners</text>
+          <text x="444" y="190">device attestation, risk score</text>
+          <text x="724" y="190">admission tokens, lottery</text>
+        </g>
+
+        <line x1="18" y1="234" x2="962" y2="234" stroke="var(--hot)" stroke-width="1.5" stroke-dasharray="7 5"></line>
+        <text x="18" y="227" font-family="IBM Plex Mono, monospace" font-size="10" fill="var(--hot)">TRUST BOUNDARY &mdash; NOTHING ABOVE IS TRUSTED, AND NO RAW BIOMETRIC EVER CROSSES IT UPWARD</text>
+
+        <g stroke="var(--rule)" fill="var(--surface-2)">
+          <rect x="150" y="260" width="185" height="46"></rect><rect x="355" y="260" width="185" height="46"></rect>
+          <rect x="560" y="260" width="185" height="46"></rect><rect x="765" y="260" width="185" height="46"></rect>
+          <rect x="150" y="320" width="185" height="46"></rect>
+          <rect x="560" y="320" width="185" height="46"></rect><rect x="765" y="320" width="185" height="46"></rect>
+          <rect x="150" y="380" width="185" height="46"></rect><rect x="355" y="380" width="185" height="46"></rect>
+          <rect x="560" y="380" width="185" height="46"></rect><rect x="765" y="380" width="185" height="46"></rect>
+        </g>
+        <rect x="355" y="320" width="185" height="46" fill="var(--teal-wash)" stroke="var(--teal)" stroke-width="1.8"></rect>
+        <g font-family="Archivo, sans-serif" font-size="12" font-weight="600" fill="var(--ink)">
+          <text x="162" y="288">Identity &amp; KYC</text>
+          <text x="367" y="288">Event &amp; Inventory</text>
+          <text x="572" y="288">Ordering</text>
+          <text x="777" y="288">Payments</text>
+          <text x="162" y="348">Token Service</text>
+          <text x="367" y="348" fill="var(--teal)">Biometric Service</text>
+          <text x="572" y="348">Resale Marketplace</text>
+          <text x="777" y="348">Entry &amp; Access</text>
+          <text x="162" y="408">Fraud Intelligence</text>
+          <text x="367" y="408">Settlement &amp; Payouts</text>
+          <text x="572" y="408">Notifications</text>
+          <text x="777" y="408">Analytics</text>
+        </g>
+        <text x="150" y="444" font-family="IBM Plex Mono, monospace" font-size="10" fill="var(--ink-3)">independently deployable, one schema each, synchronous reads over gRPC, state change published to the event bus</text>
+
+        <g stroke="var(--rule)" fill="var(--surface-2)">
+          <rect x="150" y="464" width="185" height="62"></rect>
+          <rect x="560" y="464" width="185" height="62"></rect><rect x="765" y="464" width="185" height="62"></rect>
+        </g>
+        <rect x="355" y="464" width="185" height="62" fill="var(--teal-wash)" stroke="var(--teal)" stroke-width="2"></rect>
+        <g font-family="Archivo, sans-serif" font-size="12.5" font-weight="700" fill="var(--ink)">
+          <text x="162" y="488">Postgres</text><text x="367" y="488" fill="var(--teal)">Biometric vault</text>
+          <text x="572" y="488">Redis + Kafka</text><text x="777" y="488">ClickHouse + S3</text>
+        </g>
+        <g font-family="IBM Plex Mono, monospace" font-size="10" fill="var(--ink-3)">
+          <text x="162" y="506">per-service schema</text><text x="162" y="520">column encryption</text>
+          <text x="367" y="506" fill="var(--teal)">HSM-wrapped keys</text><text x="367" y="520" fill="var(--teal)">no app read path</text>
+          <text x="572" y="506">inventory holds</text><text x="572" y="520">event log, 30d</text>
+          <text x="777" y="506">analytics, no PII</text><text x="777" y="520">manifests, receipts</text>
+        </g>
+
+        <rect x="150" y="564" width="390" height="76" fill="var(--surface-2)" stroke="var(--rule)"></rect>
+        <rect x="560" y="564" width="390" height="76" fill="var(--surface-2)" stroke="var(--rule)"></rect>
+        <g font-family="Archivo, sans-serif" font-size="13" font-weight="700" fill="var(--ink)">
+          <text x="164" y="588">L2 rollup &mdash; contracts</text><text x="574" y="588">Chain access infrastructure</text>
+        </g>
+        <g font-family="IBM Plex Mono, monospace" font-size="10" fill="var(--ink-3)">
+          <text x="164" y="608">EventFactory, TicketNFT, ResaleController,</text><text x="164" y="624">RoyaltySplitter, AccessRegistry</text>
+          <text x="574" y="608">relayer + ERC-4337 paymaster (gasless),</text><text x="574" y="624">subgraph indexer, reorg-safe reader</text>
+        </g>
+
+        <g stroke="var(--ink-3)" stroke-width="1.2" marker-end="url(#ar)" fill="none">
+          <line x1="275" y1="106" x2="275" y2="144"></line>
+          <line x1="555" y1="106" x2="555" y2="144"></line>
+          <line x1="835" y1="106" x2="835" y2="144"></line>
+          <line x1="275" y1="208" x2="275" y2="258"></line>
+          <line x1="835" y1="208" x2="835" y2="258"></line>
+          <line x1="275" y1="426" x2="275" y2="462"></line>
+          <line x1="835" y1="526" x2="835" y2="562"></line>
+        </g>
+        <line x1="447" y1="526" x2="447" y2="562" stroke="var(--teal)" stroke-width="1.4" stroke-dasharray="5 4" marker-end="url(#ar)" fill="none"></line>
+        <g font-family="IBM Plex Mono, monospace" font-size="10" fill="var(--ink-3)">
+          <text x="284" y="130">HTTPS</text><text x="564" y="130">HTTPS</text><text x="844" y="130">mTLS</text>
+          <text x="284" y="246">admitted requests only</text>
+          <text x="844" y="246">signed scan batches</text>
+          <text x="844" y="550">reads via indexer</text>
+          <text x="456" y="550" fill="var(--teal)">commitments only, never templates</text>
+        </g>
+      </svg>
+      </div>
+      <figcaption><b>Figure 1.</b> The biometric vault is the only component holding face templates, and no application service can read from it &mdash; a service submits a match request and receives back a boolean and a confidence score. The dashed arrow into the chain layer carries a commitment, not an identity: that is what makes an erasure request satisfiable against a permanent ledger.</figcaption>
+    </figure>
+
+    <h3><span class="n">2.1</span>Why these service boundaries</h3>
+    <p>The split follows blast radius, not org chart. <strong>Biometric Service</strong> is isolated because it is the one component whose compromise is unrecoverable. <strong>Ordering</strong> and <strong>Payments</strong> are separate because ordering must survive a payment-provider outage by holding inventory. <strong>Entry &amp; Access</strong> is separate because it has to keep working when everything else is down. <strong>Token Service</strong> is the only writer to the chain, so every on-chain mutation has exactly one audited code path.</p>
+  </div>
+</section>
+
+<div class="perf"></div>
+
+<section class="sec" id="identity">
+  <div class="rail"><b>03</b>Identity</div>
+  <div>
+    <h2>Identity: real-world &times; digital</h2>
+    <p>The product thesis is that fusing a real-world identity to a digital one defeats both the scalper and the counterfeiter. The engineering question is <em>how</em> you fuse them without creating a permanent, unrevocable biometric identifier on a public ledger. There is a wrong answer that looks right, and it is worth naming.</p>
+
+    <figure>
+      <div class="figscroll">
+      <svg viewBox="0 0 980 348" role="img" aria-label="Comparison of two identity binding designs: hashing a face template on chain, which fails because templates are non-deterministic, versus storing the template in a vault and committing only an identity binding on chain.">
+        <text x="20" y="20" font-family="IBM Plex Mono, monospace" font-size="10.5" fill="var(--hot)">THE DESIGN THAT LOOKS RIGHT</text>
+        <text x="510" y="20" font-family="IBM Plex Mono, monospace" font-size="10.5" fill="var(--teal)">THE DESIGN REXELL USES</text>
+        <rect x="20" y="32" width="440" height="296" fill="var(--surface-2)" stroke="var(--hot)" stroke-dasharray="6 4"></rect>
+        <rect x="510" y="32" width="450" height="296" fill="var(--teal-wash)" stroke="var(--teal)"></rect>
+
+        <g font-family="Archivo, sans-serif" font-size="12.5" font-weight="600" fill="var(--ink)">
+          <rect x="44" y="58" width="180" height="42" fill="var(--surface)" stroke="var(--rule)"></rect>
+          <text x="58" y="84">Face capture</text>
+          <rect x="44" y="130" width="180" height="42" fill="var(--surface)" stroke="var(--rule)"></rect>
+          <text x="58" y="156">Template vector</text>
+          <rect x="44" y="202" width="180" height="42" fill="var(--surface)" stroke="var(--rule)"></rect>
+          <text x="58" y="228">keccak256(vector)</text>
+          <rect x="44" y="274" width="180" height="42" fill="var(--surface)" stroke="var(--hot)" stroke-width="1.6"></rect>
+          <text x="58" y="300" fill="var(--hot)">Stored on chain</text>
+        </g>
+        <g stroke="var(--ink-3)" stroke-width="1.2" marker-end="url(#ar)" fill="none">
+          <line x1="134" y1="100" x2="134" y2="128"></line>
+          <line x1="134" y1="172" x2="134" y2="200"></line>
+          <line x1="134" y1="244" x2="134" y2="272"></line>
+        </g>
+        <g font-family="IBM Plex Mono, monospace" font-size="10.5" fill="var(--hot)">
+          <text x="240" y="150">every capture yields a</text><text x="240" y="164">different vector, so the</text><text x="240" y="178">hash never matches twice</text>
+          <text x="240" y="222">a hash is not revocable</text><text x="240" y="236">and not erasable</text>
+          <text x="240" y="290">permanent public</text><text x="240" y="304">biometric identifier</text>
+        </g>
+        <line x1="240" y1="252" x2="440" y2="196" stroke="var(--hot)" stroke-width="0"></line>
+
+        <g font-family="Archivo, sans-serif" font-size="12.5" font-weight="600" fill="var(--ink)">
+          <rect x="534" y="58" width="176" height="42" fill="var(--surface)" stroke="var(--rule)"></rect>
+          <text x="548" y="84">Face capture</text>
+          <rect x="534" y="130" width="176" height="42" fill="var(--surface)" stroke="var(--rule)"></rect>
+          <text x="548" y="150">Template, encrypted</text>
+          <text x="548" y="165" font-family="IBM Plex Mono, monospace" font-size="10" fill="var(--ink-3)">on device, then sealed</text>
+          <rect x="534" y="202" width="176" height="56" fill="var(--surface)" stroke="var(--teal)" stroke-width="1.8"></rect>
+          <text x="548" y="224" fill="var(--teal)">Biometric vault</text>
+          <text x="548" y="242" font-family="IBM Plex Mono, monospace" font-size="10" fill="var(--ink-3)">1:1 match, 1:N dedupe</text>
+          <rect x="760" y="130" width="176" height="42" fill="var(--surface)" stroke="var(--rule)"></rect>
+          <text x="774" y="156">identityId (opaque)</text>
+          <rect x="760" y="202" width="176" height="56" fill="var(--surface)" stroke="var(--rule)"></rect>
+          <text x="774" y="224">On chain</text>
+          <text x="774" y="242" font-family="IBM Plex Mono, monospace" font-size="10" fill="var(--ink-3)">identityId to wallet</text>
+        </g>
+        <g stroke="var(--ink-3)" stroke-width="1.2" marker-end="url(#ar)" fill="none">
+          <line x1="622" y1="100" x2="622" y2="128"></line>
+          <line x1="622" y1="172" x2="622" y2="200"></line>
+          <line x1="712" y1="151" x2="756" y2="151"></line>
+          <line x1="848" y1="172" x2="848" y2="200"></line>
+        </g>
+        <text x="534" y="292" font-family="IBM Plex Mono, monospace" font-size="10.5" fill="var(--teal)">match happens in the vault; the chain only learns</text>
+        <text x="534" y="306" font-family="IBM Plex Mono, monospace" font-size="10.5" fill="var(--teal)">that identityId #4c1e holds ticket #8821</text>
+      </svg>
+      </div>
+      <figcaption><b>Figure 2.</b> A face is not a password, so it cannot be hashed into a commitment. Matching must happen against a stored template under a similarity threshold, which means the template has to live somewhere &mdash; and that somewhere is a vault with no application read path. The chain learns only that an opaque <code>identityId</code> controls a ticket.</figcaption>
+    </figure>
+
+    <h3><span class="n">3.1</span>The three identifiers</h3>
+    <div class="tw"><table>
+      <thead><tr><th style="width:20%">Identifier</th><th style="width:23%">Lives where</th><th>What it is, and what it deliberately is not</th></tr></thead>
+      <tbody>
+        <tr><td><code>personId</code></td><td>Identity service, Postgres, encrypted at column level</td><td>The legal person: name, contact, government-ID reference for age-gated events. Never leaves the identity service; other services receive only <code>identityId</code>.</td></tr>
+        <tr><td><code>identityId</code></td><td>Everywhere, including on chain</td><td>A random opaque 128-bit handle. Carries no information. This is the pseudonym that lets the rest of the system, and the ledger, refer to a person without holding one.</td></tr>
+        <tr><td><code>templateRef</code></td><td>Biometric vault only</td><td>Pointer to the sealed face template plus its model version. Never returned by any API. Rotating the model means re-enrolling, which is why the model version is stored alongside.</td></tr>
+      </tbody>
+      <caption>A compromise of the main application database yields pseudonyms and ticket entitlements, not faces and not names.</caption>
+    </table></div>
+
+    <h3><span class="n">3.2</span>Enrolment</h3>
+    <ol>
+      <li><strong>Consent first.</strong> A separate, unbundled biometric consent screen naming purpose, retention period and the non-biometric alternative. Consent is versioned and stored as an immutable record; withdrawal is a supported operation, not a support ticket.</li>
+      <li><strong>Capture and liveness.</strong> Passive liveness on the frame stream plus one active challenge, run on device. This is the layer that stops a printed photo, a replayed video and a deepfake feed injected through a virtual camera.</li>
+      <li><strong>Embedding on device.</strong> The raw frames never leave the phone and are destroyed after extraction. What leaves is a template, encrypted to the vault's public key.</li>
+      <li><strong>Dedupe.</strong> A 1:N search within a bounded scope catches one person enrolling as five accounts &mdash; the account-farming primitive that every scalper relies on. Match above threshold links the accounts and flags them rather than silently blocking, because twins and siblings exist.</li>
+      <li><strong>Bind.</strong> Token Service writes <code>identityId &rarr; smartAccount</code> to <code>AccessRegistry</code>. From this point the fan's tickets are addressable without any reference to a person.</li>
+    </ol>
+
+    <div class="note warn">
+      <h4>Design note &mdash; the twin problem</h4>
+      <p>Face recognition cannot reliably separate identical twins, and 1:N dedupe at scale will produce false links. Neither is a reason to abandon the approach; both are reasons the system must never treat a biometric match as proof on its own. Dedupe flags feed a review queue; gate denial always has an operator override with an audit record. A biometric that cannot be appealed is a liability, not a feature.</p>
+    </div>
+  </div>
+</section>
+<div class="perf"></div>
+
+<section class="sec" id="token">
+  <div class="rail"><b>04</b>Token</div>
+  <div>
+    <h2>The ticket as a token</h2>
+    <p>A ReXell ticket is an ERC-721 token whose transferability is a property of the event, set by the organizer, and enforced in the contract rather than in the app. Two modes, one contract.</p>
+
+    <div class="kv">
+      <div><dt>Mode A</dt><dd>Bound<small>Transfer reverts. Ticket dies with its owner's entitlement.</small></dd></div>
+      <div><dt>Mode B</dt><dd>Capped<small>Transfer allowed only through ResaleController.</small></dd></div>
+      <div><dt>Never</dt><dd>Open<small>No unrestricted transfer path exists in either mode.</small></dd></div>
+    </div>
+
+    <p>Mode A is soulbound in the practical sense: <code>_beforeTokenTransfer</code> reverts for any caller. Mode B keeps transfer permissioned to a single controller contract, which is where price caps, windows and commission splits are enforced. Crucially, <strong>there is no third mode</strong>. The token is never freely transferable, so it can never appear on a general NFT marketplace, which is how most &ldquo;NFT ticketing&rdquo; attempts leak straight back into unrestricted scalping.</p>
+
+    <h3><span class="n">4.1</span>Contract surface</h3>
+    <div class="tw"><table>
+      <thead><tr><th style="width:19%">Contract</th><th style="width:30%">Holds</th><th>Key entry points</th></tr></thead>
+      <tbody>
+        <tr><td>EventFactory</td><td>Deployment registry, organizer roles</td><td><code>createEvent(policyHash, tiers, capacity)</code> deploys a per-event TicketNFT clone and emits the immutable policy hash.</td></tr>
+        <tr><td>TicketNFT</td><td>Token ownership, tier, seat, mode, redemption state</td><td><code>mintTo(identityId, tier)</code>, <code>redeem(tokenId, attestation)</code>, <code>revoke(tokenId, reason)</code></td></tr>
+        <tr><td>ResaleController</td><td>Listings, price caps, windows, cooldowns</td><td><code>list(tokenId, priceMinor)</code>, <code>buy(tokenId, buyerIdentityId)</code> &mdash; reverts on cap breach, closed window, or an unverified buyer.</td></tr>
+        <tr><td>RoyaltySplitter</td><td>Basis-point split table per event</td><td><code>distribute(saleId)</code> pays organizer, rights-holder, platform and seller in one transaction. Splits are set at event creation and immutable for listed inventory.</td></tr>
+        <tr><td>AccessRegistry</td><td><code>identityId &rarr; smartAccount</code>, revocations</td><td><code>bind</code>, <code>rebind</code> (recovery after a lost device), <code>revokeCredential</code></td></tr>
+      </tbody>
+      <caption>All five are upgradeable behind a proxy with a timelock plus multisig, except TicketNFT clones for live events, which are frozen once the first ticket sells.</caption>
+    </table></div>
+
+    <div class="note">
+      <h4>Design note &mdash; chain of record, fiat of settlement</h4>
+      <p>Money does not move on chain. Fans pay in local currency through a licensed payment aggregator; the contract records the entitlement and computes the split, and the splitter's emitted event is the instruction that the off-chain payout ledger reconciles against. This keeps the auditability benefit &mdash; every commission is independently verifiable &mdash; while avoiding virtual-asset tax treatment, stablecoin licensing, and the requirement that a concertgoer hold crypto.</p>
+      <p>The tradeoff is honest and should be stated to any technical buyer: settlement is trust-minimised, not trustless. On-chain stablecoin settlement remains available as an opt-in for organizers in jurisdictions where it is clean.</p>
+    </div>
+  </div>
+</section>
+
+<div class="perf"></div>
+
+<section class="sec" id="purchase">
+  <div class="rail"><b>05</b>Purchase</div>
+  <div>
+    <h2>Purchase and issuance</h2>
+    <p>Seven hops, and the notable thing about them is the order: the bot check happens before inventory is touched, and the identity check happens before money is taken. Reversing either turns a scalper attempt into a refund queue.</p>
+    <figure>
+      <div class="figscroll">
+      <svg viewBox="0 0 740 654" role="img" aria-label="Purchase flow in seven stages from fan app through bot gate, ordering, identity, payments, token service and entry access, with the data passed at each hop labelled.">
+        <g font-family="IBM Plex Mono, monospace" font-size="10" fill="var(--ink-3)" text-anchor="end">
+          <text x="130" y="46">FAN APP</text>
+          <text x="130" y="136">EDGE</text>
+          <text x="130" y="226">ORDERING</text>
+          <text x="130" y="316">IDENTITY</text>
+          <text x="130" y="406">PAYMENTS</text>
+          <text x="130" y="496">TOKEN SVC</text>
+          <text x="130" y="586">ENTRY</text>
+        </g>
+        <g stroke="var(--rule)" fill="var(--surface-2)">
+          <rect x="146" y="20" width="574" height="58"></rect>
+          <rect x="146" y="110" width="574" height="58"></rect>
+          <rect x="146" y="200" width="574" height="58"></rect>
+          <rect x="146" y="290" width="574" height="58"></rect>
+          <rect x="146" y="380" width="574" height="58"></rect>
+          <rect x="146" y="470" width="574" height="58"></rect>
+          <rect x="146" y="560" width="574" height="58"></rect>
+        </g>
+        <g font-family="Archivo, sans-serif" font-size="13" font-weight="700" fill="var(--ink)">
+          <text x="162" y="42">Join the onsale</text>
+          <text x="162" y="132">Score the request</text>
+          <text x="162" y="222">Reserve inventory</text>
+          <text x="162" y="312">Check the person</text>
+          <text x="162" y="402">Take the money</text>
+          <text x="162" y="492">Issue the entitlement</text>
+          <text x="162" y="582">Arm the gate</text>
+        </g>
+        <g font-family="IBM Plex Mono, monospace" font-size="10" fill="var(--ink-3)">
+          <text x="162" y="62">device attestation, fair-queue position, signed admission token</text>
+          <text x="162" y="152">behavioural + network + graph features, verdict in under 50 ms</text>
+          <text x="162" y="242">Redis hold, 8-minute TTL, no Postgres row lock during the spike</text>
+          <text x="162" y="332">enrolment complete, per-identity purchase cap, age gate if required</text>
+          <text x="162" y="422">authorise in local currency via licensed aggregator, idempotent</text>
+          <text x="162" y="512">mint TicketNFT to identityId, mode = bound or capped</text>
+          <text x="162" y="602">write credential to event manifest, push delta to every scanner</text>
+        </g>
+        <g stroke="var(--ink-3)" stroke-width="1.2" marker-end="url(#ar)" fill="none">
+          <line x1="200" y1="78" x2="200" y2="108"></line>
+          <line x1="200" y1="168" x2="200" y2="198"></line>
+          <line x1="200" y1="258" x2="200" y2="288"></line>
+          <line x1="200" y1="348" x2="200" y2="378"></line>
+          <line x1="200" y1="438" x2="200" y2="468"></line>
+          <line x1="200" y1="528" x2="200" y2="558"></line>
+        </g>
+        <g font-family="IBM Plex Mono, monospace" font-size="10" fill="var(--teal)">
+          <text x="212" y="97">admissionToken</text>
+          <text x="212" y="187">riskVerdict: allow</text>
+          <text x="212" y="277">holdId, expiresAt</text>
+          <text x="212" y="367">identityId, limitOk</text>
+          <text x="212" y="457">authRef, amountMinor</text>
+          <text x="212" y="547">tokenId, txHash</text>
+        </g>
+      </svg>
+      </div>
+      <figcaption><b>Figure 3.</b> The two orderings that matter: scoring before reservation means a bot farm never holds inventory it will not pay for, and identity before payment means a blocked purchase is a declined checkout rather than a refund plus a chargeback plus an angry fan.</figcaption>
+    </figure>
+    <p>Mint is deferred and batched. A hot onsale cannot wait on block confirmation, so Ordering issues the entitlement in Postgres immediately, the fan sees a valid ticket at once, and Token Service mints asynchronously in batches with the database row as the source of truth until the transaction confirms. If the chain is unavailable for an hour, tickets still sell and the gate still works &mdash; the ledger simply catches up.</p>
+  </div>
+</section>
+
+<div class="perf"></div>
+
+<section class="sec" id="gate">
+  <div class="rail"><b>06</b>The gate</div>
+  <div>
+    <h2>The gate: an 800&nbsp;ms budget</h2>
+    <p>The gate is the product. Everything else can be a little slow; this cannot. The target is a p95 of 800&nbsp;ms from face-in-frame to green light, and the only way to hit it at a festival is to make the decision without leaving the device.</p>
+    <figure>
+      <svg viewBox="0 0 980 246" role="img" aria-label="Latency budget for one gate verification: 220 ms capture and liveness, 90 ms on-device embedding, 45 ms manifest match, 15 ms policy check, 60 ms interface and turnstile signal, leaving 370 ms of headroom inside the 800 ms budget.">
+        <text x="110" y="30" font-family="IBM Plex Mono, monospace" font-size="10.5" fill="var(--ink-3)">ONE VERIFICATION, P95 BUDGET 800 MS &mdash; ENTIRELY ON DEVICE, NO NETWORK ON THE CRITICAL PATH</text>
+        <rect x="110" y="56" width="820" height="42" fill="var(--sunk)" stroke="var(--rule)"></rect>
+        <g fill="var(--teal-mark)">
+          <rect x="110" y="56" width="224" height="42"></rect>
+          <rect x="336" y="56" width="90" height="42"></rect>
+          <rect x="428" y="56" width="44" height="42"></rect>
+          <rect x="474" y="56" width="13" height="42"></rect>
+          <rect x="489" y="56" width="60" height="42"></rect>
+        </g>
+        <g font-family="IBM Plex Mono, monospace" font-size="11" fill="var(--surface)" font-weight="500">
+          <text x="124" y="82">220 ms</text>
+        </g>
+        <text x="700" y="82" font-family="IBM Plex Mono, monospace" font-size="11" fill="var(--ink-3)" text-anchor="middle">370 ms headroom</text>
+        <g stroke="var(--rule)" stroke-width="1">
+          <line x1="110" y1="98" x2="110" y2="112"></line>
+          <line x1="315" y1="98" x2="315" y2="112"></line>
+          <line x1="520" y1="98" x2="520" y2="112"></line>
+          <line x1="725" y1="98" x2="725" y2="112"></line>
+          <line x1="930" y1="98" x2="930" y2="112"></line>
+        </g>
+        <g font-family="IBM Plex Mono, monospace" font-size="10" fill="var(--ink-3)" text-anchor="middle">
+          <text x="110" y="126">0</text><text x="315" y="126">200</text><text x="520" y="126">400</text><text x="725" y="126">600</text><text x="930" y="126">800 ms</text>
+        </g>
+        <g font-family="IBM Plex Mono, monospace" font-size="11.5" fill="var(--ink)">
+          <rect x="110" y="156" width="9" height="9" fill="var(--teal-mark)"></rect>
+          <text x="126" y="165">220 ms</text><text x="196" y="165" fill="var(--ink-2)">capture + passive liveness</text>
+          <rect x="110" y="186" width="9" height="9" fill="var(--teal-mark)"></rect>
+          <text x="126" y="195">90 ms</text><text x="196" y="195" fill="var(--ink-2)">on-device embedding</text>
+          <rect x="110" y="216" width="9" height="9" fill="var(--teal-mark)"></rect>
+          <text x="126" y="225">45 ms</text><text x="196" y="225" fill="var(--ink-2)">manifest match, 12k entries</text>
+          <rect x="520" y="156" width="9" height="9" fill="var(--teal-mark)"></rect>
+          <text x="536" y="165">15 ms</text><text x="606" y="165" fill="var(--ink-2)">policy + revocation check</text>
+          <rect x="520" y="186" width="9" height="9" fill="var(--teal-mark)"></rect>
+          <text x="536" y="195">60 ms</text><text x="606" y="195" fill="var(--ink-2)">interface + turnstile signal</text>
+          <rect x="520" y="216" width="9" height="9" fill="var(--sunk)" stroke="var(--rule)"></rect>
+          <text x="536" y="225">370 ms</text><text x="606" y="225" fill="var(--ink-2)">headroom for slow frames</text>
+        </g>
+      </svg>
+      <figcaption><b>Figure 4.</b> 430&nbsp;ms of work against an 800&nbsp;ms budget. The headroom is not slack to be spent on features &mdash; it absorbs poor lighting, a fan who looks away, and the second capture attempt that a real queue produces several times a minute.</figcaption>
+    </figure>
+
+    <h3><span class="n">6.1</span>The event manifest</h3>
+    <p>Each scanner holds an encrypted, event-scoped manifest containing one entry per admitted credential: the sealed template, <code>identityId</code>, tier, seat, and entry rules. It is a bounded set &mdash; twelve thousand faces, not twelve million &mdash; which is exactly why an on-device 1:N search is tractable at 45&nbsp;ms.</p>
+    <ul>
+      <li><strong>Scoped.</strong> One manifest per event, per gate group. A scanner stolen from a stadium yields the templates of that night's ticket-holders and nothing else.</li>
+      <li><strong>Time-boxed.</strong> Manifest keys are released to the device on a schedule tied to doors-open, and the whole manifest self-destructs on a TTL after the event ends. Verified deletion is reported back and audited.</li>
+      <li><strong>Delta-synced.</strong> Every resale, revocation and late sale becomes a signed delta. Deltas apply in order and carry a sequence number, so a scanner that has been offline for an hour knows exactly how stale it is and can display that to the operator.</li>
+      <li><strong>Attested.</strong> Each admission produces a signed attestation queued locally and uploaded when connectivity returns. Double-entry is detected on reconciliation, not prevented at the gate &mdash; which is the right trade, because the alternative is a gate that stops working when the network does.</li>
+    </ul>
+
+    <div class="note warn">
+      <h4>The honest limitation</h4>
+      <p>Because scanners are allowed to make decisions offline, two lanes can each admit the same credential during a network partition. This is bounded &mdash; deltas converge in seconds when connectivity is normal, and offline windows are logged &mdash; and it is a deliberate choice: an offline-tolerant gate with a rare, detectable double-entry is strictly better than an online-only gate that halts a queue of nine thousand people. The alternative design, hard-locking each credential to a single lane, is available for high-security events where throughput is less important than certainty.</p>
+    </div>
+  </div>
+</section>
+
+<div class="perf"></div>
+
+<section class="sec" id="resale">
+  <div class="rail"><b>07</b>Resale</div>
+  <div>
+    <h2>Programmable resale</h2>
+    <p>The organizer-facing promise is a switch and three dials: resale on or off, a price ceiling, a window, and a commission. Those four settings compile down to conditions in <code>ResaleController</code>, so the policy is enforced by the token rather than by the marketplace's good behaviour.</p>
+    <figure>
+      <div class="figscroll">
+      <svg viewBox="0 0 980 406" role="img" aria-label="Resale flow: seller lists, the resale controller checks policy, the buyer identity is verified, and an atomic settlement transaction splits the sale price between organizer, platform, rights-holder and seller before rebinding the credential.">
+        <g stroke="var(--rule)" fill="var(--surface-2)">
+          <rect x="20" y="34" width="180" height="76"></rect>
+          <rect x="520" y="34" width="170" height="76"></rect>
+        </g>
+        <rect x="250" y="34" width="200" height="76" fill="var(--surface)" stroke="var(--teal)" stroke-width="1.8"></rect>
+        <rect x="740" y="34" width="220" height="76" fill="var(--surface)" stroke="var(--teal)" stroke-width="1.8"></rect>
+        <g font-family="Archivo, sans-serif" font-size="12.5" font-weight="700" fill="var(--ink)">
+          <text x="34" y="58">Seller lists</text>
+          <text x="264" y="58" fill="var(--teal)">ResaleController</text>
+          <text x="534" y="58">Buyer verified</text>
+          <text x="754" y="58" fill="var(--teal)">Atomic settlement</text>
+        </g>
+        <g font-family="IBM Plex Mono, monospace" font-size="10" fill="var(--ink-3)">
+          <text x="34" y="78">ticket #8821</text><text x="34" y="92">face value 2,200</text>
+          <text x="264" y="78">resale on? cap? window?</text><text x="264" y="92">cooldown? per-account cap?</text>
+          <text x="534" y="78">enrolled, deduped,</text><text x="534" y="92">bot score under limit</text>
+          <text x="754" y="78">transfer + split + rebind</text><text x="754" y="92">in one transaction</text>
+        </g>
+        <g stroke="var(--ink-3)" stroke-width="1.2" marker-end="url(#ar)" fill="none">
+          <line x1="200" y1="72" x2="246" y2="72"></line>
+          <line x1="450" y1="72" x2="516" y2="72"></line>
+          <line x1="690" y1="72" x2="736" y2="72"></line>
+        </g>
+        <line x1="350" y1="110" x2="350" y2="146" stroke="var(--hot)" stroke-width="1.2" stroke-dasharray="5 4" marker-end="url(#ar)" fill="none"></line>
+        <rect x="250" y="146" width="230" height="46" fill="var(--hot-wash)" stroke="var(--hot)"></rect>
+        <text x="264" y="166" font-family="Archivo, sans-serif" font-size="12" font-weight="700" fill="var(--hot)">Revert</text>
+        <text x="264" y="182" font-family="IBM Plex Mono, monospace" font-size="10" fill="var(--hot)">cap breach, resale off, window shut</text>
+        <text x="490" y="166" font-family="IBM Plex Mono, monospace" font-size="10" fill="var(--ink-3)">enforced in the contract,</text>
+        <text x="490" y="180" font-family="IBM Plex Mono, monospace" font-size="10" fill="var(--ink-3)">not in the marketplace UI</text>
+
+        <line x1="850" y1="110" x2="850" y2="164" stroke="var(--ink-3)" stroke-width="1.2" fill="none"></line>
+        <line x1="180" y1="164" x2="850" y2="164" stroke="var(--ink-3)" stroke-width="1.2" fill="none"></line>
+        <g stroke="var(--ink-3)" stroke-width="1.2" marker-end="url(#ar)" fill="none">
+          <line x1="180" y1="164" x2="180" y2="204"></line>
+          <line x1="375" y1="164" x2="375" y2="204"></line>
+          <line x1="570" y1="164" x2="570" y2="204"></line>
+          <line x1="765" y1="164" x2="765" y2="204"></line>
+        </g>
+        <text x="20" y="158" font-family="IBM Plex Mono, monospace" font-size="10" fill="var(--ink-3)">sale price 2,420 &mdash; the 110% ceiling</text>
+        <g stroke="var(--rule)" fill="var(--surface-2)">
+          <rect x="95" y="206" width="170" height="74"></rect>
+          <rect x="290" y="206" width="170" height="74"></rect>
+          <rect x="485" y="206" width="170" height="74"></rect>
+          <rect x="680" y="206" width="170" height="74"></rect>
+        </g>
+        <g font-family="Archivo, sans-serif" font-size="19" font-weight="700" fill="var(--teal)">
+          <text x="109" y="236">7%</text><text x="304" y="236">3%</text><text x="499" y="236">2%</text><text x="694" y="236">88%</text>
+        </g>
+        <g font-family="Archivo, sans-serif" font-size="12" font-weight="600" fill="var(--ink)">
+          <text x="160" y="236">Organizer</text><text x="345" y="236">Platform</text><text x="540" y="236">Rights-holder</text><text x="757" y="236">Seller</text>
+        </g>
+        <g font-family="IBM Plex Mono, monospace" font-size="11" fill="var(--ink-3)">
+          <text x="109" y="262">169</text><text x="304" y="262">73</text><text x="499" y="262">48</text><text x="694" y="262">2,130</text>
+        </g>
+        <g font-family="IBM Plex Mono, monospace" font-size="9.5" fill="var(--ink-3)">
+          <text x="109" y="274">basis points fixed at event creation</text><text x="304" y="274">ReXell take</text><text x="499" y="274">optional, artist-set</text><text x="694" y="274">net of platform fees</text>
+        </g>
+        <g stroke="var(--ink-3)" stroke-width="1.2" marker-end="url(#ar)" fill="none">
+          <line x1="180" y1="280" x2="180" y2="318"></line>
+          <line x1="765" y1="280" x2="765" y2="318"></line>
+        </g>
+        <rect x="95" y="320" width="340" height="62" fill="var(--teal-wash)" stroke="var(--teal)"></rect>
+        <rect x="520" y="320" width="330" height="62" fill="var(--hot-wash)" stroke="var(--hot)"></rect>
+        <g font-family="Archivo, sans-serif" font-size="12.5" font-weight="700">
+          <text x="109" y="344" fill="var(--teal)">Buyer credential issued</text>
+          <text x="534" y="344" fill="var(--hot)">Seller credential revoked</text>
+        </g>
+        <g font-family="IBM Plex Mono, monospace" font-size="10" fill="var(--ink-3)">
+          <text x="109" y="364">bind identityId(buyer), push scanner delta</text>
+          <text x="534" y="364">seller face no longer opens this gate</text>
+        </g>
+      </svg>
+      </div>
+      <figcaption><b>Figure 5.</b> The single most important edge in this diagram is the rightmost one at the bottom: the moment a ticket resells, the previous holder's face stops working at the gate. Without that revocation the biometric binding is decoration.</figcaption>
+    </figure>
+
+    <h3><span class="n">7.1</span>The organizer's dials</h3>
+    <div class="tw"><table>
+      <thead><tr><th style="width:20%">Setting</th><th style="width:18%">Range</th><th>What it stops, and the failure it introduces</th></tr></thead>
+      <tbody>
+        <tr><td>Resale <span class="tag off">off</span></td><td>Boolean</td><td>Eliminates scalping outright. Introduces genuine hardship &mdash; illness, travel, a changed date &mdash; so pair it with a refund-to-face-value returns queue that resells at the original price. An organizer who turns resale off without a returns queue will generate the worst support load in the product.</td></tr>
+        <tr><td>Price ceiling</td><td>100&ndash;150% of face</td><td>Removes the profit motive from bulk buying. Pushes determined resale off-platform, which is why the ceiling matters less than the identity binding: an off-platform buyer gets a ticket their face cannot open.</td></tr>
+        <tr><td>Resale window</td><td>Opens T&minus;n days, shuts T&minus;h hours</td><td>Stops both day-of price gouging and last-minute credential churn the scanners cannot sync. A window that shuts too early strands genuine sellers.</td></tr>
+        <tr><td>Cooldown</td><td>0&ndash;72 hours after purchase</td><td>Defeats the buy-and-flip-instantly pattern that automated resale bots rely on.</td></tr>
+        <tr><td>Per-identity cap</td><td>1&ndash;10 tickets, 1&ndash;3 resales</td><td>Caps the value of any single farmed account. Enforced against <code>identityId</code>, which is why biometric dedupe at enrolment is load-bearing rather than cosmetic.</td></tr>
+        <tr><td>Commission</td><td>0&ndash;15%, split any way</td><td>Turns the secondary market from revenue the organizer never sees into revenue they set the terms of. This is the commercial hook.</td></tr>
+      </tbody>
+    </table></div>
+  </div>
+</section>
+
+<div class="perf"></div>
+
+<section class="sec" id="bots">
+  <div class="rail"><b>08</b>Bots</div>
+  <div>
+    <h2>Bot and scalper defense</h2>
+    <p>The AI layer has one job: decide, in under 50&nbsp;milliseconds, whether the entity requesting a ticket is a person. It does this with two models on two timescales &mdash; a fast scorer inline in the request path, and a slow graph model that finds the farm rather than the bot.</p>
+    <figure>
+      <div class="figscroll">
+      <svg viewBox="0 0 980 414" role="img" aria-label="Bot detection pipeline: five signal families feed a feature store, which serves a real-time gradient-boosted scorer and a nightly graph clustering model, producing allow, challenge, throttle or block decisions, with outcome labels fed back into the feature store.">
+        <text x="20" y="20" font-family="IBM Plex Mono, monospace" font-size="10.5" fill="var(--ink-3)">SIGNALS</text>
+        <text x="270" y="20" font-family="IBM Plex Mono, monospace" font-size="10.5" fill="var(--ink-3)">FEATURES</text>
+        <text x="470" y="20" font-family="IBM Plex Mono, monospace" font-size="10.5" fill="var(--ink-3)">MODELS</text>
+        <text x="740" y="20" font-family="IBM Plex Mono, monospace" font-size="10.5" fill="var(--ink-3)">DECISION</text>
+        <g stroke="var(--rule)" fill="var(--surface-2)">
+          <rect x="20" y="34" width="200" height="44"></rect>
+          <rect x="20" y="90" width="200" height="44"></rect>
+          <rect x="20" y="146" width="200" height="44"></rect>
+          <rect x="20" y="202" width="200" height="44"></rect>
+          <rect x="20" y="258" width="200" height="44"></rect>
+        </g>
+        <g font-family="Archivo, sans-serif" font-size="12" font-weight="600" fill="var(--ink)">
+          <text x="34" y="54">Timing entropy</text>
+          <text x="34" y="110">Touch and cursor dynamics</text>
+          <text x="34" y="166">Device and ASN reputation</text>
+          <text x="34" y="222">Payment instrument graph</text>
+          <text x="34" y="278">Cross-account velocity</text>
+        </g>
+        <g font-family="IBM Plex Mono, monospace" font-size="9.5" fill="var(--ink-3)">
+          <text x="34" y="70">inter-keystroke and page dwell</text>
+          <text x="34" y="126">pressure, jitter, path curvature</text>
+          <text x="34" y="182">attestation, datacentre, proxy</text>
+          <text x="34" y="238">shared cards, shared BINs</text>
+          <text x="34" y="294">same seat map, same second</text>
+        </g>
+        <g stroke="var(--ink-3)" stroke-width="1.1" marker-end="url(#ar)" fill="none">
+          <line x1="220" y1="56" x2="264" y2="120"></line>
+          <line x1="220" y1="112" x2="264" y2="140"></line>
+          <line x1="220" y1="168" x2="264" y2="168"></line>
+          <line x1="220" y1="224" x2="264" y2="196"></line>
+          <line x1="220" y1="280" x2="264" y2="216"></line>
+        </g>
+        <rect x="268" y="108" width="150" height="120" fill="var(--surface)" stroke="var(--teal)" stroke-width="1.8"></rect>
+        <text x="282" y="134" font-family="Archivo, sans-serif" font-size="12.5" font-weight="700" fill="var(--teal)">Feature store</text>
+        <g font-family="IBM Plex Mono, monospace" font-size="10" fill="var(--ink-3)">
+          <text x="282" y="156">online: Redis</text>
+          <text x="282" y="172">offline: ClickHouse</text>
+          <text x="282" y="196">same transforms</text>
+          <text x="282" y="212">both paths, so</text>
+          <text x="282" y="228" fill="var(--teal)">no training skew</text>
+        </g>
+        <g stroke="var(--ink-3)" stroke-width="1.1" marker-end="url(#ar)" fill="none">
+          <line x1="418" y1="140" x2="464" y2="96"></line>
+          <line x1="418" y1="196" x2="464" y2="240"></line>
+        </g>
+        <rect x="468" y="58" width="230" height="76" fill="var(--surface-2)" stroke="var(--rule)"></rect>
+        <rect x="468" y="202" width="230" height="76" fill="var(--surface-2)" stroke="var(--rule)"></rect>
+        <g font-family="Archivo, sans-serif" font-size="12.5" font-weight="700" fill="var(--ink)">
+          <text x="482" y="82">Gradient-boosted scorer</text>
+          <text x="482" y="226">Graph community detection</text>
+        </g>
+        <g font-family="IBM Plex Mono, monospace" font-size="10" fill="var(--ink-3)">
+          <text x="482" y="102">inline, p99 under 50 ms</text><text x="482" y="118">scores one request</text>
+          <text x="482" y="246">nightly, no latency budget</text><text x="482" y="262">finds the farm, not the bot</text>
+        </g>
+        <g stroke="var(--ink-3)" stroke-width="1.1" marker-end="url(#ar)" fill="none">
+          <line x1="698" y1="96" x2="736" y2="140"></line>
+          <line x1="698" y1="240" x2="736" y2="196"></line>
+        </g>
+        <rect x="740" y="108" width="220" height="120" fill="var(--surface)" stroke="var(--teal)" stroke-width="1.8"></rect>
+        <text x="754" y="130" font-family="Archivo, sans-serif" font-size="12.5" font-weight="700" fill="var(--teal)">Verdict</text>
+        <g font-family="IBM Plex Mono, monospace" font-size="10.5" fill="var(--ink-2)">
+          <text x="754" y="152">allow &mdash; no friction added</text>
+          <text x="754" y="170">challenge &mdash; step-up check</text>
+          <text x="754" y="188">throttle &mdash; slow the queue</text>
+          <text x="754" y="206">block + flag for review</text>
+        </g>
+        <text x="754" y="222" font-family="IBM Plex Mono, monospace" font-size="9.5" fill="var(--ink-3)">never a silent permanent ban</text>
+
+        <line x1="850" y1="228" x2="850" y2="340" stroke="var(--teal)" stroke-width="1.3" stroke-dasharray="5 4" fill="none"></line>
+        <line x1="343" y1="340" x2="850" y2="340" stroke="var(--teal)" stroke-width="1.3" stroke-dasharray="5 4" fill="none"></line>
+        <line x1="343" y1="340" x2="343" y2="232" stroke="var(--teal)" stroke-width="1.3" stroke-dasharray="5 4" marker-end="url(#ar)" fill="none"></line>
+        <text x="360" y="332" font-family="IBM Plex Mono, monospace" font-size="10.5" fill="var(--teal)">labels back: chargebacks, gate denials, dedupe links, manual review outcomes</text>
+        <text x="360" y="368" font-family="IBM Plex Mono, monospace" font-size="10" fill="var(--ink-3)">the feedback loop is the whole system &mdash; a scalper adapts weekly, so a model</text>
+        <text x="360" y="384" font-family="IBM Plex Mono, monospace" font-size="10" fill="var(--ink-3)">retrained quarterly is a model that has already lost</text>
+      </svg>
+      </div>
+      <figcaption><b>Figure 6.</b> The two models answer different questions. The inline scorer asks &ldquo;is this request automated?&rdquo; and must answer instantly. The graph model asks &ldquo;which of last week's accounts were the same operator?&rdquo; and its answer arrives too late to block that purchase &mdash; but in time to reprice the risk of every account in the cluster before the next onsale.</figcaption>
+    </figure>
+
+    <div class="note warn">
+      <h4>What this layer cannot do</h4>
+      <p>A determined operator paying real humans in a low-wage market to buy tickets on real devices with real cards will pass every behavioural check, because they are not a bot. Behavioural detection raises the cost of scalping; it does not end it. <strong>The thing that actually ends it is the identity binding</strong> &mdash; a human-farmed ticket is still a ticket whose face does not match the person at the gate. The AI layer's real job is to keep the honest fan's queue clean and to make bulk acquisition expensive, not to be the last line of defense.</p>
+    </div>
+  </div>
+</section>
+
+<div class="perf"></div>
+
+<section class="sec" id="screenshot">
+  <div class="rail"><b>09</b>Screenshots</div>
+  <div>
+    <h2>&ldquo;No screenshots&rdquo;, honestly</h2>
+    <p>The requirement is that a fan cannot screenshot a ticket and sell it online. The technical controls below help, and none of them is sufficient &mdash; a phone pointed at another phone's screen defeats every one. The architecture solves it a different way, by removing the artefact.</p>
+    <div class="tw"><table>
+      <thead><tr><th style="width:26%">Control</th><th style="width:33%">What it genuinely stops</th><th>What it does not</th></tr></thead>
+      <tbody>
+        <tr><td><code>FLAG_SECURE</code> on Android</td><td>OS screenshots, screen recording, and the ticket appearing in the app switcher or a screen share.</td><td>A second camera. Rooted devices with modified frameworks.</td></tr>
+        <tr><td>iOS capture detection</td><td>Nothing, preventatively &mdash; iOS gives notification, not prevention. Useful as a signal: a capture event raises the account's risk score.</td><td>The capture itself. Treat it as telemetry, never as a control.</td></tr>
+        <tr><td>Rotating display code</td><td>A stale image being useful. Codes are derived from a device-held secret and rotate every 15 seconds, so a screenshot expires before it can be listed for sale.</td><td>A live screen-share at the moment of entry.</td></tr>
+        <tr><td><span class="tag on">the actual answer</span></td><td colspan="2"><strong>There is nothing to screenshot.</strong> The credential is the fan's face plus a server-side entitlement. There is no barcode, no QR code, no PDF, and no image that constitutes a ticket. A screenshot of the ReXell app is a screenshot of a receipt.</td></tr>
+      </tbody>
+      <caption>The rotating code exists only for the non-biometric fallback path, where a visual credential is unavoidable.</caption>
+    </table></div>
+  </div>
+</section>
+
+<div class="perf"></div>
+
+<section class="sec" id="data">
+  <div class="rail"><b>10</b>Data</div>
+  <div>
+    <h2>Core data model</h2>
+    <p class="sub">Eleven entities carry the system. Everything else is projection or audit.</p>
+    <div class="tw"><table>
+      <thead><tr><th style="width:19%">Entity</th><th style="width:31%">Key fields</th><th>Notes</th></tr></thead>
+      <tbody>
+        <tr><td>Person</td><td class="m">personId, name, contact, idRef, kycState</td><td>Identity service only. Column-encrypted. The only table holding a legal name.</td></tr>
+        <tr><td>Identity</td><td class="m">identityId, personId, dedupeClusterId, riskTier</td><td>The join between the legal person and everything else. Deleting a Person tombstones the Identity but preserves the entitlement history.</td></tr>
+        <tr><td>BiometricRecord</td><td class="m">templateRef, identityId, modelVersion, enrolledAt, consentId</td><td>Vault only. No foreign key from any application schema.</td></tr>
+        <tr><td>Consent</td><td class="m">consentId, identityId, purpose, textVersion, grantedAt, withdrawnAt</td><td>Append-only. Withdrawal writes a new row rather than mutating one, because the record of what was consented to when is the legal artefact.</td></tr>
+        <tr><td>Event</td><td class="m">eventId, organizerId, venue, capacity, policyHash, chainAddress</td><td><code>policyHash</code> anchors the resale terms so an organizer cannot quietly change them after inventory is sold.</td></tr>
+        <tr><td>TicketTier</td><td class="m">tierId, eventId, faceValueMinor, allocation, resaleMode</td><td>Resale mode is per tier: a festival can bind VIP inventory and allow capped resale on general admission.</td></tr>
+        <tr><td>Ticket</td><td class="m">ticketId, tokenId, tierId, identityId, seat, state</td><td>State machine: <code>held &rarr; issued &rarr; listed &rarr; transferred &rarr; redeemed</code>, plus <code>revoked</code> and <code>refunded</code> as terminal states.</td></tr>
+        <tr><td>Order</td><td class="m">orderId, identityId, holdId, amountMinor, authRef, riskVerdict</td><td>The risk verdict is stored with the order, so a later dispute can be reasoned about with the score that was actually used.</td></tr>
+        <tr><td>Listing</td><td class="m">listingId, ticketId, priceMinor, opensAt, closesAt, splitBps</td><td>Validated against the event policy on write and again in the contract on execution. Two checks, because the first one is a UX affordance and the second is the enforcement.</td></tr>
+        <tr><td>EntryAttestation</td><td class="m">ticketId, scannerId, laneId, decidedAt, matchScore, offline</td><td>Signed by the scanner. The <code>offline</code> flag is what makes double-entry reconciliation possible after a partition.</td></tr>
+        <tr><td>RiskSignal</td><td class="m">signalId, identityId, kind, value, observedAt</td><td>Feeds the feature store. Retained 90 days, then aggregated and the raw rows dropped.</td></tr>
+      </tbody>
+    </table></div>
+  </div>
+</section>
+
+<div class="perf"></div>
+
+<section class="sec" id="nfr">
+  <div class="rail"><b>11</b>Targets</div>
+  <div>
+    <h2>Non-functional requirements</h2>
+    <div class="tw"><table>
+      <thead><tr><th style="width:26%">Dimension</th><th style="width:22%">Target</th><th>Why this number</th></tr></thead>
+      <tbody>
+        <tr><td>Gate verification p95</td><td class="m">under 800 ms</td><td>Below the threshold at which a queue starts to compound. Legacy barcode scanning sits at roughly 2&ndash;4 seconds per person including the fumble for a phone.</td></tr>
+        <tr><td>Gate throughput</td><td class="m">1,500 per lane-hour</td><td>Clears a 12,000-capacity venue in 80 minutes on 10 lanes with one lane spare.</td></tr>
+        <tr><td>Onsale peak</td><td class="m">40,000 req/s at edge</td><td>Observed shape of a hot regional onsale. The edge absorbs it; only admitted traffic reaches origin, which is sized for 2,000 req/s.</td></tr>
+        <tr><td>False reject rate</td><td class="m">under 1.5% at gate</td><td>At 1.5%, one lane in ten has a manual case per minute &mdash; staffable. At 5% the fallback desk becomes the bottleneck and the product fails in the field.</td></tr>
+        <tr><td>False accept rate</td><td class="m">under 1 in 100,000</td><td>Within an event-scoped manifest of ~12,000, this keeps expected wrongful admissions per event well below one.</td></tr>
+        <tr><td>Entry service availability</td><td class="m">99.95%, degrades offline</td><td>Availability matters less than the offline mode, which is why the scanner is designed to be correct with zero connectivity.</td></tr>
+        <tr><td>Purchase path availability</td><td class="m">99.9%</td><td>An onsale that fails is unrecoverable reputationally. Multi-AZ, and inventory state reconstructible from the event log.</td></tr>
+        <tr><td>RPO / RTO</td><td class="m">RPO 0, RTO 15 min</td><td>Synchronous replication for ticket and order state. Losing a ticket sale is not recoverable by apology.</td></tr>
+        <tr><td>Chain finality tolerance</td><td class="m">up to 24 h</td><td>Nothing on the critical path waits for the chain. A day-long L2 outage delays settlement reporting, not sales and not entry.</td></tr>
+      </tbody>
+    </table></div>
+  </div>
+</section>
+
+<div class="perf"></div>
+
+<section class="sec" id="degrade">
+  <div class="rail"><b>12</b>Degradation</div>
+  <div>
+    <h2>Degradation ladder</h2>
+    <p>Every step down is a deliberate, pre-authorised behaviour with its own audit trail. The operator at the gate is told which rung they are on.</p>
+    <div class="tw"><table>
+      <thead><tr><th style="width:8%">Rung</th><th style="width:24%">What has failed</th><th style="width:34%">System behaviour</th><th>Cost accepted</th></tr></thead>
+      <tbody>
+        <tr><td class="m">0</td><td>Nothing</td><td>Face scan, local match, green light.</td><td>None.</td></tr>
+        <tr><td class="m">1</td><td>Venue connectivity</td><td>Scanner runs fully offline against its manifest; attestations queue.</td><td>Deltas from the last few minutes are missing. Rare double-entry, detected on reconciliation.</td></tr>
+        <tr><td class="m">2</td><td>Biometric match fails twice</td><td>Fan is routed to a resolution lane: app-held rotating code plus a liveness re-check on a staffed device.</td><td>60&ndash;90 seconds per case. Sized for 1.5% of attendees.</td></tr>
+        <tr><td class="m">3</td><td>Fan cannot or will not use biometrics</td><td>Pre-registered non-biometric path: government ID checked against the order name by a trained operator.</td><td>Slower, human-dependent. Must be offered without penalty or the product is discriminatory.</td></tr>
+        <tr><td class="m">4</td><td>Scanner hardware down</td><td>Adjacent lane absorbs traffic; spare devices carry the same manifest, keyed on arrival.</td><td>Throughput drops by one lane. Spares are a line item, not an optional extra.</td></tr>
+        <tr><td class="m">5</td><td>Manifest cannot be provisioned at all</td><td>Break-glass mode: signed offline ticket list, ID-based admission, biometrics suspended for the event. Requires two-person authorisation and produces an incident report.</td><td>The event's fraud guarantee is void. This must be rare enough to be newsworthy internally.</td></tr>
+      </tbody>
+    </table></div>
+  </div>
+</section>
+
+<div class="perf"></div>
+
+<section class="sec" id="threat">
+  <div class="rail"><b>13</b>Threats</div>
+  <div>
+    <h2>Threat model</h2>
+    <div class="tw"><table>
+      <thead><tr><th style="width:17%">Adversary</th><th style="width:27%">Vector</th><th style="width:30%">Control</th><th>Residual risk</th></tr></thead>
+      <tbody>
+        <tr><td>Bot operator</td><td>Headless browsers and residential proxies at onsale</td><td>Edge attestation, behavioural scoring, fair queue, per-identity caps</td><td>Human farms on real devices. Contained by the identity binding, not by detection.</td></tr>
+        <tr><td>Counterfeiter</td><td>Forged or duplicated visual tickets</td><td>No visual ticket exists to forge</td><td>Fake ReXell-branded sites selling nothing. A brand and takedown problem, not a technical one.</td></tr>
+        <tr><td>Off-platform reseller</td><td>Selling account access with an agreed face at the gate</td><td>Face binds to the enrolled template, not the account; a sold account still shows the wrong face</td><td>Coerced accompaniment, where the enrolled person attends to hand off. Detectable via re-entry patterns only.</td></tr>
+        <tr><td>Presentation attacker</td><td>Photo, video replay, mask, injected virtual camera feed</td><td>Passive plus active liveness, on-device only, with capture-integrity attestation</td><td>Well-funded 3D mask attacks. Mitigated by operator presence at the lane.</td></tr>
+        <tr><td>Insider</td><td>Engineer or support agent extracting templates</td><td>Vault has no read path; match is a service call; break-glass access needs two people and pages the security channel</td><td>A compromised vault operator. Bounded by HSM key custody split.</td></tr>
+        <tr><td>Malicious organizer</td><td>Changing resale terms after inventory sells; overselling capacity</td><td><code>policyHash</code> anchored at event creation; capacity enforced by the contract mint cap</td><td>An organizer who simply lies in their marketing. A contractual matter.</td></tr>
+        <tr><td>Chain-level attacker</td><td>Reorgs, sequencer downtime, contract exploit</td><td>Chain is not on the critical path; timelocked upgrades; two independent audits before any mainnet mint</td><td>A novel exploit in a dependency. Bug bounty plus an incident playbook that can freeze transfers without stopping entry.</td></tr>
+        <tr><td>Data thief</td><td>Stealing a scanner from a live venue</td><td>Event-scoped manifest, keys released at doors-open, TTL destruction, remote wipe, full-disk encryption with device attestation</td><td>One night's templates for one event. The blast radius is the point of the scoping.</td></tr>
+      </tbody>
+    </table></div>
+  </div>
+</section>
+
+<div class="perf"></div>
+
+<section class="sec" id="privacy">
+  <div class="rail"><b>14</b>Privacy</div>
+  <div>
+    <h2>Privacy and compliance</h2>
+    <p>Biometrics move this product from &ldquo;handle data carefully&rdquo; to &ldquo;processing a special category of personal data under multiple regimes at once.&rdquo; The architecture is built so that compliance is a property of the design rather than a policy document.</p>
+
+    <h3><span class="n">14.1</span>Retention schedule</h3>
+    <div class="tw"><table>
+      <thead><tr><th style="width:30%">Data</th><th style="width:20%">Retained</th><th>Then</th></tr></thead>
+      <tbody>
+        <tr><td>Raw face frames</td><td class="m">never persisted</td><td>Destroyed in-process after template extraction. Never written to disk, never logged.</td></tr>
+        <tr><td>Face template</td><td class="m">enrolment + 12 months</td><td>Deleted on inactivity, on withdrawal of consent, or immediately on request. Deletion is verified and certificated.</td></tr>
+        <tr><td>Event manifest on scanner</td><td class="m">doors-open to +6 h</td><td>Cryptographic erasure on TTL, confirmed back to the server and audited per device.</td></tr>
+        <tr><td>Entry attestations</td><td class="m">90 days full, then aggregate</td><td>Match scores stripped; counts retained for capacity reporting.</td></tr>
+        <tr><td>Risk signals</td><td class="m">90 days</td><td>Aggregated into account-level features; raw behavioural rows dropped.</td></tr>
+        <tr><td>Order and payment records</td><td class="m">7 years</td><td>Statutory financial retention. Contains no biometric data, so it survives an erasure request lawfully.</td></tr>
+        <tr><td>On-chain records</td><td class="m">permanent</td><td>Pseudonymous by construction: <code>identityId</code>, token, policy, split. Erasure of the off-chain mapping renders them unlinkable, which is what makes permanence compatible with erasure rights.</td></tr>
+      </tbody>
+    </table></div>
+
+    <h3><span class="n">14.2</span>Regimes the design answers to</h3>
+    <ul>
+      <li><strong>India DPDP Act, 2023</strong> &mdash; itemised notice, purpose limitation, consent withdrawal as a first-class operation, breach notification, and a named data protection officer. The consent record model in <a href="#data">&sect;10</a> exists to satisfy this.</li>
+      <li><strong>GDPR Article 9</strong> &mdash; biometric data for unique identification requires explicit consent and a completed DPIA. Consent must be unbundled from the ticket purchase, which is why the enrolment flow has its own screen and its own record.</li>
+      <li><strong>Illinois BIPA and comparable US state law</strong> &mdash; written release, a published retention schedule, and a prohibition on profiting from biometric data. The litigation exposure here is material and disproportionate; the recommendation is to <strong>geofence biometric enrolment out of those states</strong> and operate the non-biometric path there until counsel advises otherwise.</li>
+      <li><strong>Accessibility</strong> &mdash; WCAG 2.2 AA across fan and organizer surfaces, and the non-biometric entry path treated as an equal route rather than an exception. A gate that works only for some bodies is not a gate.</li>
+      <li><strong>Payments</strong> &mdash; card data never touches ReXell infrastructure; a licensed aggregator holds the merchant relationship and ReXell scopes to SAQ-A.</li>
+    </ul>
+
+    <div class="note">
+      <h4>The design decision that makes all of this tractable</h4>
+      <p>Because no biometric or personal data is ever written on chain, a deletion request is satisfiable in full: delete the template from the vault, tombstone the person record, and the permanent ledger is left holding an opaque identifier that maps to nobody. Any design that anchors biometric data on chain forfeits this permanently, on the first day, for every user.</p>
+    </div>
+  </div>
+</section>
+
+<div class="perf"></div>
+
+<section class="sec" id="stack">
+  <div class="rail"><b>15</b>Stack</div>
+  <div>
+    <h2>Technology choices</h2>
+    <div class="tw"><table>
+      <thead><tr><th style="width:19%">Layer</th><th style="width:26%">Choice</th><th>Rationale, and what we would switch to</th></tr></thead>
+      <tbody>
+        <tr><td>Fan app</td><td>React Native with native modules</td><td>Screen-capture blocking, camera pipeline and secure key storage all need native code; the rest of the app does not. A pure PWA cannot block capture or hold a device secret, which rules it out.</td></tr>
+        <tr><td>Gate scanner</td><td>Native Android, kiosk-mode</td><td>Cheap rugged hardware, full camera control, offline-first storage, mobile device management. Switch target if throughput demands it: a dedicated turnstile unit.</td></tr>
+        <tr><td>Organizer console</td><td>Next.js, server-rendered</td><td>Read-heavy dashboards with real-time sales; SSR keeps the first paint honest on venue wifi.</td></tr>
+        <tr><td>Services</td><td>Go for the hot path, Python for ML</td><td>Ordering and entry are latency-sensitive and concurrency-heavy. The fraud stack lives where the libraries are.</td></tr>
+        <tr><td>Face recognition</td><td>Commercial SDK, on-device, at launch</td><td>Buy accuracy and certified liveness first; the differentiator is the binding architecture, not the matcher. Revisit an in-house model only once volume makes licensing the larger cost.</td></tr>
+        <tr><td>Datastores</td><td>Postgres, Redis, Kafka, ClickHouse</td><td>Boring, well-understood operational characteristics under load. ClickHouse because event analytics is the organizer-facing upsell.</td></tr>
+        <tr><td>Biometric vault</td><td>Isolated service, HSM-backed keys, own VPC and own account</td><td>Blast-radius containment. Cloud KMS with split custody; no shared credentials with the application plane.</td></tr>
+        <tr><td>Chain</td><td>An EVM L2 with cheap, predictable fees</td><td>Sub-cent transactions, EVM tooling maturity, established audit ecosystem. The design is chain-agnostic by intent &mdash; nothing above the Token Service knows which chain it is.</td></tr>
+        <tr><td>Account abstraction</td><td>ERC-4337 smart accounts with a sponsored paymaster</td><td>Fans never see gas, never see a seed phrase, and can recover access after losing a phone. Non-custodial upgrade path stays open for organizers who want it.</td></tr>
+      </tbody>
+    </table></div>
+  </div>
+</section>
+
+<div class="perf"></div>
+
+<section class="sec" id="phases">
+  <div class="rail"><b>16</b>Phases</div>
+  <div>
+    <h2>Build phases</h2>
+    <p class="sub">What matters in an early roadmap is not what gets built but what deliberately does not.</p>
+    <div class="tw"><table>
+      <thead><tr><th style="width:14%">Phase</th><th style="width:30%">Ships</th><th style="width:28%">Deliberately absent</th><th>Proves</th></tr></thead>
+      <tbody>
+        <tr><td>P0 &mdash; Pilot<br><span class="tag">one venue</span></td><td>Enrolment, purchase, bound-mode tickets only, offline scanner, manual organizer setup, staffed fallback lane</td><td>No resale, no chain, no self-serve, no analytics. Entitlements in Postgres.</td><td>That the gate is faster than a barcode and the false-reject rate is staffable. This is the only question that matters at this stage.</td></tr>
+        <tr><td>P1 &mdash; Resale<br><span class="tag">5&ndash;10 events</span></td><td>Contracts on an L2 testnet then mainnet, capped resale, commission splits, credential revocation, organizer console</td><td>No secondary-market discovery, no dynamic pricing, no white-label.</td><td>That organizers will set resale policy themselves, and that revocation propagates to scanners fast enough.</td></tr>
+        <tr><td>P2 &mdash; Defense<br><span class="tag">scale onsales</span></td><td>Fair queue, inline bot scorer, graph clustering, dedupe at enrolment, fraud dashboards</td><td>No in-house recognition model, no international expansion.</td><td>That the platform survives a genuinely hot onsale without either falling over or admitting a bot farm.</td></tr>
+        <tr><td>P3 &mdash; Platform<br><span class="tag">self-serve</span></td><td>Self-serve organizer onboarding, API and webhooks, white-label embeds, settlement automation, analytics product</td><td>&mdash;</td><td>That the business scales without a ReXell employee at every gate.</td></tr>
+      </tbody>
+    </table></div>
+  </div>
+</section>
+
+<div class="perf"></div>
+
+<section class="sec" id="open">
+  <div class="rail"><b>17</b>Open</div>
+  <div>
+    <h2>Open decisions</h2>
+    <p class="sub">Named, so they are decided rather than defaulted into.</p>
+    <ol>
+      <li><strong>Custodial or non-custodial smart accounts at launch.</strong> Custodial gives a recoverable, gas-free experience for a mainstream fan; non-custodial is the stronger claim to a web3 buyer. Recommendation: custodial by default with an export path, and revisit once organizer demand is real.</li>
+      <li><strong>How long a template survives after an event.</strong> Twelve months makes re-enrolment unnecessary and is the better experience; per-event deletion is the stronger privacy position and a better answer to counsel. This is a positioning decision as much as a technical one.</li>
+      <li><strong>Whether resale-off events must offer a face-value returns queue.</strong> Recommendation: yes, mandatory. The support burden of the alternative will land on ReXell regardless of whose policy caused it.</li>
+      <li><strong>1:N dedupe scope.</strong> Per-event is cheap and privacy-preserving; platform-wide catches serial farmers but concentrates biometric linkage across the whole user base. Legal review required before choosing.</li>
+      <li><strong>Gate hardware ownership.</strong> ReXell-owned kits give control of the field experience and a hardware line item; BYOD on venue tablets scales faster and controls less. Pilot both in P0.</li>
+      <li><strong>Chain selection and whether it is ever user-visible.</strong> If fans never see it, the choice is purely operational and reversible &mdash; which argues for not marketing the specific chain at all.</li>
+    </ol>
+  </div>
+</section>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <div>ReXell Technologies &mdash; System Architecture v1.0 &middot; 09 September 2026 &middot; Draft for review</div>
+    <div>contact@rexell.tech</div>
+  </div>
+</footer>
