@@ -24,9 +24,23 @@ set -euo pipefail
 REPO="${1:-}"
 API_HOST="${2:-}"
 
+# Run from inside a checkout, the repository URL is already known, so one
+# argument is enough. Typing a long URL twice at an SSH prompt with no working
+# paste is its own source of failure.
+if [[ -n "$REPO" && -z "$API_HOST" ]]; then
+  SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+  if ORIGIN="$(git -C "$SCRIPT_DIR" remote get-url origin 2>/dev/null)" && [[ -n "$ORIGIN" ]]; then
+    API_HOST="$REPO"
+    REPO="$ORIGIN"
+    echo "Using this checkout's origin: $REPO"
+  fi
+fi
+
 if [[ -z "$REPO" || -z "$API_HOST" ]]; then
   echo "usage: sudo bash bootstrap.sh <repo-url> <api-hostname>" >&2
-  echo "e.g.   sudo bash bootstrap.sh https://github.com/you/rexell.git api-you.duckdns.org" >&2
+  echo "   or: sudo bash deploy/bootstrap.sh <api-hostname>   (from inside a checkout)" >&2
+  echo "" >&2
+  echo "e.g. sudo bash bootstrap.sh https://github.com/you/rexell.git api-you.duckdns.org" >&2
   exit 2
 fi
 
