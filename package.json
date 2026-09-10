@@ -28,7 +28,8 @@
     "fan": "node apps/fan/serve.js",
     "seed:demo": "tsx scripts/seed-demo.ts",
     "backup": "node scripts/backup.js",
-    "gen-secrets": "node scripts/gen-secrets.js"
+    "gen-secrets": "node scripts/gen-secrets.js",
+    "build:netlify": "node scripts/build-netlify.js"
   },
   "engines": {
     "node": ">=22.5"

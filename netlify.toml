@@ -1,0 +1,33 @@
+# Netlify hosts the three browser surfaces — the fan app, the organizer
+# console and the gate scanner — and nothing else.
+#
+# The API and the vault cannot live here. They are long-running processes with
+# a SQLite database that has exactly one writer, plus background timers
+# draining the chain outbox and the waiting room. Netlify has no persistent
+# filesystem and no long-running process, so they need a host that does; see
+# docs/DEPLOYMENT.md.
+#
+# One repository backs three sites. Each site sets, under
+# Site configuration → Environment variables:
+#
+#   NETLIFY_SURFACE   fan | console | scanner
+#   REXELL_API        https://api.yourdomain.com   (the public API origin)
+#
+# The build fails loudly if REXELL_API is missing, because a surface built
+# without one deploys and renders perfectly while every call falls back to
+# localhost.
+
+[build]
+  command = "npm run build:netlify"
+  publish = "dist"
+
+[build.environment]
+  # node:sqlite is used unflagged elsewhere in this repo and 22.5 is the floor.
+  # The static build does not touch it, but one Node version across the repo is
+  # one fewer thing that differs between here and a real deployment.
+  NODE_VERSION = "24"
+
+# Security headers are NOT set here. They are generated into dist/_headers by
+# the build, because the Content-Security-Policy has to name the API origin and
+# netlify.toml cannot interpolate an environment variable. Setting a partial
+# set here as well would leave two sources of truth, one of them incomplete.

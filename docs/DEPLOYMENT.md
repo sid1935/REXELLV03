@@ -156,6 +156,65 @@ starting. Migrations run on startup and are idempotent.
 
 ---
 
+## Putting the browser surfaces on Netlify
+
+The three surfaces are static files, so they can be hosted anywhere. The API
+and the vault cannot: they are long-running processes with a SQLite database
+that has one writer and background timers draining the chain outbox and the
+waiting room. Netlify has no persistent filesystem and no long-running process.
+
+So this is a split deployment: **surfaces on Netlify, API on a host that keeps
+a process alive.** The API still needs the systemd or Compose setup above.
+
+### One repository, three sites
+
+Each Netlify site points at this repository and differs only in two
+environment variables, under *Site configuration → Environment variables*:
+
+| Site | `NETLIFY_SURFACE` | `REXELL_API` |
+|---|---|---|
+| tickets.yourdomain.com | `fan` | `https://api.yourdomain.com` |
+| organizers.yourdomain.com | `console` | `https://api.yourdomain.com` |
+| gate.yourdomain.com | `scanner` | `https://api.yourdomain.com` |
+
+Build settings come from `netlify.toml` and need no changes: the command is
+`npm run build:netlify` and the publish directory is `dist`.
+
+`REXELL_API` is the **public HTTPS origin of your API** — never a localhost
+address. The build refuses to run without it, and refuses a plaintext one,
+because a surface built with either deploys and renders perfectly while every
+call quietly goes nowhere.
+
+### What the build does that the Node server did at runtime
+
+`packages/ui/static-server.js` generates two things per request that a static
+host cannot. `scripts/build-netlify.js` writes them into `dist/` instead:
+
+- **`config.js`** — carries the API origin, so no page reads it from a query
+  string. The surfaces used to accept `?api=`, which meant a link could point
+  the fan app, including the enrolment step where a face is captured, at a
+  server chosen by whoever wrote the link.
+- **`_headers`** — the security headers. The CSP has to name the API origin in
+  `connect-src`, and `netlify.toml` cannot interpolate an environment variable,
+  so it is generated rather than declared. This is why `netlify.toml` sets no
+  headers of its own: two sources of truth, one incomplete, is worse than one.
+
+### Before you point DNS at it
+
+The API's CORS is `*`, so the surfaces can call it cross-origin from day one.
+What does need saying: the fan app and the scanner both ask for a camera, and
+a browser only grants that over HTTPS. Netlify provides it; your API host must
+too, or the fetch from an HTTPS page to a plaintext API is blocked as mixed
+content.
+
+### Is this worth it over serving them from the same host?
+
+Only if you want Netlify's deploy workflow. Caddy already serves these three
+surfaces on the API host with the same headers and no extra moving parts. The
+split is a preference, not an improvement.
+
+---
+
 ## The systemd path, step by step
 
 Debian or Ubuntu, one host, from nothing.
