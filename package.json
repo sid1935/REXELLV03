@@ -21,7 +21,8 @@
     "test:contracts": "npm --workspace @rexell/contracts run test",
     "compile": "npm --workspace @rexell/contracts run compile",
     "bench:gate": "tsx scripts/bench-gate.ts",
-    "scanner": "node apps/scanner/serve.js"
+    "scanner": "node apps/scanner/serve.js",
+    "train:risk": "tsx scripts/train-risk.ts"
   },
   "engines": {
     "node": ">=20"

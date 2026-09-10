@@ -227,3 +227,59 @@ and recognises nobody, and no liveness detection at all — a printed photo woul
 pass. Both are marked in the source. The plumbing around them is real and tested;
 the matcher is not, and must be replaced by a licensed SDK with certified
 presentation-attack detection before anyone stands at a turnstile.
+
+## Onsale defence
+
+```bash
+npm run train:risk   # refit the scorer and write packages/risk/src/model.ts
+```
+
+Two layers on two timescales. The queue and the scorer decide inline in
+microseconds; the graph runs nightly and cannot save the purchase it describes,
+only the ones after it.
+
+### The fair queue
+
+It has two jobs and they are different jobs. **Protecting the origin** is the
+easy one: 40,000 arrivals in a second, released at 200/s, and there is a test
+asserting the origin never sees more over any window. **Making the queue
+winnable by a person** is the one a naive implementation gets wrong — strict
+first-come-first-served is won by whoever opens the most connections, so a
+session's place is fixed at its first arrival, rejoining returns the same place,
+and admission within a batch is drawn rather than ordered.
+
+### What the numbers actually say
+
+| | |
+|---|---|
+| scripted automation stopped | **94.6%** pooled over 2,700 held-out sessions |
+| information ceiling | **94.7%** |
+| humans wrongly blocked | 0.86% |
+| humans given any friction | 3.86% |
+
+The scorer is within 0.1 points of the best any behavioural model could do,
+because 12% of the evasive-bot persona is drawn from the human generator
+outright. A model that scored 100% here would have learned the traffic
+generator, and reporting that would be a lie told with arithmetic.
+
+Bands are set from a **false-positive budget**, not round numbers: "block the top
+0.5% of human scores" is a decision an operations lead can defend; "threshold
+0.9" is not.
+
+### Human farms are not solved here, and the code says so
+
+Paid humans on real devices *are* humans by every signal the edge can see. The
+scorer stops about 20% of them and `INDISTINGUISHABLE.human_farm` is 0.55 in the
+traffic model to make that explicit. The graph catches the ones sharing a card;
+the gate's identity binding catches the rest, because a farmed ticket still meets
+the wrong face. Three layers, and only the third is decisive.
+
+### One design note worth reading
+
+A `block` at the queue door is softened to a challenge for an **enrolled**
+identity. The score is wrong about roughly one fan in a hundred, and refusing
+them with no recourse is the worst thing this system can do — but ReXell has
+something better than a CAPTCHA to fall back on, because that person already
+proved they are a specific human and dedupe caps how many accounts one human can
+hold. A farm cannot exploit it: enrolling every mule is exactly what dedupe
+catches.

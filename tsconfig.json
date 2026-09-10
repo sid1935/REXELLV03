@@ -11,6 +11,9 @@
       "path": "./packages/gate"
     },
     {
+      "path": "./packages/risk"
+    },
+    {
       "path": "./packages/db"
     },
     {

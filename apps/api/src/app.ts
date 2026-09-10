@@ -1,3 +1,4 @@
+import { randomBytes } from 'node:crypto';
 import Fastify from 'fastify';
 import type { FastifyInstance } from 'fastify';
 import type { EpochMs } from '@rexell/domain';
@@ -10,6 +11,8 @@ import { identityRoutes } from './routes/identity.js';
 import { gateRoutes } from './routes/gate.js';
 import { chainRoutes } from './routes/chain.js';
 import { scannerRoutes } from './routes/scanners.js';
+import { RiskEngine, onsaleRoutes } from './routes/onsale.js';
+import { FairQueue } from '@rexell/risk';
 import { TokenService } from './chain/token-service.js';
 import type { ChainClient } from './chain/client.js';
 import type { VaultClient } from './vault-client.js';
@@ -39,6 +42,11 @@ export interface AppOptions {
   devMode?: boolean;
   /** The chain. Without one, tickets still sell — they simply never mint. */
   chain?: ChainClient;
+  /**
+   * Onsale admission control. Without one there is no waiting room, and every
+   * request goes straight to origin — fine in development, not at an onsale.
+   */
+  onsale?: { drainPerSecond: number; tokenTtlMs?: number; secret?: Buffer; lottery?: boolean };
 }
 
 export interface App {
@@ -46,6 +54,8 @@ export interface App {
   db: Db;
   repo: Repo;
   tokens?: TokenService;
+  risk: RiskEngine;
+  queue?: FairQueue;
 }
 
 export function buildApp(options: AppOptions = {}): App {
@@ -74,13 +84,31 @@ export function buildApp(options: AppOptions = {}): App {
 
   server.get('/health', async () => ({ ok: true, at: now() }));
 
-  commerceRoutes(server, { repo, now, devMode: options.devMode ?? false });
+  const risk = new RiskEngine();
+  const queue = options.onsale
+    ? new FairQueue({
+        drainPerSecond: options.onsale.drainPerSecond,
+        tokenTtlMs: options.onsale.tokenTtlMs ?? 120_000,
+        secret: options.onsale.secret ?? randomBytes(32),
+        ...(options.onsale.lottery !== undefined ? { lottery: options.onsale.lottery } : {}),
+      })
+    : undefined;
+
+  commerceRoutes(server, { repo, now, devMode: options.devMode ?? false, risk });
   identityRoutes(server, { repo, now, vault: options.vault });
   gateRoutes(server, { repo, now });
   scannerRoutes(server, { repo, now, vault: options.vault });
 
   const tokens = options.chain ? new TokenService(repo, options.chain, now) : undefined;
   chainRoutes(server, { tokens, chain: options.chain, now });
+  onsaleRoutes(server, { repo, now, queue }, risk);
 
-  return tokens ? { server, db, repo, tokens } : { server, db, repo };
+  return {
+    server,
+    db,
+    repo,
+    risk,
+    ...(tokens ? { tokens } : {}),
+    ...(queue ? { queue } : {}),
+  };
 }

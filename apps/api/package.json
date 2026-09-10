@@ -13,6 +13,7 @@
     "@rexell/db": "*",
     "@rexell/domain": "*",
     "fastify": "^5.12.3",
-    "@rexell/gate": "*"
+    "@rexell/gate": "*",
+    "@rexell/risk": "*"
   }
 }

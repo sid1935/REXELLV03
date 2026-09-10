@@ -16,6 +16,7 @@ import {
 import type { EpochMs, EventDef, PurchaserContext, RiskVerdict, TicketTier } from '@rexell/domain';
 import type { Repo } from '@rexell/db';
 import { HttpError, badRequest, errorBody, notFound, statusFor } from '../errors.js';
+import type { RiskEngine } from './onsale.js';
 
 /** How long inventory is held while a fan finishes checkout. */
 export const HOLD_TTL_MS = 8 * MINUTE;
@@ -24,6 +25,7 @@ interface Deps {
   repo: Repo;
   now: () => EpochMs;
   devMode: boolean;
+  risk: RiskEngine;
 }
 
 /** Tier index on chain. Tiers are stored in creation order in TicketNFT. */
@@ -32,7 +34,7 @@ function tierIndexOf(repo: Repo, eventId: string, tierId: string): number {
   return event ? event.tiers.findIndex((t) => t.id === tierId) : 0;
 }
 
-function purchaserContext(repo: Repo, identity: string, eventId: string): PurchaserContext {
+function purchaserContext(repo: Repo, identity: string, eventId: string, risk: RiskEngine): PurchaserContext {
   const row = repo.getIdentity(toIdentityId(identity));
   if (!row) throw notFound('identity', identity);
   const base = {
@@ -40,9 +42,10 @@ function purchaserContext(repo: Repo, identity: string, eventId: string): Purcha
     enrolled: row.enrolled === 1,
     blocked: row.blocked === 1,
     ticketsHeldForEvent: repo.ticketsHeldForEvent(toIdentityId(identity), eventId),
-    // M5 replaces this with a real score. Until then every request is `allow`,
-    // and the field exists so the shape of the call never has to change.
-    riskVerdict: 'allow' as RiskVerdict,
+    // The verdict computed when this session joined the onsale queue. A session
+    // that never went through the queue has none, and gets the benefit of the
+    // doubt — refusing on absence would block every non-onsale purchase.
+    riskVerdict: (risk.verdictFor(identity) ?? 'allow') as RiskVerdict,
   };
   return row.age_years === null ? base : { ...base, ageYears: row.age_years };
 }
@@ -73,7 +76,7 @@ function tierView(tier: TicketTier, availability: { sold: number; held: number }
   };
 }
 
-export function commerceRoutes(app: FastifyInstance, { repo, now, devMode }: Deps): void {
+export function commerceRoutes(app: FastifyInstance, { repo, now, devMode, risk }: Deps): void {
   // ─ identities ─
 
   app.post<{ Body: { enrolled?: boolean; ageYears?: number } }>('/v1/identities', async (req, reply) => {
@@ -170,7 +173,7 @@ export function commerceRoutes(app: FastifyInstance, { repo, now, devMode }: Dep
       const event = repo.getEvent(tier.eventId);
       if (!event) throw notFound('event', tier.eventId);
 
-      const buyer = purchaserContext(repo, identityId, event.id);
+      const buyer = purchaserContext(repo, identityId, event.id, risk);
       const verdict = evaluatePurchase(event, { tier, quantity: quantity ?? 1, now: at }, buyer, availability);
       if (!verdict.ok) {
         return reply.code(statusFor(verdict.code)).send(errorBody(verdict.code, verdict.message, verdict.detail));
@@ -342,7 +345,7 @@ export function commerceRoutes(app: FastifyInstance, { repo, now, devMode }: Dep
       const event = repo.getEvent(tier.eventId);
       if (!event) throw notFound('event', tier.eventId);
 
-      const buyer = purchaserContext(repo, req.body?.buyerIdentityId ?? '', event.id);
+      const buyer = purchaserContext(repo, req.body?.buyerIdentityId ?? '', event.id, risk);
       const verdict = evaluateListingPurchase(
         listing,
         tier,

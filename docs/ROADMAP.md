@@ -149,22 +149,38 @@ means migrating live ticket data. Getting them right now costs a few days.
 
 ---
 
-### M5 — Onsale defence `← next`
+### M5 — Onsale defence ⚠ one of two done `280 + 42 tests green`
 
 **Ships**
 - Edge fair queue with signed admission tokens
 - Inline risk scorer, p99 under 50 ms
 - Feature store with identical transforms online and offline
 - Nightly graph clustering over device, payment and behaviour edges
-- Fraud review console
+- Fraud review console — **API only.** `GET /v1/risk/clusters` returns each
+  cluster with the evidence it was built on; the operator UI over it is not built.
 
 **Exit criteria**
-- A simulated 40,000 req/s onsale clears without origin saturation
-- A scripted bot buying run is blocked at above 95% while a human control run passes
+- ✅ A simulated 40,000 req/s onsale clears without origin saturation. 40,000
+  arrivals in one second against an origin that serves 200/s: the origin sees
+  exactly 200/s and never more, over any window.
+- ⚠ **A scripted bot run blocked above 95% — NOT MET, and not reachable by this
+  layer.** Pooled over 2,700 held-out sessions the inline scorer stops **94.6%**
+  of scripted automation at a 0.86% human false-block rate. The ceiling is
+  **94.7%**, because 12% of the evasive-bot persona is drawn from the human
+  generator outright — those sessions are not *like* human sessions, they are
+  human sessions, and no model recovers them. The scorer is therefore within
+  0.1 points of the information limit, and >95% cannot be bought with a better
+  model, only by moving traffic assumptions or accepting more false blocks.
+
+  The system answer is the other two layers: the graph pass lifts clustered
+  accounts at the *next* onsale, and the identity binding at the gate means a
+  farmed ticket still meets the wrong face. There is a test asserting the
+  ceiling is below 95%, so that nobody quietly lowers the assumption to make the
+  number look better.
 
 ---
 
-### M6 — Organizer self-serve
+### M6 — Organizer self-serve `← next`
 
 **Ships**
 - Event creation, tier and resale policy UI

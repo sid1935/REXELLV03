@@ -20,6 +20,9 @@
     },
     {
       "path": "../../packages/gate"
+    },
+    {
+      "path": "../../packages/risk"
     }
   ]
 }
