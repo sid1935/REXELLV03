@@ -1,0 +1,44 @@
+# The biometric vault.
+#
+# Bound to loopback and never proxied. The API is the only thing that talks to
+# it, and nothing off this host has any business reaching it.
+
+[Unit]
+Description=ReXell biometric vault
+After=network-online.target
+Wants=network-online.target
+# The API answers 503 on enrolment without this, rather than failing oddly, so
+# the ordering is a courtesy rather than a hard requirement.
+Before=rexell-api.service
+
+[Service]
+Type=simple
+User=rexell
+Group=rexell
+WorkingDirectory=/srv/rexell
+EnvironmentFile=/etc/rexell/rexell.env
+Environment=REXELL_ENV=production
+Environment=VAULT_PORT=8090
+Environment=VAULT_HOST=127.0.0.1
+Environment=VAULT_DB=/var/lib/rexell/vault.sqlite
+ExecStart=/usr/bin/node apps/vault/dist/server.js
+Restart=always
+RestartSec=2
+
+# A vault that refuses to start on a missing key (exit 78) must not be
+# restarted into a loop that hides the reason. 78 is treated as fatal.
+SuccessExitStatus=0
+RestartPreventExitStatus=78
+
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/rexell
+ProtectKernelTunables=true
+ProtectControlGroups=true
+RestrictAddressFamilies=AF_INET AF_INET6
+MemoryDenyWriteExecute=true
+
+[Install]
+WantedBy=multi-user.target

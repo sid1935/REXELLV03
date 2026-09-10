@@ -1,0 +1,39 @@
+# Caddyfile for the systemd deployment, where every service is a local process
+# on loopback rather than a container with a name.
+#
+#   sudo cp deploy/Caddyfile /etc/caddy/Caddyfile
+#   sudo systemctl reload caddy
+#
+# Substituted from /etc/default/caddy or the service environment.
+
+(common) {
+	encode zstd gzip
+	header {
+		# The edge is the only place that knows TLS is real, so this is the
+		# only place HSTS is asserted.
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		-Server
+	}
+}
+
+{$PUBLIC_FAN_HOST} {
+	import common
+	reverse_proxy 127.0.0.1:8120
+}
+
+{$PUBLIC_CONSOLE_HOST} {
+	import common
+	reverse_proxy 127.0.0.1:8110
+}
+
+{$PUBLIC_SCANNER_HOST} {
+	import common
+	reverse_proxy 127.0.0.1:8100
+}
+
+{$PUBLIC_API_HOST} {
+	import common
+	# Caddy sets X-Forwarded-For itself and overwrites what the client sent,
+	# which is what makes TRUST_PROXY=true safe on the API.
+	reverse_proxy 127.0.0.1:8080
+}

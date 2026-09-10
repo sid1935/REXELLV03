@@ -70,7 +70,7 @@ services:
     restart: unless-stopped
     environment:
       FAN_PORT: "8120"
-      REXELL_API: ${PUBLIC_API_URL:?set PUBLIC_API_URL in .env}
+      REXELL_API: ${REXELL_API:?set REXELL_API in .env}
       PUBLIC_HTTPS: "true"
     networks: [edge]
 
@@ -80,7 +80,7 @@ services:
     restart: unless-stopped
     environment:
       CONSOLE_PORT: "8110"
-      REXELL_API: ${PUBLIC_API_URL:?set PUBLIC_API_URL in .env}
+      REXELL_API: ${REXELL_API:?set REXELL_API in .env}
       PUBLIC_HTTPS: "true"
     networks: [edge]
 
@@ -90,7 +90,7 @@ services:
     restart: unless-stopped
     environment:
       SCANNER_PORT: "8100"
-      REXELL_API: ${PUBLIC_API_URL:?set PUBLIC_API_URL in .env}
+      REXELL_API: ${REXELL_API:?set REXELL_API in .env}
       PUBLIC_HTTPS: "true"
     networks: [edge]
 

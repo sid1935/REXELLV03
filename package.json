@@ -27,7 +27,8 @@
     "start": "npm run build && tsx scripts/dev.ts",
     "fan": "node apps/fan/serve.js",
     "seed:demo": "tsx scripts/seed-demo.ts",
-    "backup": "node scripts/backup.js"
+    "backup": "node scripts/backup.js",
+    "gen-secrets": "node scripts/gen-secrets.js"
   },
   "engines": {
     "node": ">=20"

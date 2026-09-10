@@ -1,0 +1,41 @@
+# The API. Loopback only — Caddy is what faces the internet.
+
+[Unit]
+Description=ReXell API
+After=network-online.target rexell-vault.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=rexell
+Group=rexell
+WorkingDirectory=/srv/rexell
+EnvironmentFile=/etc/rexell/rexell.env
+Environment=REXELL_ENV=production
+Environment=PORT=8080
+Environment=HOST=127.0.0.1
+Environment=REXELL_DB=/var/lib/rexell/rexell.sqlite
+Environment=VAULT_URL=http://127.0.0.1:8090
+# Caddy overwrites x-forwarded-for, which is what makes this safe. Without a
+# proxy in front, remove it or every client shares one rate-limit bucket.
+Environment=TRUST_PROXY=true
+ExecStart=/usr/bin/node apps/api/dist/server.js
+Restart=always
+RestartSec=2
+
+# Exit 78 is EX_CONFIG: the process refused to start because configuration was
+# missing or unsafe. Restarting cannot fix that, and looping buries the message.
+RestartPreventExitStatus=78
+
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/rexell
+ProtectKernelTunables=true
+ProtectControlGroups=true
+RestrictAddressFamilies=AF_INET AF_INET6
+MemoryDenyWriteExecute=true
+
+[Install]
+WantedBy=multi-user.target

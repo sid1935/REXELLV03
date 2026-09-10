@@ -1,0 +1,33 @@
+# Static file server for the fan surface. Loopback only; Caddy fronts it.
+
+[Unit]
+Description=ReXell Fan surface
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=rexell
+Group=rexell
+WorkingDirectory=/srv/rexell
+EnvironmentFile=/etc/rexell/rexell.env
+Environment=FAN_PORT=8120
+Environment=FAN_HOST=127.0.0.1
+# Tells the page, via /config.js, where to send API calls. Must be the public
+# HTTPS address of the API, not this host's loopback.
+Environment=PUBLIC_HTTPS=true
+ExecStart=/usr/bin/node apps/fan/serve.js
+Restart=always
+RestartSec=2
+
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectControlGroups=true
+RestrictAddressFamilies=AF_INET AF_INET6
+MemoryDenyWriteExecute=true
+
+[Install]
+WantedBy=multi-user.target

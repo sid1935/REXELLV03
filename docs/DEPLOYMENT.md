@@ -1,15 +1,38 @@
 # Deploying ReXell
 
-One host, Docker Compose, Caddy in front for TLS.
+One host, Caddy in front for TLS, and five processes behind it. There are two
+ways to run those five, and they are equivalent in behaviour.
 
 ```bash
-cp .env.example .env      # fill it in
+cp .env.example .env
+npm run gen-secrets >> .env   # then edit the hostnames
 docker compose up -d --build
 ```
 
 The API validates its configuration before it opens a port. If something is
 missing it exits `78` and prints every problem at once, rather than starting in
 a weaker posture than you intended.
+
+> **Honest status of the two paths.** The five processes have been run directly
+> and exercised end to end — enrolment, purchase, resale, settlement, gate, and
+> a backup restored into a clean instance. The **container images have never
+> been built**, because no Docker daemon was available where this was written.
+> The Dockerfile and compose file are careful but unverified; expect the first
+> `docker compose up --build` to need a fix or two. If you want the path with
+> the least unknown in it, use systemd below.
+
+---
+
+## Which path
+
+| | Docker Compose | systemd |
+|---|---|---|
+| Setup | one command | copy five units |
+| Isolation | containers, internal network for the vault | systemd sandboxing, loopback binds |
+| Verified here | **no — never built** | yes, as processes |
+
+Both put Caddy in front, both bind everything else to loopback, and both use
+the same environment file.
 
 ---
 
@@ -130,6 +153,105 @@ starting. Migrations run on startup and are idempotent.
 
 **Test the restore before you need it**, including that you can still read
 `VAULT_MASTER_KEY` from wherever you put it.
+
+---
+
+## The systemd path, step by step
+
+Debian or Ubuntu, one host, from nothing.
+
+**1. Node 24 and Caddy.** `node:sqlite` is used unflagged, so 22 is the floor
+and 24 is what this is tested on.
+
+```bash
+curl -fsSL https://deb.nodesource.com/setup_24.x | sudo -E bash -
+sudo apt-get install -y nodejs caddy git
+```
+
+**2. A user that owns nothing else.**
+
+```bash
+sudo useradd --system --home /srv/rexell --shell /usr/sbin/nologin rexell
+sudo mkdir -p /srv/rexell /var/lib/rexell /etc/rexell
+sudo chown rexell:rexell /srv/rexell /var/lib/rexell
+```
+
+**3. The code, built.**
+
+```bash
+sudo -u rexell git clone <your-remote> /srv/rexell
+cd /srv/rexell
+sudo -u rexell npm ci
+sudo -u rexell npm run build
+sudo -u rexell npm prune --omit=dev    # optional; drops hardhat and friends
+```
+
+**4. The environment file.** This holds every secret, so it is the one file on
+the host that must not be world-readable.
+
+```bash
+npm run gen-secrets | sudo tee /etc/rexell/rexell.env
+sudo chown root:rexell /etc/rexell/rexell.env
+sudo chmod 640 /etc/rexell/rexell.env
+sudo nano /etc/rexell/rexell.env      # add the four hostnames and REXELL_API
+```
+
+It needs the generated secrets plus:
+
+```
+PUBLIC_FAN_HOST=tickets.example.com
+PUBLIC_CONSOLE_HOST=organizers.example.com
+PUBLIC_SCANNER_HOST=gate.example.com
+PUBLIC_API_HOST=api.example.com
+REXELL_API=https://api.example.com
+```
+
+`REXELL_API` is what the browser is told to call, so it is the public HTTPS
+address of the API — never this host's loopback.
+
+**5. The services.**
+
+```bash
+sudo cp deploy/systemd/*.service /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now rexell-vault rexell-api rexell-fan rexell-console rexell-scanner
+systemctl status 'rexell-*' --no-pager
+```
+
+The units set `RestartPreventExitStatus=78`, so a process that refused to start
+because of bad configuration stays down with its message readable in
+`journalctl -u rexell-api` instead of looping and burying it.
+
+**6. TLS.** All four hostnames must already resolve to this host, or issuance
+fails.
+
+```bash
+sudo cp deploy/Caddyfile /etc/caddy/Caddyfile
+sudo systemctl edit caddy      # add the four PUBLIC_*_HOST vars as Environment=
+sudo systemctl restart caddy
+```
+
+**7. Check it.**
+
+```bash
+curl -fsS https://api.example.com/health
+```
+
+Then open the console hostname, create the first organizer with the invite
+token, and walk `docs/DEMO.md`.
+
+**8. Backups on a schedule.** A daily timer, and copy the results off the host.
+
+```bash
+sudo tee /etc/cron.daily/rexell-backup >/dev/null <<'SH'
+#!/bin/sh
+cd /srv/rexell && \
+REXELL_DB=/var/lib/rexell/rexell.sqlite \
+VAULT_DB=/var/lib/rexell/vault.sqlite \
+/usr/bin/node scripts/backup.js /var/backups/rexell
+SH
+sudo chmod +x /etc/cron.daily/rexell-backup
+```
 
 ---
 
