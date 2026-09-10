@@ -31,7 +31,7 @@
     "gen-secrets": "node scripts/gen-secrets.js"
   },
   "engines": {
-    "node": ">=20"
+    "node": ">=22.5"
   },
   "devDependencies": {
     "@nomicfoundation/hardhat-toolbox-viem": "^5.0.7",
