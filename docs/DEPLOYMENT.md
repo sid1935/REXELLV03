@@ -156,6 +156,63 @@ starting. Migrations run on startup and are idempotent.
 
 ---
 
+## Where to host the API, including for free
+
+Three things decide whether a host can run this at all:
+
+1. **A disk that survives a restart.** SQLite is a file. A host with an
+   ephemeral filesystem loses every ticket, every enrolment and every
+   settlement on each deploy — silently, because the app recreates an empty
+   schema and looks healthy.
+2. **A process that is not put to sleep.** The chain outbox and the waiting
+   room drain on timers. A host that idles the process stops both.
+3. **Ports 80 and 443.** Caddy needs them to obtain a certificate, and the
+   camera needs the certificate.
+
+The whole runtime is pure JavaScript plus built-in `node:sqlite` — no native
+modules — so **ARM hosts work fine**, which is what makes the best free tier
+viable.
+
+### Free tiers that actually work
+
+| Host | What you get | Catch |
+|---|---|---|
+| **Oracle Cloud Always Free** | 4 ARM cores, 24 GB RAM, 200 GB disk, permanent | Card required for identity; ARM capacity is scarce in popular regions; idle accounts can be reclaimed |
+| **Google Cloud Free Tier** | 1 `e2-micro`, 1 GB RAM, 30 GB disk, permanent | Only `us-west1`, `us-central1`, `us-east1`. 1 GB is tight but sufficient |
+| **AWS / Azure free tier** | 1 small instance | **12 months only**, then billed |
+
+Oracle's free tier is genuinely oversized for this — 24 GB of RAM against an
+app that idles near 300 MB. Take it if you can get through signup.
+
+### Free tiers that will quietly destroy your data
+
+Do not use these for the API, whatever their marketing says:
+
+- **Render / Railway / Fly free plans** — ephemeral disks, or sleep on idle.
+  Your database is gone on the next deploy and the outbox stops draining.
+- **Vercel / Netlify / Cloudflare Pages** — no long-running process at all.
+  The surfaces belong here; the API cannot.
+- **Anything "serverless"** — a single-writer SQLite file and a pool of
+  short-lived function instances are incompatible by construction.
+
+The failure mode is the dangerous part: none of these error. The app boots,
+migrates an empty schema, and reports healthy.
+
+### A free hostname, if you do not own a domain
+
+Caddy needs a name that resolves to the host. [DuckDNS](https://www.duckdns.org)
+gives one free, and Let's Encrypt issues for it normally:
+
+```
+api-yourname.duckdns.org      → the VPS public IP
+```
+
+Point `PUBLIC_API_HOST` at it and set `REXELL_API=https://api-yourname.duckdns.org`
+on the Netlify sites. A real domain is a few dollars a year and looks like a
+business; a DuckDNS name is fine for a pilot and costs nothing.
+
+---
+
 ## Putting the browser surfaces on Netlify
 
 The three surfaces are static files, so they can be hosted anywhere. The API
