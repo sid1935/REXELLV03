@@ -1,0 +1,24 @@
+# This repository is authored on Windows and deployed to Linux. Anything the
+# server executes or parses must arrive with LF endings: a shell script with
+# CRLF fails as "bad interpreter", and the error names the interpreter rather
+# than the line endings, so it costs an hour the first time.
+*.sh            text eol=lf
+*.js            text eol=lf
+*.mjs           text eol=lf
+*.ts            text eol=lf
+*.json          text eol=lf
+*.yml           text eol=lf
+*.yaml          text eol=lf
+*.toml          text eol=lf
+*.service       text eol=lf
+*.css           text eol=lf
+*.html          text eol=lf
+*.md            text eol=lf
+*.webmanifest   text eol=lf
+Dockerfile      text eol=lf
+Caddyfile       text eol=lf
+.env.example    text eol=lf
+.nvmrc          text eol=lf
+
+*.png           binary
+*.svg           text eol=lf
