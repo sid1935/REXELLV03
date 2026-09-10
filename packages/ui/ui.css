@@ -1,0 +1,772 @@
+/**
+ * ReXell design system.
+ *
+ * One stylesheet, served by every surface: the organizer console, the fan app
+ * and the gate scanner. They are three very different jobs — a desk, a phone in
+ * a pocket, a device held at arm's length in the dark — so the tokens are shared
+ * and the density is not.
+ *
+ * The identity carries over from the architecture and business documents:
+ * Archivo for anything a person reads, IBM Plex Mono for anything a person
+ * checks, and a teal that survives both grounds. Numbers are always tabular, so
+ * a column of money does not wobble as it updates.
+ */
+
+/* ─── tokens ──────────────────────────────────────────────────────────────── */
+
+:root {
+  /* Ground is a cooled paper rather than grey. Pure #fff under a teal reads
+     clinical, and this product spends its life next to spreadsheets. */
+  --paper: #eef2f1;
+  --surface: #ffffff;
+  --surface-2: #f4f7f6;
+  --sunk: #e4eae8;
+
+  --ink: #0c1412;
+  --ink-2: #3b4a47;
+  --ink-3: #6d7c78;
+  --ink-4: #96a3a0;
+
+  --rule: #d3dcda;
+  --rule-2: #e4eae8;
+
+  --teal: #0d6b60;
+  --teal-hover: #0a544b;
+  --teal-ink: #ffffff;
+  --teal-wash: #dceae7;
+  --teal-line: #9fc7c0;
+
+  --ok: #14764a;
+  --ok-wash: #d9ecdf;
+  --warn: #a06a05;
+  --warn-wash: #f7ebd2;
+  --bad: #bd3a13;
+  --bad-wash: #f8e2d9;
+
+  --focus: #0d6b60;
+
+  /* Depth is a hairline plus a whisper. Anything heavier competes with the
+     data, and the data is the point. */
+  --lift: 0 1px 2px rgba(12, 20, 18, 0.05);
+  --lift-2: 0 4px 16px -6px rgba(12, 20, 18, 0.16);
+  --lift-3: 0 18px 48px -18px rgba(12, 20, 18, 0.3);
+
+  --r-sm: 6px;
+  --r: 10px;
+  --r-lg: 16px;
+  --r-full: 999px;
+
+  --sans: Archivo, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --mono: 'IBM Plex Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+
+  --fast: 120ms cubic-bezier(0.2, 0, 0.2, 1);
+  --slow: 260ms cubic-bezier(0.2, 0, 0.2, 1);
+
+  --header: 60px;
+  --rail: 232px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --paper: #090f0e;
+    --surface: #121a18;
+    --surface-2: #172120;
+    --sunk: #0d1514;
+
+    --ink: #e9efed;
+    --ink-2: #b2c0bc;
+    --ink-3: #7f8e8a;
+    --ink-4: #5f6d6a;
+
+    --rule: #28332f;
+    --rule-2: #1d2725;
+
+    --teal: #46bfae;
+    --teal-hover: #6bd0c1;
+    --teal-ink: #04211d;
+    --teal-wash: #0f302c;
+    --teal-line: #1e4d46;
+
+    --ok: #3fb87a;
+    --ok-wash: #0e2c1e;
+    --warn: #d9a52a;
+    --warn-wash: #2e2408;
+    --bad: #ff7f4d;
+    --bad-wash: #331610;
+
+    --focus: #46bfae;
+
+    --lift: 0 1px 2px rgba(0, 0, 0, 0.4);
+    --lift-2: 0 4px 16px -6px rgba(0, 0, 0, 0.55);
+    --lift-3: 0 18px 48px -18px rgba(0, 0, 0, 0.7);
+  }
+}
+
+/* The same palette, forced. A gate runs at night and cannot wait for the
+   operating system to agree with it. */
+:root[data-theme='dark'] {
+    --paper: #090f0e;
+    --surface: #121a18;
+    --surface-2: #172120;
+    --sunk: #0d1514;
+
+    --ink: #e9efed;
+    --ink-2: #b2c0bc;
+    --ink-3: #7f8e8a;
+    --ink-4: #5f6d6a;
+
+    --rule: #28332f;
+    --rule-2: #1d2725;
+
+    --teal: #46bfae;
+    --teal-hover: #6bd0c1;
+    --teal-ink: #04211d;
+    --teal-wash: #0f302c;
+    --teal-line: #1e4d46;
+
+    --ok: #3fb87a;
+    --ok-wash: #0e2c1e;
+    --warn: #d9a52a;
+    --warn-wash: #2e2408;
+    --bad: #ff7f4d;
+    --bad-wash: #331610;
+
+    --focus: #46bfae;
+
+    --lift: 0 1px 2px rgba(0, 0, 0, 0.4);
+    --lift-2: 0 4px 16px -6px rgba(0, 0, 0, 0.55);
+    --lift-3: 0 18px 48px -18px rgba(0, 0, 0, 0.7);
+}
+
+/* ─── base ────────────────────────────────────────────────────────────────── */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  min-height: 100dvh;
+  background: var(--paper);
+  color: var(--ink);
+  font: 400 15px/1.5 var(--sans);
+  font-synthesis-weight: none;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+h1,
+h2,
+h3,
+h4 {
+  margin: 0;
+  font-weight: 700;
+  letter-spacing: -0.018em;
+  line-height: 1.18;
+  text-wrap: balance;
+}
+h1 { font-size: 27px; }
+h2 { font-size: 19px; }
+h3 { font-size: 15px; }
+
+p { margin: 0; }
+
+a {
+  color: var(--teal);
+  text-underline-offset: 2px;
+}
+
+.mono,
+code,
+kbd {
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+}
+
+code {
+  font-size: 0.88em;
+  background: var(--surface-2);
+  border: 1px solid var(--rule-2);
+  border-radius: 4px;
+  padding: 1px 5px;
+}
+
+/* Focus is visible and consistent. A keyboard user at a gate desk is normal,
+   not an edge case. */
+:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+  border-radius: 3px;
+}
+
+::selection {
+  background: var(--teal-wash);
+  color: var(--ink);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ─── text utilities ──────────────────────────────────────────────────────── */
+
+.lede { color: var(--ink-2); font-size: 14.5px; line-height: 1.55; max-width: 62ch; }
+.hint { color: var(--ink-3); font-size: 12.5px; line-height: 1.5; }
+.eyebrow {
+  font: 600 10.5px/1 var(--mono);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+.num { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+.muted { color: var(--ink-3); }
+.right { text-align: right; }
+
+/* ─── layout ──────────────────────────────────────────────────────────────── */
+
+.stack { display: flex; flex-direction: column; }
+.row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.spacer { flex: 1 1 auto; }
+.grid { display: grid; gap: 14px; }
+.g2 { grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); }
+.g3 { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
+.gap-sm { gap: 8px; }
+.gap-lg { gap: 22px; }
+
+/* ─── brand ───────────────────────────────────────────────────────────────── */
+
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  font: 800 16px/1 var(--sans);
+  letter-spacing: -0.03em;
+  color: var(--ink);
+  text-decoration: none;
+}
+
+/* The mark is a ticket stub: a rounded rectangle with the perforation bitten
+   out of both sides. Small enough to work at 22px, specific enough to be ours. */
+.brand-mark {
+  width: 22px;
+  height: 22px;
+  flex: none;
+  border-radius: 6px;
+  background: var(--teal);
+  position: relative;
+  overflow: hidden;
+}
+.brand-mark::before,
+.brand-mark::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--surface);
+  transform: translateY(-50%);
+}
+.brand-mark::before { left: -3.5px; }
+.brand-mark::after { right: -3.5px; }
+
+/* ─── surfaces ────────────────────────────────────────────────────────────── */
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: var(--r-lg);
+  box-shadow: var(--lift);
+}
+.card > .pad { padding: 18px 20px; }
+.card > .pad + .pad { border-top: 1px solid var(--rule-2); }
+.card-head {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  padding: 15px 20px;
+  border-bottom: 1px solid var(--rule-2);
+}
+.card-head h2 { font-size: 15px; }
+
+/* Ticket-stub divider: a perforation, with the notch bitten out at both ends. */
+.perf {
+  position: relative;
+  height: 0;
+  border-top: 1.5px dashed var(--rule);
+  margin: 0;
+}
+.perf::before,
+.perf::after {
+  content: '';
+  position: absolute;
+  top: -8px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--paper);
+}
+.perf::before { left: -8px; }
+.perf::after { right: -8px; }
+
+/* ─── buttons ─────────────────────────────────────────────────────────────── */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 16px;
+  min-height: 40px;
+  border-radius: var(--r);
+  border: 1px solid var(--rule);
+  background: var(--surface);
+  color: var(--ink);
+  font: 600 14px/1 var(--sans);
+  cursor: pointer;
+  transition: background var(--fast), border-color var(--fast), transform var(--fast), box-shadow var(--fast);
+  -webkit-tap-highlight-color: transparent;
+}
+.btn:hover:not(:disabled) { background: var(--surface-2); border-color: var(--ink-4); }
+.btn:active:not(:disabled) { transform: translateY(1px); }
+.btn:disabled { opacity: 0.45; cursor: default; }
+
+.btn-primary {
+  background: var(--teal);
+  border-color: var(--teal);
+  color: var(--teal-ink);
+  box-shadow: var(--lift);
+}
+.btn-primary:hover:not(:disabled) { background: var(--teal-hover); border-color: var(--teal-hover); }
+
+.btn-quiet { background: none; border-color: transparent; color: var(--ink-2); }
+.btn-quiet:hover:not(:disabled) { background: var(--surface-2); border-color: var(--rule-2); }
+
+.btn-danger { color: var(--bad); border-color: var(--rule); }
+.btn-danger:hover:not(:disabled) { background: var(--bad-wash); border-color: var(--bad); }
+
+.btn-sm { min-height: 32px; padding: 7px 11px; font-size: 12.5px; border-radius: var(--r-sm); }
+.btn-lg { min-height: 52px; padding: 15px 24px; font-size: 15.5px; border-radius: var(--r); }
+.btn-block { width: 100%; }
+
+/* ─── fields ──────────────────────────────────────────────────────────────── */
+
+.field { display: block; }
+.field > span {
+  display: block;
+  font: 600 11.5px/1 var(--sans);
+  letter-spacing: 0.03em;
+  color: var(--ink-3);
+  margin-bottom: 6px;
+}
+.field input,
+.field select,
+.input {
+  width: 100%;
+  padding: 10px 12px;
+  min-height: 42px;
+  border: 1px solid var(--rule);
+  border-radius: var(--r);
+  background: var(--surface-2);
+  color: var(--ink);
+  font: 400 14.5px/1.3 var(--sans);
+  transition: border-color var(--fast), background var(--fast), box-shadow var(--fast);
+}
+.field input:focus,
+.field select:focus,
+.input:focus {
+  outline: none;
+  background: var(--surface);
+  border-color: var(--teal);
+  box-shadow: 0 0 0 3px var(--teal-wash);
+}
+.field input::placeholder { color: var(--ink-4); }
+.field .num-input { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+.field-hint { margin-top: 5px; }
+
+select {
+  appearance: none;
+  background-image: linear-gradient(45deg, transparent 50%, currentColor 50%),
+    linear-gradient(135deg, currentColor 50%, transparent 50%);
+  background-position: calc(100% - 17px) 50%, calc(100% - 12px) 50%;
+  background-size: 5px 5px, 5px 5px;
+  background-repeat: no-repeat;
+  padding-right: 34px;
+}
+
+/* ─── stats ───────────────────────────────────────────────────────────────── */
+
+.stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(132px, 1fr));
+  gap: 1px;
+  background: var(--rule-2);
+  border: 1px solid var(--rule);
+  border-radius: var(--r-lg);
+  overflow: hidden;
+}
+.stat { background: var(--surface); padding: 14px 16px 15px; }
+.stat b {
+  display: block;
+  font: 700 24px/1.1 var(--sans);
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+  margin-bottom: 3px;
+}
+.stat span {
+  font: 600 10.5px/1.3 var(--mono);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+.stat.is-bad b { color: var(--bad); }
+.stat.is-ok b { color: var(--ok); }
+
+/* ─── tables ──────────────────────────────────────────────────────────────── */
+
+.table-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+th {
+  text-align: left;
+  font: 600 10.5px/1 var(--mono);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  padding: 11px 16px;
+  border-bottom: 1px solid var(--rule);
+  white-space: nowrap;
+}
+td {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--rule-2);
+  color: var(--ink-2);
+  vertical-align: middle;
+}
+tbody tr:last-child td { border-bottom: 0; }
+tbody tr { transition: background var(--fast); }
+tbody tr:hover td { background: var(--surface-2); }
+th.n, td.n { text-align: right; font-family: var(--mono); font-variant-numeric: tabular-nums; }
+td.key { color: var(--ink); font-weight: 600; }
+
+/* ─── tags ────────────────────────────────────────────────────────────────── */
+
+.tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font: 600 10.5px/1 var(--mono);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 5px 8px;
+  border-radius: var(--r-sm);
+  border: 1px solid var(--rule);
+  background: var(--surface-2);
+  color: var(--ink-2);
+  white-space: nowrap;
+}
+.tag-ok { border-color: var(--ok); color: var(--ok); background: var(--ok-wash); }
+.tag-warn { border-color: var(--warn); color: var(--warn); background: var(--warn-wash); }
+.tag-bad { border-color: var(--bad); color: var(--bad); background: var(--bad-wash); }
+.tag-teal { border-color: var(--teal-line); color: var(--teal); background: var(--teal-wash); }
+
+.dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; flex: none; }
+
+/* ─── notices ─────────────────────────────────────────────────────────────── */
+
+.note {
+  border: 1px solid var(--teal-line);
+  border-left-width: 3px;
+  background: var(--teal-wash);
+  color: var(--ink);
+  border-radius: var(--r);
+  padding: 13px 15px;
+  font-size: 13.5px;
+  line-height: 1.55;
+}
+.note-warn { border-color: var(--warn); background: var(--warn-wash); }
+.note-bad { border-color: var(--bad); background: var(--bad-wash); }
+.note strong { font-weight: 700; }
+
+/* ─── empty states ────────────────────────────────────────────────────────── */
+
+.empty {
+  text-align: center;
+  padding: 44px 24px;
+  color: var(--ink-3);
+}
+.empty h3 { color: var(--ink-2); margin-bottom: 6px; }
+.empty p { font-size: 13.5px; max-width: 40ch; margin: 0 auto; }
+
+/* ─── skeleton ────────────────────────────────────────────────────────────── */
+
+.skel {
+  background: linear-gradient(90deg, var(--sunk) 25%, var(--surface-2) 50%, var(--sunk) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.3s infinite linear;
+  border-radius: var(--r-sm);
+  color: transparent;
+}
+@keyframes shimmer {
+  to { background-position: -200% 0; }
+}
+
+/* ─── toast ───────────────────────────────────────────────────────────────── */
+
+.toasts {
+  position: fixed;
+  inset: auto 16px 16px auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  z-index: 90;
+  pointer-events: none;
+}
+.toast {
+  background: var(--ink);
+  color: var(--paper);
+  border-radius: var(--r);
+  padding: 12px 16px;
+  font: 500 13.5px/1.4 var(--sans);
+  box-shadow: var(--lift-3);
+  max-width: 340px;
+  animation: rise var(--slow);
+}
+.toast-bad { background: var(--bad); color: #fff; }
+@keyframes rise {
+  from { opacity: 0; transform: translateY(8px); }
+}
+
+/* ─── app shell: rail + header ────────────────────────────────────────────── */
+
+.shell { display: grid; grid-template-columns: var(--rail) minmax(0, 1fr); min-height: 100dvh; }
+
+.rail {
+  background: var(--surface);
+  border-right: 1px solid var(--rule);
+  padding: 18px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  position: sticky;
+  top: 0;
+  height: 100dvh;
+}
+.rail-nav { display: flex; flex-direction: column; gap: 2px; }
+.rail-nav button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 9px 11px;
+  border: 0;
+  border-radius: var(--r-sm);
+  background: none;
+  color: var(--ink-2);
+  font: 600 13.5px/1 var(--sans);
+  text-align: left;
+  cursor: pointer;
+  transition: background var(--fast), color var(--fast);
+}
+.rail-nav button:hover { background: var(--surface-2); color: var(--ink); }
+.rail-nav button[aria-current='true'] { background: var(--teal-wash); color: var(--teal); }
+.rail-nav button svg { width: 16px; height: 16px; flex: none; opacity: 0.85; }
+.rail-foot { margin-top: auto; }
+
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: var(--header);
+  padding: 0 26px;
+  background: color-mix(in srgb, var(--paper) 86%, transparent);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--rule-2);
+}
+
+.page { padding: 26px; max-width: 1120px; }
+.page-head { margin-bottom: 20px; }
+.page-head h1 { margin-bottom: 5px; }
+
+@media (max-width: 860px) {
+  .shell { grid-template-columns: 1fr; }
+  .rail {
+    position: static;
+    height: auto;
+    flex-direction: row;
+    align-items: center;
+    gap: 14px;
+    overflow-x: auto;
+    border-right: 0;
+    border-bottom: 1px solid var(--rule);
+    padding: 12px 14px;
+  }
+  .rail-nav { flex-direction: row; }
+  .rail-foot { margin: 0; }
+  .page { padding: 18px 16px 60px; }
+  .topbar { padding: 0 16px; }
+}
+
+/* ─── mobile shell: for the fan app ───────────────────────────────────────── */
+
+.phone {
+  max-width: 460px;
+  margin: 0 auto;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  background: var(--paper);
+  position: relative;
+}
+.phone-body { flex: 1; padding: 18px 18px 96px; }
+
+.tabbar {
+  position: fixed;
+  inset: auto 0 0 0;
+  z-index: 30;
+  max-width: 460px;
+  margin: 0 auto;
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  background: color-mix(in srgb, var(--surface) 92%, transparent);
+  backdrop-filter: blur(14px);
+  border-top: 1px solid var(--rule);
+  padding: 7px 6px calc(7px + env(safe-area-inset-bottom));
+}
+.tabbar button {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 7px 4px;
+  border: 0;
+  border-radius: var(--r-sm);
+  background: none;
+  color: var(--ink-3);
+  font: 600 10.5px/1 var(--sans);
+  cursor: pointer;
+  transition: color var(--fast);
+  -webkit-tap-highlight-color: transparent;
+}
+.tabbar button svg { width: 20px; height: 20px; }
+.tabbar button[aria-current='true'] { color: var(--teal); }
+
+/* ─── the ticket ──────────────────────────────────────────────────────────── */
+
+/**
+ * There is no barcode here, and the absence is the design.
+ *
+ * Every other ticketing product puts a QR code in this space. ReXell cannot,
+ * because the credential is the person — so the space where the code would be
+ * says so instead. It is the one screen that has to carry the whole product
+ * idea, and it gets the only gradient in the system.
+ */
+.ticket {
+  border-radius: var(--r-lg);
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  box-shadow: var(--lift-2);
+  overflow: hidden;
+}
+.ticket-top {
+  padding: 20px;
+  background: linear-gradient(148deg, var(--teal) 0%, color-mix(in srgb, var(--teal) 72%, #0b3b36) 100%);
+  color: #fff;
+}
+.ticket-top .eyebrow { color: rgba(255, 255, 255, 0.72); }
+.ticket-top h2 { color: #fff; font-size: 20px; margin: 6px 0 3px; }
+.ticket-top .when { color: rgba(255, 255, 255, 0.82); font-size: 13px; }
+
+.ticket-face {
+  padding: 26px 20px 22px;
+  text-align: center;
+  background: var(--surface);
+}
+.ticket-face svg { color: var(--teal); margin-bottom: 12px; }
+.ticket-face h3 { font-size: 16px; margin-bottom: 5px; }
+.ticket-face p { font-size: 13px; color: var(--ink-3); max-width: 30ch; margin: 0 auto; line-height: 1.5; }
+
+.ticket-meta {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1px;
+  background: var(--rule-2);
+  border-top: 1px solid var(--rule-2);
+}
+.ticket-meta div { background: var(--surface); padding: 11px 14px; }
+.ticket-meta dt {
+  font: 600 9.5px/1 var(--mono);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  margin-bottom: 4px;
+}
+.ticket-meta dd { margin: 0; font: 600 13px/1.2 var(--sans); }
+
+/* ─── stepper ─────────────────────────────────────────────────────────────── */
+
+.steps { display: flex; align-items: center; gap: 6px; }
+.step {
+  flex: 1;
+  height: 3px;
+  border-radius: var(--r-full);
+  background: var(--rule);
+  transition: background var(--slow);
+}
+.step.done { background: var(--teal); }
+
+/* ─── camera ──────────────────────────────────────────────────────────────── */
+
+.viewfinder {
+  position: relative;
+  aspect-ratio: 1;
+  border-radius: var(--r-lg);
+  overflow: hidden;
+  background: var(--sunk);
+  display: grid;
+  place-items: center;
+}
+.viewfinder video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transform: scaleX(-1);
+}
+.viewfinder-ring {
+  position: absolute;
+  inset: 12%;
+  border: 2px dashed var(--teal-line);
+  border-radius: 50%;
+  pointer-events: none;
+  transition: border-color var(--slow);
+}
+.viewfinder.is-live .viewfinder-ring { border-style: solid; border-color: var(--teal); }
+.viewfinder-hint { position: absolute; inset: auto 0 12px; text-align: center; }
+
+/* ─── misc ────────────────────────────────────────────────────────────────── */
+
+.divider { height: 1px; background: var(--rule-2); border: 0; margin: 0; }
+[hidden] { display: none !important; }
+.sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}

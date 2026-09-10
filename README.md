@@ -12,8 +12,17 @@ organizer writes themselves.
 
 ```bash
 npm install
-npm run check     # typecheck + tests
+npm start         # vault, API, organizer console and fan app — one command
+npm run check     # typecheck, tests, contract tests
 ```
+
+| | |
+|---|---|
+| Fan app | http://127.0.0.1:8120 |
+| Organizer console | http://127.0.0.1:8110 |
+| Gate scanner | `npm run scanner` |
+| API | http://127.0.0.1:8080 |
+| Vault | http://127.0.0.1:8090 |
 
 ## Layout
 
@@ -359,3 +368,46 @@ them causes:
    write rows the newer schema rejects. `GET /health` returns 503 when the
    running build and the schema disagree, so a load balancer removes it rather
    than a human noticing later.
+
+## The interface
+
+Three surfaces, one stylesheet. `packages/ui/ui.css` is served by all of them
+at `/ui.css`, so the palette, type and motion come from one place rather than
+three copies that drift.
+
+| Surface | Job | Shape |
+|---|---|---|
+| `apps/fan` | enrol, buy, hold, resell | phone, thumb-reachable, bottom tabs |
+| `apps/console` | run an event and get paid | desk, sidebar, dense tables |
+| `apps/scanner` | admit a queue | arm's length, dark, one glance |
+
+Archivo for anything a person reads, IBM Plex Mono for anything a person
+*checks*. Every number is tabular, so a column of money does not wobble as it
+updates. The mark is a ticket stub with the perforation bitten out of both
+sides.
+
+### The one screen that matters
+
+Every other ticketing app puts a QR code on the ticket. ReXell cannot, and
+`.ticket-face` is where that absence becomes the design — where the code would
+be, it says **Nothing to scan**, and explains why. It is the only place in the
+system with a gradient, because it is the only screen that has to carry the
+whole product idea on its own.
+
+### Two things the fan app does that are not decoration
+
+**Consent is its own step**, never bundled, with the purpose and the retention
+in plain language and a line saying staffed entry is always available. Bundling
+it is the exact pattern GDPR Article 9 exists to prohibit, and a person handing
+over their face deserves to be doing one thing at a time.
+
+**Withdrawal shows the receipt.** Deleting your template returns a signed record
+you can check against us later, and the consent history stays — what you agreed
+to and when is the artefact, and deleting that would defeat the point of having
+it.
+
+### Still a prototype where it counts
+
+The fan app's `embed()` and the scanner's both fold pixels into a vector and
+recognise nobody, and neither has liveness detection. Marked in both files. The
+flows around them are real; the matcher is not.

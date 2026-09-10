@@ -12,3 +12,8 @@ packages/contracts/artifacts/
 packages/contracts/cache/
 packages/contracts/types/
 .tmp/
+.dev.sqlite*
+.dev-vault.sqlite*
+.demo.sqlite*
+.tmp-*
+vault.sqlite*

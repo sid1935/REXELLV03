@@ -1,11 +1,11 @@
 /**
- * Static server for the organizer console.
+ * Static server for the fan app.
  *
- *   npm run console
+ *   npm run fan
  *
- * Also serves the shared design system from packages/ui at /ui.css, so the
- * console, the fan app and the scanner all render from one stylesheet rather
- * than three copies that drift.
+ * Serves the shared design system from packages/ui at /ui.css, so the fan app,
+ * the console and the scanner all render from one stylesheet rather than three
+ * copies that drift.
  */
 import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
@@ -14,7 +14,7 @@ import { fileURLToPath } from 'node:url';
 
 const ROOT = fileURLToPath(new URL('./public', import.meta.url));
 const UI = fileURLToPath(new URL('../../packages/ui', import.meta.url));
-const PORT = Number(process.env.CONSOLE_PORT ?? 8110);
+const PORT = Number(process.env.FAN_PORT ?? 8120);
 const API = process.env.REXELL_API ?? 'http://127.0.0.1:8080';
 
 const TYPES = {
@@ -56,7 +56,7 @@ staticServer({
   ui: UI,
   port: PORT,
   onReady: () => {
-    console.log(`\n  ReXell organizer console  http://127.0.0.1:${PORT}/?api=${API}`);
-    console.log(`  Start the API first:      npm run dev\n`);
+    console.log(`\n  ReXell fan app  http://127.0.0.1:${PORT}/?api=${API}`);
+    console.log(`  The camera needs localhost or https.\n`);
   },
 });

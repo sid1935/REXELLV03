@@ -3,173 +3,241 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="light dark">
 <title>ReXell Organizer</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="/ui.css">
 <style>
-  :root{
-    --paper:#E8EDEB; --surface:#FCFCFB; --surface-2:#F1F5F3; --sunk:#DFE7E4;
-    --ink:#0E1513; --ink-2:#394744; --ink-3:#6C7C78;
-    --rule:#C4D0CD; --rule-2:#DCE4E1;
-    --teal:#0E6E63; --teal-wash:#DCEAE7; --hot:#C43A12; --hot-wash:#F8E4DC; --ok:#1C7A50;
+  /* Console-only refinements. Everything reusable lives in ui.css. */
+  .event-switch { display: flex; align-items: center; gap: 8px; }
+  .event-switch select { min-width: 220px; min-height: 36px; padding-block: 7px; font-size: 13.5px; }
+  .live-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--ok); box-shadow: 0 0 0 3px var(--ok-wash); }
+  @keyframes pulse { 50% { opacity: 0.35; } }
+  .live-dot { animation: pulse 2.4s ease-in-out infinite; }
+  .dial-preview { margin-top: 16px; }
+  .dial-preview b { color: var(--teal); }
+  .keyout {
+    font: 500 13px/1.6 var(--mono);
+    word-break: break-all;
+    background: var(--sunk);
+    border: 1px solid var(--rule);
+    border-radius: var(--r);
+    padding: 13px 15px;
+    -webkit-user-select: all;
+    user-select: all;
   }
-  @media (prefers-color-scheme: dark){
-    :root{
-      --paper:#0B1110; --surface:#131A19; --surface-2:#182120; --sunk:#0E1514;
-      --ink:#E8EEEC; --ink-2:#AFBDB9; --ink-3:#7C8B87;
-      --rule:#2B3634; --rule-2:#212B29;
-      --teal:#4FBFAF; --teal-wash:#11302C; --hot:#FF7A45; --hot-wash:#331810; --ok:#41B87A;
-    }
-  }
-  *{box-sizing:border-box}
-  body{
-    margin:0;background:var(--paper);color:var(--ink);
-    font:15px/1.55 system-ui,-apple-system,"Segoe UI",sans-serif;
-  }
-  .mono,code,th{font-family:ui-monospace,"SF Mono",Menlo,monospace}
-  header{background:var(--surface);border-bottom:1px solid var(--rule);padding:14px 20px;display:flex;gap:14px;align-items:center;flex-wrap:wrap}
-  header b{font-size:15px;letter-spacing:-.01em}
-  header .who{font-size:12px;color:var(--ink-3);font-family:ui-monospace,monospace}
-  header .spacer{flex:1}
-  nav{display:flex;gap:4px}
-  nav button{
-    font:600 13px/1 system-ui,sans-serif;padding:9px 13px;border-radius:7px;
-    border:1px solid transparent;background:none;color:var(--ink-2);cursor:pointer;
-  }
-  nav button[aria-current="true"]{background:var(--teal-wash);color:var(--teal);border-color:var(--teal)}
-  main{max-width:1060px;margin:0 auto;padding:24px 20px 60px}
-  section[hidden]{display:none}
-  h2{font-size:19px;margin:0 0 4px;letter-spacing:-.01em}
-  .sub{color:var(--ink-3);font-size:13.5px;margin:0 0 18px;max-width:62ch}
-  .card{background:var(--surface);border:1px solid var(--rule);border-radius:10px;padding:18px;margin:0 0 16px}
-  label{display:block;font-size:12px;font-weight:600;color:var(--ink-3);margin:0 0 5px;letter-spacing:.02em}
-  input,select{
-    width:100%;padding:9px 11px;border:1px solid var(--rule);border-radius:7px;
-    background:var(--surface-2);color:var(--ink);font:14px/1.3 inherit;
-  }
-  .grid{display:grid;gap:13px}
-  .g2{grid-template-columns:repeat(auto-fit,minmax(190px,1fr))}
-  .g3{grid-template-columns:repeat(auto-fit,minmax(140px,1fr))}
-  button.go{
-    font:600 14px/1 system-ui,sans-serif;padding:12px 18px;border-radius:8px;cursor:pointer;
-    background:var(--teal);color:var(--paper);border:1px solid var(--teal);
-  }
-  button.ghost{background:none;color:var(--ink-2);border:1px solid var(--rule)}
-  button:disabled{opacity:.5;cursor:default}
-  .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(128px,1fr));gap:1px;background:var(--rule-2);border:1px solid var(--rule);border-radius:10px;overflow:hidden}
-  .stats div{background:var(--surface);padding:13px 14px}
-  .stats b{display:block;font:700 22px/1.15 ui-monospace,monospace;letter-spacing:-.02em}
-  .stats span{font-size:11px;color:var(--ink-3);text-transform:uppercase;letter-spacing:.06em}
-  table{width:100%;border-collapse:collapse;font-size:13.5px}
-  th{text-align:left;font-size:10.5px;text-transform:uppercase;letter-spacing:.08em;color:var(--ink-3);padding:9px 10px;border-bottom:1px solid var(--rule)}
-  td{padding:9px 10px;border-bottom:1px solid var(--rule-2);color:var(--ink-2)}
-  td.n,th.n{text-align:right;font-family:ui-monospace,monospace;font-variant-numeric:tabular-nums}
-  .tag{display:inline-block;font:600 10.5px/1 ui-monospace,monospace;padding:4px 7px;border-radius:4px;border:1px solid var(--rule);color:var(--ink-2)}
-  .tag.ok{border-color:var(--ok);color:var(--ok);background:var(--teal-wash)}
-  .tag.bad{border-color:var(--hot);color:var(--hot);background:var(--hot-wash)}
-  .note{border-left:3px solid var(--teal);background:var(--surface-2);padding:12px 14px;border-radius:0 7px 7px 0;font-size:13.5px;margin:0 0 16px}
-  .note.warn{border-left-color:var(--hot)}
-  .key{font-family:ui-monospace,monospace;font-size:12.5px;word-break:break-all;background:var(--sunk);padding:11px;border-radius:7px;border:1px solid var(--rule)}
-  .hint{font-size:11.5px;color:var(--ink-3);margin-top:5px}
-  .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  .two-col { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 18px; align-items: start; }
+  @media (max-width: 900px) { .two-col { grid-template-columns: minmax(0, 1fr); } }
 </style>
 </head>
 <body>
 
-<header>
-  <b>ReXell</b>
-  <span class="who" id="who">not signed in</span>
-  <span class="spacer"></span>
-  <nav>
-    <button data-tab="setup" aria-current="true">Account</button>
-    <button data-tab="create">Create event</button>
-    <button data-tab="live">Live</button>
-    <button data-tab="settle">Settlement</button>
-  </nav>
-</header>
+<div class="shell">
+  <aside class="rail">
+    <a class="brand" href="#"><span class="brand-mark"></span>ReXell</a>
 
-<main>
+    <nav class="rail-nav" id="nav">
+      <button data-view="events" aria-current="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="15" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>
+        Events
+      </button>
+      <button data-view="create">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+        New event
+      </button>
+      <button data-view="live">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l5-6 4 4 5-8 4 5"/></svg>
+        Live
+      </button>
+      <button data-view="settlement">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18M17 7H9.5a2.5 2.5 0 0 0 0 5h5a2.5 2.5 0 0 1 0 5H6"/></svg>
+        Settlement
+      </button>
+      <button data-view="account">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 11V8a5 5 0 0 1 10 0v3"/><rect x="4" y="11" width="16" height="10" rx="2"/></svg>
+        Account
+      </button>
+    </nav>
 
-<section id="setup">
-  <h2>Account</h2>
-  <p class="sub">Sign up and get an API key. Nobody at ReXell is involved in any of this — that is the point of the page.</p>
-
-  <div class="card" id="signupCard">
-    <div class="grid g2">
-      <div><label for="orgName">Organization</label><input id="orgName" placeholder="Pinewood Live"></div>
-      <div><label for="orgEmail">Contact email</label><input id="orgEmail" placeholder="ops@pinewood.example"></div>
+    <div class="rail-foot stack gap-sm">
+      <div class="eyebrow">Signed in</div>
+      <div class="hint" id="whoami">Not signed in</div>
     </div>
-    <div class="row" style="margin-top:14px">
-      <button class="go" id="signupBtn">Create account</button>
-      <button class="ghost" id="useKeyBtn">I already have a key</button>
-    </div>
+  </aside>
+
+  <div>
+    <header class="topbar">
+      <div class="eyebrow" id="crumb">Events</div>
+      <span class="spacer"></span>
+      <div class="event-switch" id="switcher" hidden>
+        <span class="live-dot" id="liveDot" hidden></span>
+        <select id="eventPicker" aria-label="Event"></select>
+      </div>
+    </header>
+
+    <!-- ── events ────────────────────────────────────────────────────────── -->
+    <main class="page" id="view-events">
+      <div class="page-head">
+        <h1>Your events</h1>
+        <p class="lede">Everything you run, and how each one is doing.</p>
+      </div>
+      <div id="eventsList"></div>
+    </main>
+
+    <!-- ── create ────────────────────────────────────────────────────────── -->
+    <main class="page" id="view-create" hidden>
+      <div class="page-head">
+        <h1>New event</h1>
+        <p class="lede">The four resale dials are the commercial product. They are enforced in the contract, not on this page.</p>
+      </div>
+
+      <div class="two-col">
+        <div class="stack gap-lg">
+          <section class="card">
+            <div class="card-head"><h2>The event</h2></div>
+            <div class="pad grid g2">
+              <label class="field"><span>Event name</span><input id="evName" value="Sunburn Weekender 2026"></label>
+              <label class="field"><span>Capacity</span><input class="num-input" id="evCapacity" type="number" value="12000"></label>
+              <label class="field"><span>Doors open in (days)</span><input class="num-input" id="evDoors" type="number" value="30"></label>
+              <label class="field"><span>Max tickets per person</span><input class="num-input" id="evLimit" type="number" value="4"></label>
+            </div>
+          </section>
+
+          <section class="card">
+            <div class="card-head"><h2>General admission</h2></div>
+            <div class="pad grid g2">
+              <label class="field"><span>Face value (₹)</span><input class="num-input" id="evFace" type="number" value="2200"></label>
+              <label class="field"><span>Tickets on sale</span><input class="num-input" id="evAlloc" type="number" value="11200"></label>
+            </div>
+          </section>
+
+          <section class="card">
+            <div class="card-head">
+              <h2>Resale</h2>
+              <span class="spacer"></span>
+              <span class="tag tag-teal" id="modeTag">Capped</span>
+            </div>
+            <div class="pad">
+              <p class="lede" style="margin-bottom:16px">Turn it off and the ticket dies with its owner. Leave it on and you set the terms — and take a commission on transactions that today earn you nothing.</p>
+              <div class="grid g3">
+                <label class="field"><span>Resale</span>
+                  <select id="rsMode"><option value="capped">On, with a cap</option><option value="bound">Off — soulbound</option></select>
+                </label>
+                <label class="field"><span>Ceiling (% of face)</span><input class="num-input" id="rsCap" type="number" value="110"></label>
+                <label class="field"><span>Floor (%)</span><input class="num-input" id="rsFloor" type="number" value="50"></label>
+                <label class="field"><span>Cooldown (hours)</span><input class="num-input" id="rsCooldown" type="number" value="24"></label>
+                <label class="field"><span>Your commission (%)</span><input class="num-input" id="rsOrg" type="number" value="7"></label>
+                <label class="field"><span>Artist share (%)</span><input class="num-input" id="rsRights" type="number" value="2"></label>
+              </div>
+            </div>
+          </section>
+        </div>
+
+        <aside class="stack gap-lg" style="position:sticky;top:78px">
+          <section class="card">
+            <div class="card-head"><h2>What a resale looks like</h2></div>
+            <div class="pad">
+              <div class="note dial-preview" id="dialPreview"></div>
+            </div>
+          </section>
+          <button class="btn btn-primary btn-lg btn-block" id="createBtn">Create event</button>
+          <div id="createResult"></div>
+        </aside>
+      </div>
+    </main>
+
+    <!-- ── live ──────────────────────────────────────────────────────────── -->
+    <main class="page" id="view-live" hidden>
+      <div class="page-head">
+        <h1>Live</h1>
+        <p class="lede">Refreshing every five seconds. On the night, the number to watch is the fallback rate.</p>
+      </div>
+      <div id="liveBody"></div>
+    </main>
+
+    <!-- ── settlement ────────────────────────────────────────────────────── -->
+    <main class="page" id="view-settlement" hidden>
+      <div class="page-head">
+        <h1>Settlement</h1>
+        <p class="lede">Every resale, its split, recomputed from your own policy, and whether the chain has confirmed it. You are not asked to trust a total.</p>
+      </div>
+      <div id="settleBody"></div>
+    </main>
+
+    <!-- ── account ───────────────────────────────────────────────────────── -->
+    <main class="page" id="view-account" hidden>
+      <div class="page-head">
+        <h1>Account</h1>
+        <p class="lede">Sign up and get an API key. Nobody at ReXell is involved in any of this — that is the point of the page.</p>
+      </div>
+
+      <div class="two-col">
+        <div class="stack gap-lg">
+          <section class="card" id="signupCard">
+            <div class="card-head"><h2>Create an account</h2></div>
+            <div class="pad stack gap-lg">
+              <div class="grid g2">
+                <label class="field"><span>Organization</span><input id="orgName" placeholder="Pinewood Live"></label>
+                <label class="field"><span>Contact email</span><input id="orgEmail" type="email" placeholder="ops@pinewood.example"></label>
+              </div>
+              <div class="row">
+                <button class="btn btn-primary" id="signupBtn">Create account</button>
+                <button class="btn btn-quiet" id="useKeyBtn">I already have a key</button>
+              </div>
+            </div>
+          </section>
+
+          <section class="card" id="pasteCard" hidden>
+            <div class="card-head"><h2>Use an existing key</h2></div>
+            <div class="pad stack gap-lg">
+              <label class="field"><span>API key</span><input id="pasteKey" placeholder="rxl_live_…" autocomplete="off" spellcheck="false"></label>
+              <div class="row">
+                <button class="btn btn-primary" id="pasteGo">Sign in</button>
+                <button class="btn btn-quiet" id="backToSignup">Back</button>
+              </div>
+            </div>
+          </section>
+
+          <section class="card" id="keyCard" hidden>
+            <div class="card-head"><h2>Your API key</h2></div>
+            <div class="pad stack gap-lg">
+              <div class="note note-warn"><strong>Copy this now.</strong> It is shown once and cannot be retrieved. Losing it means issuing a new one.</div>
+              <div class="keyout" id="keyValue"></div>
+              <div class="row"><button class="btn" id="copyKey">Copy</button></div>
+            </div>
+          </section>
+
+          <section class="card" id="keysCard" hidden>
+            <div class="card-head">
+              <h2>Keys</h2>
+              <span class="spacer"></span>
+              <button class="btn btn-sm" id="newKeyBtn">New key</button>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th>Name</th><th>Prefix</th><th>Scopes</th><th>Last used</th><th></th></tr></thead>
+                <tbody id="keysBody"></tbody>
+              </table>
+            </div>
+          </section>
+        </div>
+
+        <aside>
+          <section class="card">
+            <div class="card-head"><h2>About keys</h2></div>
+            <div class="pad stack gap-sm">
+              <p class="hint">Keys are stored only as a hash. No route returns one and no support tool can recover one — the remedy for losing a key is a new key, which is also the remedy for leaking one.</p>
+              <p class="hint">A key can never mint a key with scopes it does not itself hold.</p>
+            </div>
+          </section>
+        </aside>
+      </div>
+    </main>
   </div>
+</div>
 
-  <div class="card" id="keyCard" hidden>
-    <div class="note warn"><b>Copy this now.</b> It is shown once and cannot be retrieved. Losing it means issuing a new one.</div>
-    <div class="key" id="keyValue"></div>
-  </div>
-
-  <div class="card" id="pasteCard" hidden>
-    <label for="pasteKey">API key</label>
-    <input id="pasteKey" placeholder="rxl_live_…">
-    <div class="row" style="margin-top:12px"><button class="go" id="pasteGo">Use this key</button></div>
-  </div>
-
-  <div class="card" id="keysCard" hidden>
-    <h2 style="font-size:15px">Keys</h2>
-    <p class="sub" style="margin-bottom:12px">A key can never mint a key with more scopes than it holds.</p>
-    <table><thead><tr><th>Name</th><th>Prefix</th><th>Scopes</th><th>Last used</th><th></th></tr></thead>
-    <tbody id="keysBody"></tbody></table>
-  </div>
-</section>
-
-<section id="create" hidden>
-  <h2>Create an event</h2>
-  <p class="sub">The four resale dials are the commercial product. They are enforced in the contract, not in this page.</p>
-
-  <div class="card">
-    <div class="grid g2">
-      <div><label for="evName">Event name</label><input id="evName" value="Sunburn Weekender 2026"></div>
-      <div><label for="evCapacity">Capacity</label><input id="evCapacity" type="number" value="12000"></div>
-      <div><label for="evDoors">Doors open in (days)</label><input id="evDoors" type="number" value="30"></div>
-      <div><label for="evFace">Face value (₹)</label><input id="evFace" type="number" value="2200"></div>
-      <div><label for="evAlloc">Tickets on sale</label><input id="evAlloc" type="number" value="11200"></div>
-      <div><label for="evLimit">Max per person</label><input id="evLimit" type="number" value="4"></div>
-    </div>
-  </div>
-
-  <div class="card">
-    <h2 style="font-size:15px">Resale</h2>
-    <p class="sub" style="margin-bottom:14px">Turn it off and the ticket dies with its owner. Leave it on and you set the terms — and take a commission on transactions that today earn you nothing.</p>
-    <div class="grid g3">
-      <div><label for="rsMode">Resale</label><select id="rsMode"><option value="capped">On, with a cap</option><option value="bound">Off — soulbound</option></select></div>
-      <div><label for="rsCap">Price ceiling (% of face)</label><input id="rsCap" type="number" value="110"></div>
-      <div><label for="rsFloor">Price floor (%)</label><input id="rsFloor" type="number" value="50"></div>
-      <div><label for="rsCooldown">Cooldown (hours)</label><input id="rsCooldown" type="number" value="24"></div>
-      <div><label for="rsOrg">Your commission (%)</label><input id="rsOrg" type="number" value="7"></div>
-      <div><label for="rsRights">Artist share (%)</label><input id="rsRights" type="number" value="2"></div>
-    </div>
-    <div class="note" style="margin-top:16px" id="rsPreview"></div>
-  </div>
-
-  <button class="go" id="createBtn">Create event</button>
-  <div id="createResult" style="margin-top:16px"></div>
-</section>
-
-<section id="live" hidden>
-  <h2>Live</h2>
-  <p class="sub">Refreshes every five seconds. The number to watch on the night is the fallback rate.</p>
-  <div class="card"><label for="evPicker">Event</label><select id="evPicker"></select></div>
-  <div id="liveBody"></div>
-</section>
-
-<section id="settle" hidden>
-  <h2>Settlement</h2>
-  <p class="sub">Every resale, its split, recomputed from your own policy, and whether the chain has confirmed it. You are not asked to trust a total.</p>
-  <div class="card"><label for="setPicker">Event</label><select id="setPicker"></select></div>
-  <div id="settleBody"></div>
-</section>
-
-</main>
-<script type="module" src="./console.js"></script>
+<div class="toasts" id="toasts"></div>
+<script type="module" src="/console.js"></script>
 </body>
 </html>

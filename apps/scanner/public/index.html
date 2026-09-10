@@ -1,22 +1,30 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#0B1110">
 <title>ReXell Gate</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="/ui.css">
 <link rel="manifest" href="./manifest.webmanifest">
 <style>
-  :root{
-    --ink:#E8EEEC; --ink-2:#AFBDB9; --ink-3:#7C8B87;
-    --bg:#0B1110; --surface:#131A19; --rule:#2B3634;
-    --admit:#1F9D5B; --deny:#D8480F; --fallback:#C99A20; --teal:#4FBFAF;
+  /* Forced dark on the html element, so the palette comes from ui.css rather
+     than being redeclared here and drifting. Only the verdict colours are
+     local: they need more saturation than a dashboard, because they are read
+     at arm's length, at night, in one glance. */
+  :root {
+    --bg: var(--paper);
+    --admit: #1c9a5c;
+    --deny: #d8480f;
+    --fallback: #c99a20;
   }
-  *{box-sizing:border-box}
+  html { color-scheme: dark; }
   html,body{height:100%}
   body{
     margin:0;background:var(--bg);color:var(--ink);
-    font-family:system-ui,-apple-system,"Segoe UI",sans-serif;
+    font-family:var(--sans);
     -webkit-user-select:none;user-select:none;overscroll-behavior:none;
     display:flex;flex-direction:column;
   }
@@ -27,7 +35,7 @@
   header .lane{font-weight:700;letter-spacing:.04em}
   header .spacer{flex:1}
   .pill{
-    font:600 11px/1 ui-monospace,monospace;padding:5px 9px;border-radius:100px;
+    font:600 11px/1 var(--mono);padding:5px 9px;border-radius:100px;
     border:1px solid var(--rule);color:var(--ink-2);white-space:nowrap;
   }
   .pill.ok{border-color:var(--admit);color:#7BE3AC}
@@ -46,7 +54,7 @@
   .verdict.show{display:flex}
   .verdict h1{font-size:clamp(30px,9vw,64px);margin:0;letter-spacing:-.02em;line-height:1}
   .verdict p{margin:0;font-size:clamp(14px,3.6vw,19px);max-width:22ch;line-height:1.4}
-  .verdict small{font:500 11px/1 ui-monospace,monospace;opacity:.75}
+  .verdict small{font:500 11px/1 var(--mono);opacity:.75}
   .verdict.admit{background:rgba(31,157,91,.94)}
   .verdict.deny{background:rgba(216,72,15,.95)}
   .verdict.fallback{background:rgba(201,154,32,.95);color:#1A1405}
@@ -54,7 +62,7 @@
   footer{border-top:1px solid var(--rule);background:var(--surface);padding:12px 14px}
   .row{display:flex;gap:10px;align-items:center}
   button{
-    flex:1;font:600 15px/1 system-ui,sans-serif;padding:16px 12px;border-radius:10px;
+    flex:1;font:600 15px/1 var(--sans);padding:16px 12px;border-radius:10px;
     border:1px solid var(--rule);background:#1C2624;color:var(--ink);cursor:pointer;
   }
   button.primary{background:var(--teal);color:#06231F;border-color:var(--teal)}
@@ -64,17 +72,17 @@
     border:1px solid var(--rule);border-radius:8px;overflow:hidden;margin-top:10px;
   }
   .stats div{background:var(--surface);padding:8px 6px;text-align:center}
-  .stats b{display:block;font:700 17px/1.2 ui-monospace,monospace}
+  .stats b{display:block;font:700 17px/1.2 var(--mono)}
   .stats span{font-size:10px;color:var(--ink-3);letter-spacing:.05em;text-transform:uppercase}
 
   .banner{
-    display:none;padding:9px 14px;font:600 12px/1.4 system-ui,sans-serif;
+    display:none;padding:9px 14px;font:600 12px/1.4 var(--sans);
     background:#3A2A05;color:#F0CE72;border-bottom:1px solid var(--rule);
   }
   .banner.show{display:block}
   .log{
     max-height:96px;overflow-y:auto;margin-top:10px;
-    font:500 11px/1.6 ui-monospace,monospace;color:var(--ink-3);
+    font:500 11px/1.6 var(--mono);color:var(--ink-3);
   }
   .log div{display:flex;gap:8px}
   .log .a{color:#7BE3AC}.log .d{color:#FF9A70}.log .f{color:#F0CE72}
@@ -83,7 +91,7 @@
 <body>
 
 <header>
-  <span class="lane" id="laneLabel">LANE —</span>
+  <span class="brand-mark" style="width:18px;height:18px;border-radius:5px"></span><span class="lane" id="laneLabel">LANE —</span>
   <span class="spacer"></span>
   <span class="pill" id="netPill">offline</span>
   <span class="pill" id="syncPill">seq 0</span>

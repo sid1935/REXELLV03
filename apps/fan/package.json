@@ -1,0 +1,8 @@
+{
+  "name": "@rexell/fan",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Fan app: enrol, buy, hold and resell a ticket that is your face.",
+  "scripts": { "dev": "node serve.js" }
+}

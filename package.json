@@ -23,7 +23,9 @@
     "bench:gate": "tsx scripts/bench-gate.ts",
     "scanner": "node apps/scanner/serve.js",
     "train:risk": "tsx scripts/train-risk.ts",
-    "console": "node apps/console/serve.js"
+    "console": "node apps/console/serve.js",
+    "start": "npm run build && tsx scripts/dev.ts",
+    "fan": "node apps/fan/serve.js"
   },
   "engines": {
     "node": ">=20"
