@@ -9,11 +9,9 @@ import {
   identityId as toIdentityId,
   applyTicketEvent,
   minor,
-  resaleCeiling,
-  resaleFloor,
   validateEvent,
 } from '@rexell/domain';
-import type { EpochMs, EventDef, PurchaserContext, RiskVerdict, TicketTier } from '@rexell/domain';
+import type { EpochMs, EventDef, PurchaserContext, RiskVerdict } from '@rexell/domain';
 import type { Repo } from '@rexell/db';
 import { HttpError, badRequest, errorBody, notFound, statusFor } from '../errors.js';
 import type { RiskEngine } from './onsale.js';
@@ -54,26 +52,6 @@ function requireTier(repo: Repo, tierId: string) {
   const found = repo.getTier(tierId);
   if (!found) throw notFound('tier', tierId);
   return found;
-}
-
-function tierView(tier: TicketTier, availability: { sold: number; held: number }) {
-  return {
-    id: tier.id,
-    name: tier.name,
-    faceValueMinor: tier.faceValue,
-    allocation: tier.allocation,
-    sold: availability.sold,
-    held: availability.held,
-    remaining: tier.allocation - availability.sold - availability.held,
-    resale: {
-      mode: tier.resale.mode,
-      ceilingMinor: tier.resale.mode === 'capped' ? resaleCeiling(tier) : null,
-      floorMinor: tier.resale.mode === 'capped' ? resaleFloor(tier) : null,
-      opensAt: tier.resale.opensAt,
-      closesAt: tier.resale.closesAt,
-      commissionBps: tier.resale.splits,
-    },
-  };
 }
 
 export function commerceRoutes(app: FastifyInstance, { repo, now, devMode, risk }: Deps): void {
@@ -128,34 +106,6 @@ export function commerceRoutes(app: FastifyInstance, { repo, now, devMode, risk 
     repo.createOrganizer(req.body.organizerName ?? 'Organizer', now(), event.organizerId);
     repo.createEvent(event, now());
     return reply.code(201).send({ eventId: event.id, policyHash: repo.getEventRow(event.id)?.policy_hash });
-  });
-
-  app.get<{ Params: { id: string } }>('/v1/events/:id', async (req) => {
-    // Sweep first: a hold that expired ten seconds ago must not make an event
-    // look sold out to the next person who looks at it.
-    repo.releaseExpiredHolds(now());
-
-    const event = repo.getEvent(req.params.id);
-    if (!event) throw notFound('event', req.params.id);
-    const row = repo.getEventRow(req.params.id);
-
-    return {
-      id: event.id,
-      name: event.name,
-      capacity: event.capacity,
-      salesOpenAt: event.salesOpenAt,
-      salesCloseAt: event.salesCloseAt,
-      doorsOpenAt: event.doorsOpenAt,
-      endsAt: event.endsAt,
-      maxTicketsPerIdentity: event.maxTicketsPerIdentity,
-      allowReentry: event.allowReentry,
-      policyHash: row?.policy_hash,
-      manifestSequence: row?.manifest_sequence ?? 0,
-      tiers: event.tiers.map((t) => {
-        const found = repo.getTier(t.id);
-        return tierView(t, found?.availability ?? { sold: 0, held: 0 });
-      }),
-    };
   });
 
   // ─ buying ─

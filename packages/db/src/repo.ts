@@ -224,12 +224,14 @@ export class Repo {
   readonly outbox: OutboxRepo;
   readonly scanners: ScannerRepo;
   readonly organizers: OrganizerRepo;
+  readonly catalogue: CatalogueRepo;
 
   constructor(readonly db: Db) {
     this.consents = new ConsentRepo(db);
     this.outbox = new OutboxRepo(db);
     this.scanners = new ScannerRepo(db);
     this.organizers = new OrganizerRepo(db);
+    this.catalogue = new CatalogueRepo(db);
   }
 
   // ─ organizers & identities ─
@@ -1114,5 +1116,72 @@ export class OrganizerRepo {
       'SELECT event_id, name, capacity, doors_open_at, created_at FROM events WHERE organizer_id = ? ORDER BY doors_open_at DESC',
       organizerId,
     );
+  }
+}
+
+// ─── public catalogue (discovery) ────────────────────────────────────────────
+
+export interface CatalogueRow {
+  event_id: string;
+  name: string;
+  organizer_name: string;
+  capacity: number;
+  sales_open_at: number;
+  sales_close_at: number;
+  doors_open_at: number;
+  ends_at: number;
+  min_face_value: number;
+  allocation: number;
+  sold: number;
+  held: number;
+  any_capped: number;
+}
+
+/**
+ * The public catalogue.
+ *
+ * Aggregated in SQL rather than by loading every event and its tiers, because
+ * this is the one endpoint a bored crawler will hit hardest and it must not
+ * turn into N+1 queries against the same tables an onsale is writing to.
+ *
+ * Note what is NOT selected: no commission split, no manifest sequence, no
+ * per-tier sold counts. A public row cannot leak what it never loads.
+ */
+export class CatalogueRepo {
+  constructor(private readonly db: Db) {}
+
+  onSale(now: number, limit = 50, offset = 0): CatalogueRow[] {
+    return this.db.all<CatalogueRow>(
+      `SELECT e.event_id, e.name, o.name AS organizer_name, e.capacity,
+              e.sales_open_at, e.sales_close_at, e.doors_open_at, e.ends_at,
+              MIN(t.face_value)                              AS min_face_value,
+              COALESCE(SUM(t.allocation), 0)                 AS allocation,
+              COALESCE(SUM(t.sold), 0)                       AS sold,
+              COALESCE(SUM(t.held), 0)                       AS held,
+              MAX(CASE WHEN t.resale_mode = 'capped' THEN 1 ELSE 0 END) AS any_capped
+       FROM events e
+       JOIN organizers o ON o.organizer_id = e.organizer_id
+       JOIN tiers t      ON t.event_id = e.event_id
+       WHERE e.sales_open_at <= ? AND e.sales_close_at > ? AND e.ends_at > ?
+       GROUP BY e.event_id
+       ORDER BY e.doors_open_at
+       LIMIT ? OFFSET ?`,
+      now,
+      now,
+      now,
+      limit,
+      offset,
+    );
+  }
+
+  countOnSale(now: number): number {
+    const row = this.db.get<{ n: number }>(
+      `SELECT COUNT(*) AS n FROM events
+       WHERE sales_open_at <= ? AND sales_close_at > ? AND ends_at > ?`,
+      now,
+      now,
+      now,
+    );
+    return row?.n ?? 0;
   }
 }

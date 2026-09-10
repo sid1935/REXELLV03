@@ -74,6 +74,21 @@ async function get(url: string) {
   return app.server.inject({ method: 'GET', url });
 }
 
+/**
+ * Exact inventory, read directly.
+ *
+ * These assertions used to come from `GET /v1/events/:id`, back when that
+ * endpoint published an organizer's exact sold and held counts to anybody who
+ * asked. It does not any more — see discover.test.ts — and the tests below are
+ * about inventory behaviour rather than about what a stranger may see.
+ */
+function inventory(tierId = 'tier_ga') {
+  const found = app.repo.getTier(tierId);
+  if (!found) throw new Error(`no tier ${tierId}`);
+  const { sold, held } = found.availability;
+  return { sold, held, allocation: found.tier.allocation, remaining: found.tier.allocation - sold - held };
+}
+
 async function newIdentity(opts: { enrolled?: boolean; ageYears?: number } = {}): Promise<string> {
   const r = await post('/v1/identities', opts);
   return r.json().identityId as string;
@@ -154,11 +169,7 @@ describe('the exit criterion: a ticket sold and read back over HTTP', () => {
     expect(mine.json().tickets).toHaveLength(2);
     expect(mine.json().tickets[0].state).toBe('issued');
 
-    const event = await get('/v1/events/evt_test');
-    const ga = event.json().tiers.find((t: { id: string }) => t.id === 'tier_ga');
-    expect(ga.sold).toBe(2);
-    expect(ga.held).toBe(0);
-    expect(ga.remaining).toBe(8);
+    expect(inventory()).toMatchObject({ sold: 2, held: 0, remaining: 8 });
   });
 });
 
@@ -179,8 +190,7 @@ describe('the exit criterion: contention cannot oversell', () => {
     expect(soldOut).toHaveLength(15);
     expect(soldOut.every((r) => r.json().error.code === 'SOLD_OUT')).toBe(true);
 
-    const event = await get('/v1/events/evt_test');
-    const ga = event.json().tiers.find((t: { id: string }) => t.id === 'tier_ga');
+    const ga = inventory();
     expect(ga.held).toBe(10);
     expect(ga.sold + ga.held).toBeLessThanOrEqual(ga.allocation);
   });
@@ -213,8 +223,7 @@ describe('the exit criterion: writes are idempotent under retry', () => {
     expect(second.headers['idempotent-replay']).toBe('true');
 
     // One hold, not two. This is the whole point.
-    const event = await get('/v1/events/evt_test');
-    expect(event.json().tiers.find((t: { id: string }) => t.id === 'tier_ga').held).toBe(1);
+    expect(inventory().held).toBe(1);
   });
 
   it('refuses a reused key carrying a different request', async () => {
@@ -249,14 +258,12 @@ describe('holds', () => {
     const alice = await newIdentity();
     await post('/v1/orders', { identityId: alice, tierId: 'tier_ga', quantity: 3 });
 
-    let ga = (await get('/v1/events/evt_test')).json().tiers[0];
-    expect(ga.held).toBe(3);
-    expect(ga.remaining).toBe(7);
+    expect(inventory()).toMatchObject({ held: 3, remaining: 7 });
 
     clock = T0 + HOLD_TTL_MS + 1;
-    ga = (await get('/v1/events/evt_test')).json().tiers[0];
-    expect(ga.held).toBe(0);
-    expect(ga.remaining).toBe(10);
+    // Reading the public view sweeps lapsed holds, the same as any other read.
+    await get('/v1/events/evt_test');
+    expect(inventory()).toMatchObject({ held: 0, remaining: 10 });
   });
 
   it('refuses to pay against a hold that already expired', async () => {

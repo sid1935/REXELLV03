@@ -13,6 +13,7 @@ import { chainRoutes } from './routes/chain.js';
 import { scannerRoutes } from './routes/scanners.js';
 import { RiskEngine, onsaleRoutes } from './routes/onsale.js';
 import { organizerRoutes } from './routes/organizer.js';
+import { discoverRoutes } from './routes/discover.js';
 import { FairQueue } from '@rexell/risk';
 import { TokenService } from './chain/token-service.js';
 import type { ChainClient } from './chain/client.js';
@@ -124,6 +125,8 @@ export function buildApp(options: AppOptions = {}): App {
   chainRoutes(server, { tokens, chain: options.chain, now });
   onsaleRoutes(server, { repo, now, queue }, risk);
   organizerRoutes(server, { repo, now });
+  // Last, so the public event view wins over nothing and is easy to find.
+  discoverRoutes(server, { repo, now });
 
   return {
     server,

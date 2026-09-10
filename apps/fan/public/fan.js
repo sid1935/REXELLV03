@@ -355,68 +355,92 @@ function ticketCard(t) {
 
 async function renderDiscover() {
   const host = $('view-discover');
-  host.innerHTML = `<div class="card skel" style="height:120px"></div>`;
+  host.innerHTML = '<div class="card skel" style="height:120px"></div>';
 
-  // No public catalogue endpoint yet, so this reads the events the demo seeded.
-  // A real build gets a discovery API; the buying flow below is unchanged by it.
-  const ids = JSON.parse(localStorage.getItem('rexell.fan.seen') ?? '[]');
-  const fromQuery = new URLSearchParams(location.search).get('event');
-  if (fromQuery && !ids.includes(fromQuery)) {
-    ids.push(fromQuery);
-    localStorage.setItem('rexell.fan.seen', JSON.stringify(ids));
-  }
-
-  const events = (await Promise.all(ids.map((id) => call(`/v1/events/${id}`).catch(() => null)))).filter(Boolean);
-  state.events = events;
-
-  if (events.length === 0) {
-    host.innerHTML = `<div class="card"><div class="empty">
-      <h3>Nothing here yet</h3>
-      <p>Open a link from an organizer, or add an event id to try one.</p>
-      <div class="row" style="justify-content:center;margin-top:18px">
-        <input class="input" id="eventIdInput" placeholder="evt_…" style="max-width:190px">
-        <button class="btn" id="addEvent">Add</button>
-      </div>
-    </div></div>`;
-    $('addEvent').addEventListener('click', () => {
-      const id = $('eventIdInput').value.trim();
-      if (!id) return;
-      const seen = JSON.parse(localStorage.getItem('rexell.fan.seen') ?? '[]');
-      seen.push(id);
-      localStorage.setItem('rexell.fan.seen', JSON.stringify(seen));
-      renderDiscover();
-    });
+  let listing;
+  try {
+    listing = await call('/v1/discover?limit=30');
+  } catch (e) {
+    host.innerHTML = `<div class="note note-bad">${esc(e.message)}</div>`;
     return;
   }
 
-  host.innerHTML = `<div class="stack gap-lg">${events
-    .map((e) => {
-      const tier = e.tiers[0];
-      const soldOut = tier.remaining <= 0;
-      return `<button class="event-card" data-buy="${esc(tier.id)}" ${soldOut ? 'disabled' : ''}>
-        <div class="event-strip"></div>
-        <div class="body">
-          <h3>${esc(e.name)}</h3>
-          <div class="hint" style="margin-bottom:10px">${when(e.doorsOpenAt)}</div>
-          <div class="row">
-            <span class="price">${money(tier.faceValueMinor)}</span>
-            <span class="spacer"></span>
-            ${
-              soldOut
-                ? '<span class="tag tag-bad">sold out</span>'
-                : `<span class="tag">${tier.remaining.toLocaleString('en-IN')} left</span>`
-            }
-            <span class="tag ${tier.resale.mode === 'capped' ? 'tag-teal' : 'tag-warn'}">${
-              tier.resale.mode === 'capped' ? `resale capped ${money(tier.resale.ceilingMinor)}` : 'no resale'
-            }</span>
-          </div>
-        </div>
-      </button>`;
-    })
-    .join('')}</div>`;
+  if (listing.events.length === 0) {
+    host.innerHTML = `<div class="card"><div class="empty">
+      <h3>Nothing on sale</h3><p>When an organizer opens a sale, it shows up here.</p>
+    </div></div>`;
+    return;
+  }
 
-  document.querySelectorAll('[data-buy]').forEach((b) =>
-    b.addEventListener('click', () => buySheet(b.dataset.buy)),
+  // The catalogue carries what a card needs; the tiers come from the event view
+  // when somebody actually taps through.
+  host.innerHTML = `<div class="stack gap-lg">${listing.events.map(discoverCard).join('')}</div>`;
+  document.querySelectorAll('[data-event]').forEach((b) =>
+    b.addEventListener('click', () => openEvent(b.dataset.event)),
+  );
+}
+
+const BAND_TAG = { available: '', limited: 'tag-warn', last_few: 'tag-warn', sold_out: 'tag-bad' };
+
+function discoverCard(e) {
+  return `<button class="event-card" data-event="${esc(e.id)}" ${e.availability === 'sold_out' ? 'disabled' : ''}>
+    <div class="event-strip"></div>
+    <div class="body">
+      <h3>${esc(e.name)}</h3>
+      <div class="hint" style="margin-bottom:10px">${esc(e.organizer)} · ${when(e.doorsOpenAt)}</div>
+      <div class="row">
+        <span class="price">from ${money(e.fromMinor)}</span>
+        <span class="spacer"></span>
+        <span class="tag ${BAND_TAG[e.availability]}">${esc(e.availabilityLabel)}</span>
+        ${e.resaleAllowed ? '<span class="tag tag-teal">resale capped</span>' : '<span class="tag">no resale</span>'}
+      </div>
+    </div>
+  </button>`;
+}
+
+async function openEvent(eventId) {
+  let event;
+  try {
+    event = await call(`/v1/events/${eventId}`);
+  } catch (e) {
+    return toast(e.message, true);
+  }
+  state.events = [event, ...state.events.filter((x) => x.id !== eventId)];
+
+  sheet(`
+    <div class="eyebrow">${esc(event.organizer ?? '')}</div>
+    <h2 style="margin:8px 0 4px">${esc(event.name)}</h2>
+    <div class="hint" style="margin-bottom:16px">${when(event.doorsOpenAt)}</div>
+
+    <div class="stack gap-sm" style="margin-bottom:16px">
+      ${event.tiers
+        .map(
+          (t) => `<button class="event-card" data-tier="${esc(t.id)}" ${t.availability === 'sold_out' ? 'disabled' : ''}>
+            <div class="body">
+              <div class="row">
+                <div>
+                  <h3>${esc(t.name)}</h3>
+                  <div class="hint">${t.resale.allowed ? `Resale capped at ${moneyExact(t.resale.ceilingMinor)}` : 'Cannot be resold'}</div>
+                </div>
+                <span class="spacer"></span>
+                <div style="text-align:right">
+                  <div class="price">${money(t.faceValueMinor)}</div>
+                  <span class="tag ${BAND_TAG[t.availability]}" style="margin-top:5px">${esc(t.availabilityLabel)}</span>
+                </div>
+              </div>
+            </div>
+          </button>`,
+        )
+        .join('')}
+    </div>
+
+    <p class="hint">Up to ${event.maxTicketsPerIdentity} per person. Terms anchored as <code style="font-size:10px">${esc(event.policyHash.slice(0, 12))}…</code> — they cannot change once tickets sell.</p>
+    <button class="btn btn-quiet btn-block" style="margin-top:14px" id="closeEvent">Close</button>
+  `);
+
+  $('closeEvent').addEventListener('click', closeSheet);
+  document.querySelectorAll('[data-tier]').forEach((b) =>
+    b.addEventListener('click', () => buySheet(b.dataset.tier)),
   );
 }
 
@@ -436,7 +460,7 @@ function buySheet(tierId) {
 
     <div class="note" style="margin-bottom:16px">
       ${
-        tier.resale.mode === 'capped'
+        tier.resale.allowed
           ? `If you cannot go, you can resell for up to <strong>${moneyExact(tier.resale.ceilingMinor)}</strong> — the ceiling the organizer set. No more than that, to anyone.`
           : 'This ticket cannot be resold. It is tied to you.'
       }
@@ -501,7 +525,7 @@ async function renderSell() {
       ${sellable
         .map((t) => {
           const tier = t.event?.tiers.find((x) => x.id === t.tierId);
-          const capped = tier?.resale.mode === 'capped';
+          const capped = tier?.resale.allowed === true;
           return `<div class="card"><div class="pad">
             <h3 style="margin-bottom:3px">${esc(t.event?.name ?? 'Event')}</h3>
             <div class="hint" style="margin-bottom:14px">${t.event ? when(t.event.doorsOpenAt) : ''}</div>

@@ -406,6 +406,29 @@ you can check against us later, and the consent history stays — what you agree
 to and when is the artefact, and deleting that would defeat the point of having
 it.
 
+### The public surface leaks nothing
+
+`GET /v1/discover` and `GET /v1/events/:id` are unauthenticated, cacheable, and
+the most likely thing in the system to be scraped. What they deliberately do not
+carry, each for a reason somebody would be angry about:
+
+| Withheld | Why |
+|---|---|
+| `sold` / `held` | polling hourly reconstructs an organizer's entire sales curve |
+| commission split | their private terms with ReXell and with the artist |
+| `manifestSequence` | an internal counter that leaks ticketing volume |
+| organizer id | a tenant identifier, useful only for enumeration |
+
+Availability is published as a **band** — `available`, `limited`, `last_few`,
+`sold_out` — from one definition in `packages/domain/src/availability.ts`, so
+the public and authenticated views cannot drift into disagreeing about what
+"limited" means. The organizer's own numbers stay exact behind their key.
+
+The bands are capped against the allocation, not just floored. Without that a
+thirty-ticket event reads "selling fast" with every ticket still available —
+manufactured urgency, which in a product whose pitch is that ticketing can be
+trusted is self-defeating. There is a test named for it.
+
 ### Still a prototype where it counts
 
 The fan app's `embed()` and the scanner's both fold pixels into a vector and
