@@ -7,6 +7,7 @@
 <title>ReXell Organizer</title>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<link rel="icon" href="/logo.svg" type="image/svg+xml">
 <link rel="stylesheet" href="/ui.css">
 <style>
   /* Console-only refinements. Everything reusable lives in ui.css. */
@@ -16,7 +17,7 @@
   @keyframes pulse { 50% { opacity: 0.35; } }
   .live-dot { animation: pulse 2.4s ease-in-out infinite; }
   .dial-preview { margin-top: 16px; }
-  .dial-preview b { color: var(--teal); }
+  .dial-preview b { color: var(--brand); }
   .keyout {
     font: 500 13px/1.6 var(--mono);
     word-break: break-all;
@@ -116,7 +117,7 @@
             <div class="card-head">
               <h2>Resale</h2>
               <span class="spacer"></span>
-              <span class="tag tag-teal" id="modeTag">Capped</span>
+              <span class="tag tag-brand" id="modeTag">Capped</span>
             </div>
             <div class="pad">
               <p class="lede" style="margin-bottom:16px">Turn it off and the ticket dies with its owner. Leave it on and you set the terms — and take a commission on transactions that today earn you nothing.</p>
@@ -238,6 +239,8 @@
 </div>
 
 <div class="toasts" id="toasts"></div>
+<!-- Serves the API origin chosen by the process, so it is not guessable from a URL. -->
+<script src="/config.js"></script>
 <script type="module" src="/console.js"></script>
 </body>
 </html>

@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="ReXell">
+  <title>ReXell</title>
+  <!--
+    The ReXell mark: a hexagonal shield holding an R, drawn in the cyan →
+    indigo → magenta gradient from the brand.
+
+    Vector rather than the source PNG because it is used at 20px in a header and
+    at 96px on a splash, and because the gradient has to survive both grounds.
+    Drop the original artwork at packages/ui/logo.png if a pixel-exact raster is
+    ever needed for something that cannot take SVG.
+  -->
+  <defs>
+    <linearGradient id="rexell-edge" x1="6" y1="58" x2="58" y2="6" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#35D6E8"/>
+      <stop offset="0.52" stop-color="#6E7BF2"/>
+      <stop offset="1" stop-color="#E24FA0"/>
+    </linearGradient>
+    <linearGradient id="rexell-letter" x1="20" y1="46" x2="46" y2="18" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#3FD3E6"/>
+      <stop offset="0.55" stop-color="#7C86F5"/>
+      <stop offset="1" stop-color="#D95BA8"/>
+    </linearGradient>
+  </defs>
+
+  <!-- The shield. Pointed top and bottom, softened at the corners. -->
+  <path d="M32 3.4 56.5 17.7 56.5 46.3 32 60.6 7.5 46.3 7.5 17.7Z"
+        fill="none" stroke="url(#rexell-edge)" stroke-width="3.2"
+        stroke-linejoin="round"/>
+
+  <!-- The R, built from a stem, a bowl and a leg rather than set as type, so
+       it renders identically without the brand face installed. -->
+  <g fill="none" stroke="url(#rexell-letter)" stroke-width="4.6" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M24 45.5V19h9.4a7.3 7.3 0 0 1 0 14.6H24"/>
+    <path d="M33.2 33.8 41.6 45.5"/>
+  </g>
+</svg>

@@ -4,10 +4,11 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="color-scheme" content="light dark">
-<meta name="theme-color" content="#0d6b60">
+<meta name="theme-color" content="#080b20">
 <title>ReXell</title>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<link rel="icon" href="/logo.svg" type="image/svg+xml">
 <link rel="stylesheet" href="/ui.css">
 <style>
   .fan-head { display: flex; align-items: center; gap: 10px; padding: 16px 18px 10px; }
@@ -21,7 +22,7 @@
   .event-card:hover { transform: translateY(-1px); box-shadow: var(--lift-2); }
   .event-card .body { padding: 15px 16px; }
   .event-card h3 { font-size: 15.5px; margin-bottom: 3px; }
-  .event-strip { height: 5px; background: linear-gradient(90deg, var(--teal), color-mix(in srgb, var(--teal) 55%, #7cd6c6)); }
+  .event-strip { height: 5px; background: linear-gradient(90deg, var(--brand), color-mix(in srgb, var(--brand) 55%, #7cd6c6)); }
   .price { font: 700 16px/1 var(--sans); font-variant-numeric: tabular-nums; }
   .sheet {
     position: fixed; inset: 0; z-index: 60; display: grid; align-items: end;
@@ -42,7 +43,7 @@
     display: flex; gap: 12px; padding: 14px; border: 1px solid var(--rule);
     border-radius: var(--r); background: var(--surface-2);
   }
-  .consent-item svg { flex: none; color: var(--teal); margin-top: 1px; }
+  .consent-item svg { flex: none; color: var(--brand); margin-top: 1px; }
 </style>
 </head>
 <body>
@@ -85,6 +86,8 @@
 <div class="toasts" id="toasts"></div>
 <div id="sheetHost"></div>
 
+<!-- Serves the API origin chosen by the process, so it is not guessable from a URL. -->
+<script src="/config.js"></script>
 <script type="module" src="/fan.js"></script>
 </body>
 </html>

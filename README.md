@@ -93,6 +93,31 @@ runs ten capped resales, refuses a scalper at ₹6,000 and a VIP resale outright
 simulates a night at the gate, reconciles it, and finally withdraws one fan's
 consent and verifies the deletion receipt. Every number it prints is computed.
 
+## Deploying it
+
+```bash
+cp .env.example .env      # fill it in
+docker compose up -d --build
+```
+
+One host, Docker Compose, Caddy in front for TLS — which is not optional,
+because both the fan app and the gate need a camera and `getUserMedia` is
+refused on plain HTTP. `docs/DEPLOYMENT.md` is the full runbook.
+
+Two things worth knowing before you read it:
+
+**The API refuses to start misconfigured.** In production every unsafe posture
+has to be asked for by name — an invite token or an explicit `SIGNUP_OPEN=true`,
+a real `ONSALE_SECRET`, a `VAULT_TOKEN`. Missing any of them exits `78` with the
+whole list rather than starting in a weaker posture than you meant. The vault
+does the same with its master key, because generating one per boot makes every
+enrolled template unreadable after a restart.
+
+**One host is the ceiling, not a shortcut.** `node:sqlite` is synchronous and
+single-process, so two API replicas against one volume corrupt each other, and
+the rate limiter is per-process for the same reason. Scaling out means replacing
+the storage layer first. Do not add replicas.
+
 ## Where the invariants are enforced
 
 Twice, on purpose. Application code can be bypassed by a migration or a support

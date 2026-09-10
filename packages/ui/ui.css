@@ -6,50 +6,69 @@
  * a pocket, a device held at arm's length in the dark — so the tokens are shared
  * and the density is not.
  *
- * The identity carries over from the architecture and business documents:
+ * The palette is taken from the ReXell mark: a hexagonal shield running cyan →
+ * indigo → magenta on a deep indigo ground. The gradient belongs to the logo
+ * and to the occasional deliberate brand moment; the interface itself runs on
+ * one solid accent lifted from the middle stop, because a gradient behind text
+ * is a legibility problem wearing a nice coat.
+ *
  * Archivo for anything a person reads, IBM Plex Mono for anything a person
- * checks, and a teal that survives both grounds. Numbers are always tabular, so
- * a column of money does not wobble as it updates.
+ * checks. Numbers are always tabular, so a column of money does not wobble as
+ * it updates.
  */
 
 /* ─── tokens ──────────────────────────────────────────────────────────────── */
 
 :root {
-  /* Ground is a cooled paper rather than grey. Pure #fff under a teal reads
-     clinical, and this product spends its life next to spreadsheets. */
-  --paper: #eef2f1;
+  /* The three stops of the mark, in the order they run through it. This is the
+     only place the brand hues are literal; everything else derives from them.
+     They do NOT change between themes — a gradient that shifts with an OS
+     setting is no longer a logo. */
+  --grad-1: #35d6e8; /* cyan, bottom-left of the mark */
+  --grad-2: #6e7bf2; /* indigo, the middle */
+  --grad-3: #e24fa0; /* magenta, top-right */
+  --brand-gradient: linear-gradient(120deg, var(--grad-1), var(--grad-2) 52%, var(--grad-3));
+
+  /* Ground is paper cooled toward the indigo rather than neutral grey, so the
+     accent sits on it rather than on top of it. */
+  --paper: #f1f2fa;
   --surface: #ffffff;
-  --surface-2: #f4f7f6;
-  --sunk: #e4eae8;
+  --surface-2: #f7f8fd;
+  --sunk: #e9ebf7;
 
-  --ink: #0c1412;
-  --ink-2: #3b4a47;
-  --ink-3: #6d7c78;
-  --ink-4: #96a3a0;
+  --ink: #0b0e28;
+  --ink-2: #3c4370;
+  --ink-3: #6b739f;
+  --ink-4: #959bc0;
 
-  --rule: #d3dcda;
-  --rule-2: #e4eae8;
+  --rule: #d7dbee;
+  --rule-2: #e7e9f6;
 
-  --teal: #0d6b60;
-  --teal-hover: #0a544b;
-  --teal-ink: #ffffff;
-  --teal-wash: #dceae7;
-  --teal-line: #9fc7c0;
+  /* The solid accent is the middle stop, darkened until it carries white text
+     at AA on this ground. The gradient itself is for the mark and for
+     deliberate brand moments — never for a control somebody has to read. */
+  --brand: #4a43d6;
+  --brand-hover: #3a34b4;
+  --brand-ink: #ffffff;
+  --brand-wash: #e9e8fb;
+  --brand-line: #bab6f0;
 
-  --ok: #14764a;
-  --ok-wash: #d9ecdf;
-  --warn: #a06a05;
-  --warn-wash: #f7ebd2;
-  --bad: #bd3a13;
-  --bad-wash: #f8e2d9;
+  /* Held away from the magenta stop deliberately: an error and a brand accent
+     must never be confusable, and #e24fa0 is close to a warm red. */
+  --ok: #0e7a4e;
+  --ok-wash: #d9eee3;
+  --warn: #96690a;
+  --warn-wash: #f8ecd3;
+  --bad: #c33a22;
+  --bad-wash: #fae2dc;
 
-  --focus: #0d6b60;
+  --focus: #4a43d6;
 
   /* Depth is a hairline plus a whisper. Anything heavier competes with the
      data, and the data is the point. */
-  --lift: 0 1px 2px rgba(12, 20, 18, 0.05);
-  --lift-2: 0 4px 16px -6px rgba(12, 20, 18, 0.16);
-  --lift-3: 0 18px 48px -18px rgba(12, 20, 18, 0.3);
+  --lift: 0 1px 2px rgba(11, 14, 40, 0.06);
+  --lift-2: 0 4px 16px -6px rgba(11, 14, 40, 0.18);
+  --lift-3: 0 18px 48px -18px rgba(11, 14, 40, 0.32);
 
   --r-sm: 6px;
   --r: 10px;
@@ -68,74 +87,82 @@
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) {
-    --paper: #090f0e;
-    --surface: #121a18;
-    --surface-2: #172120;
-    --sunk: #0d1514;
+    /* The ground the logo was drawn on: a deep indigo, not black. Black flattens
+       the cyan stop, and the mark loses one of its three colours. */
+    --paper: #080b20;
+    --surface: #111635;
+    --surface-2: #171d42;
+    --sunk: #0a0e28;
 
-    --ink: #e9efed;
-    --ink-2: #b2c0bc;
-    --ink-3: #7f8e8a;
-    --ink-4: #5f6d6a;
+    --ink: #eef0fb;
+    --ink-2: #b4bbde;
+    --ink-3: #7d86b4;
+    --ink-4: #5b6390;
 
-    --rule: #28332f;
-    --rule-2: #1d2725;
+    --rule: #262d57;
+    --rule-2: #1a2045;
 
-    --teal: #46bfae;
-    --teal-hover: #6bd0c1;
-    --teal-ink: #04211d;
-    --teal-wash: #0f302c;
-    --teal-line: #1e4d46;
+    /* Lifted off the middle stop rather than darkened, so the accent reads as
+       the same colour as the mark on both grounds. */
+    --brand: #8b93ff;
+    --brand-hover: #a8aeff;
+    --brand-ink: #080b20;
+    --brand-wash: #1a2050;
+    --brand-line: #333c7a;
 
-    --ok: #3fb87a;
-    --ok-wash: #0e2c1e;
-    --warn: #d9a52a;
+    --ok: #35c98a;
+    --ok-wash: #0b2c1f;
+    --warn: #e0a93a;
     --warn-wash: #2e2408;
-    --bad: #ff7f4d;
-    --bad-wash: #331610;
+    --bad: #ff8460;
+    --bad-wash: #35150f;
 
-    --focus: #46bfae;
+    --focus: #8b93ff;
 
-    --lift: 0 1px 2px rgba(0, 0, 0, 0.4);
-    --lift-2: 0 4px 16px -6px rgba(0, 0, 0, 0.55);
-    --lift-3: 0 18px 48px -18px rgba(0, 0, 0, 0.7);
+    --lift: 0 1px 2px rgba(0, 0, 0, 0.45);
+    --lift-2: 0 4px 16px -6px rgba(0, 0, 0, 0.6);
+    --lift-3: 0 18px 48px -18px rgba(0, 0, 0, 0.75);
   }
 }
 
 /* The same palette, forced. A gate runs at night and cannot wait for the
    operating system to agree with it. */
 :root[data-theme='dark'] {
-    --paper: #090f0e;
-    --surface: #121a18;
-    --surface-2: #172120;
-    --sunk: #0d1514;
+    /* The ground the logo was drawn on: a deep indigo, not black. Black flattens
+       the cyan stop, and the mark loses one of its three colours. */
+    --paper: #080b20;
+    --surface: #111635;
+    --surface-2: #171d42;
+    --sunk: #0a0e28;
 
-    --ink: #e9efed;
-    --ink-2: #b2c0bc;
-    --ink-3: #7f8e8a;
-    --ink-4: #5f6d6a;
+    --ink: #eef0fb;
+    --ink-2: #b4bbde;
+    --ink-3: #7d86b4;
+    --ink-4: #5b6390;
 
-    --rule: #28332f;
-    --rule-2: #1d2725;
+    --rule: #262d57;
+    --rule-2: #1a2045;
 
-    --teal: #46bfae;
-    --teal-hover: #6bd0c1;
-    --teal-ink: #04211d;
-    --teal-wash: #0f302c;
-    --teal-line: #1e4d46;
+    /* Lifted off the middle stop rather than darkened, so the accent reads as
+       the same colour as the mark on both grounds. */
+    --brand: #8b93ff;
+    --brand-hover: #a8aeff;
+    --brand-ink: #080b20;
+    --brand-wash: #1a2050;
+    --brand-line: #333c7a;
 
-    --ok: #3fb87a;
-    --ok-wash: #0e2c1e;
-    --warn: #d9a52a;
+    --ok: #35c98a;
+    --ok-wash: #0b2c1f;
+    --warn: #e0a93a;
     --warn-wash: #2e2408;
-    --bad: #ff7f4d;
-    --bad-wash: #331610;
+    --bad: #ff8460;
+    --bad-wash: #35150f;
 
-    --focus: #46bfae;
+    --focus: #8b93ff;
 
-    --lift: 0 1px 2px rgba(0, 0, 0, 0.4);
-    --lift-2: 0 4px 16px -6px rgba(0, 0, 0, 0.55);
-    --lift-3: 0 18px 48px -18px rgba(0, 0, 0, 0.7);
+    --lift: 0 1px 2px rgba(0, 0, 0, 0.45);
+    --lift-2: 0 4px 16px -6px rgba(0, 0, 0, 0.6);
+    --lift-3: 0 18px 48px -18px rgba(0, 0, 0, 0.75);
 }
 
 /* ─── base ────────────────────────────────────────────────────────────────── */
@@ -178,7 +205,7 @@ h3 { font-size: 15px; }
 p { margin: 0; }
 
 a {
-  color: var(--teal);
+  color: var(--brand);
   text-underline-offset: 2px;
 }
 
@@ -206,7 +233,7 @@ code {
 }
 
 ::selection {
-  background: var(--teal-wash);
+  background: var(--brand-wash);
   color: var(--ink);
 }
 
@@ -259,28 +286,44 @@ code {
 
 /* The mark is a ticket stub: a rounded rectangle with the perforation bitten
    out of both sides. Small enough to work at 22px, specific enough to be ours. */
+/**
+ * The mark.
+ *
+ * A masked SVG rather than an <img>, so one element carries the artwork and a
+ * surface can size it without a second file. The gradient is painted by the
+ * element and the SVG only supplies the silhouette, which means the mark stays
+ * the brand's own colours on either ground instead of inheriting text colour.
+ */
 .brand-mark {
-  width: 22px;
-  height: 22px;
+  width: 24px;
+  height: 24px;
   flex: none;
-  border-radius: 6px;
-  background: var(--teal);
-  position: relative;
-  overflow: hidden;
+  background: var(--brand-gradient);
+  -webkit-mask: url('/logo.svg') center / contain no-repeat;
+  mask: url('/logo.svg') center / contain no-repeat;
 }
-.brand-mark::before,
-.brand-mark::after {
-  content: '';
-  position: absolute;
-  top: 50%;
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: var(--surface);
-  transform: translateY(-50%);
+
+/* The wordmark, when the lockup is spelled out rather than iconic. Only the R
+   and the X are capitalised — it is ReXell, not Rexell or REXELL. */
+.brand-word {
+  font-family: var(--sans);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  color: var(--ink);
 }
-.brand-mark::before { left: -3.5px; }
-.brand-mark::after { right: -3.5px; }
+
+/*
+ * Brand-gradient text. Reserved for the wordmark and for the single largest
+ * number on a page — never for anything long, because gradient text drops to
+ * the fallback colour in high-contrast modes and cannot be relied on to carry
+ * meaning.
+ */
+.brand-grad {
+  background: var(--brand-gradient);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
 
 /* ─── surfaces ────────────────────────────────────────────────────────────── */
 
@@ -344,12 +387,12 @@ code {
 .btn:disabled { opacity: 0.45; cursor: default; }
 
 .btn-primary {
-  background: var(--teal);
-  border-color: var(--teal);
-  color: var(--teal-ink);
+  background: var(--brand);
+  border-color: var(--brand);
+  color: var(--brand-ink);
   box-shadow: var(--lift);
 }
-.btn-primary:hover:not(:disabled) { background: var(--teal-hover); border-color: var(--teal-hover); }
+.btn-primary:hover:not(:disabled) { background: var(--brand-hover); border-color: var(--brand-hover); }
 
 .btn-quiet { background: none; border-color: transparent; color: var(--ink-2); }
 .btn-quiet:hover:not(:disabled) { background: var(--surface-2); border-color: var(--rule-2); }
@@ -389,8 +432,8 @@ code {
 .input:focus {
   outline: none;
   background: var(--surface);
-  border-color: var(--teal);
-  box-shadow: 0 0 0 3px var(--teal-wash);
+  border-color: var(--brand);
+  box-shadow: 0 0 0 3px var(--brand-wash);
 }
 .field input::placeholder { color: var(--ink-4); }
 .field .num-input { font-family: var(--mono); font-variant-numeric: tabular-nums; }
@@ -479,16 +522,16 @@ td.key { color: var(--ink); font-weight: 600; }
 .tag-ok { border-color: var(--ok); color: var(--ok); background: var(--ok-wash); }
 .tag-warn { border-color: var(--warn); color: var(--warn); background: var(--warn-wash); }
 .tag-bad { border-color: var(--bad); color: var(--bad); background: var(--bad-wash); }
-.tag-teal { border-color: var(--teal-line); color: var(--teal); background: var(--teal-wash); }
+.tag-brand { border-color: var(--brand-line); color: var(--brand); background: var(--brand-wash); }
 
 .dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; flex: none; }
 
 /* ─── notices ─────────────────────────────────────────────────────────────── */
 
 .note {
-  border: 1px solid var(--teal-line);
+  border: 1px solid var(--brand-line);
   border-left-width: 3px;
-  background: var(--teal-wash);
+  background: var(--brand-wash);
   color: var(--ink);
   border-radius: var(--r);
   padding: 13px 15px;
@@ -580,7 +623,7 @@ td.key { color: var(--ink); font-weight: 600; }
   transition: background var(--fast), color var(--fast);
 }
 .rail-nav button:hover { background: var(--surface-2); color: var(--ink); }
-.rail-nav button[aria-current='true'] { background: var(--teal-wash); color: var(--teal); }
+.rail-nav button[aria-current='true'] { background: var(--brand-wash); color: var(--brand); }
 .rail-nav button svg { width: 16px; height: 16px; flex: none; opacity: 0.85; }
 .rail-foot { margin-top: auto; }
 
@@ -664,7 +707,7 @@ td.key { color: var(--ink); font-weight: 600; }
   -webkit-tap-highlight-color: transparent;
 }
 .tabbar button svg { width: 20px; height: 20px; }
-.tabbar button[aria-current='true'] { color: var(--teal); }
+.tabbar button[aria-current='true'] { color: var(--brand); }
 
 /* ─── the ticket ──────────────────────────────────────────────────────────── */
 
@@ -685,7 +728,7 @@ td.key { color: var(--ink); font-weight: 600; }
 }
 .ticket-top {
   padding: 20px;
-  background: linear-gradient(148deg, var(--teal) 0%, color-mix(in srgb, var(--teal) 72%, #0b3b36) 100%);
+  background: linear-gradient(148deg, var(--brand) 0%, color-mix(in srgb, var(--brand) 72%, #0b3b36) 100%);
   color: #fff;
 }
 .ticket-top .eyebrow { color: rgba(255, 255, 255, 0.72); }
@@ -697,7 +740,7 @@ td.key { color: var(--ink); font-weight: 600; }
   text-align: center;
   background: var(--surface);
 }
-.ticket-face svg { color: var(--teal); margin-bottom: 12px; }
+.ticket-face svg { color: var(--brand); margin-bottom: 12px; }
 .ticket-face h3 { font-size: 16px; margin-bottom: 5px; }
 .ticket-face p { font-size: 13px; color: var(--ink-3); max-width: 30ch; margin: 0 auto; line-height: 1.5; }
 
@@ -728,7 +771,7 @@ td.key { color: var(--ink); font-weight: 600; }
   background: var(--rule);
   transition: background var(--slow);
 }
-.step.done { background: var(--teal); }
+.step.done { background: var(--brand); }
 
 /* ─── camera ──────────────────────────────────────────────────────────────── */
 
@@ -750,12 +793,12 @@ td.key { color: var(--ink); font-weight: 600; }
 .viewfinder-ring {
   position: absolute;
   inset: 12%;
-  border: 2px dashed var(--teal-line);
+  border: 2px dashed var(--brand-line);
   border-radius: 50%;
   pointer-events: none;
   transition: border-color var(--slow);
 }
-.viewfinder.is-live .viewfinder-ring { border-style: solid; border-color: var(--teal); }
+.viewfinder.is-live .viewfinder-ring { border-style: solid; border-color: var(--brand); }
 .viewfinder-hint { position: absolute; inset: auto 0 12px; text-align: center; }
 
 /* ─── misc ────────────────────────────────────────────────────────────────── */

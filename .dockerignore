@@ -1,0 +1,17 @@
+# Anything here would either bloat the build context or leak into an image.
+node_modules
+**/node_modules
+dist
+**/dist
+*.tsbuildinfo
+.git
+.github
+.env
+.env.local
+*.sqlite
+*.sqlite-*
+coverage
+docs
+packages/contracts/artifacts
+packages/contracts/cache
+packages/contracts/types

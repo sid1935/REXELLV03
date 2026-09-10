@@ -1,0 +1,130 @@
+# ReXell, on one host.
+#
+# One host is not a limitation to be apologised for — it is what the storage
+# engine supports. `node:sqlite` is a synchronous, single-process library, so
+# there is exactly one writer. Two API replicas against the same volume will
+# corrupt each other, and the rate limiter is per-process besides. Scaling out
+# means replacing the storage layer first; see docs/DEPLOYMENT.md.
+#
+#   cp .env.example .env   # then fill it in — the API refuses to start otherwise
+#   docker compose up -d --build
+
+name: rexell
+
+services:
+  # The biometric vault. Never published to a port: only the API talks to it,
+  # over the internal network, and nothing else on the host can reach it.
+  vault:
+    build: .
+    command: ["node", "apps/vault/dist/server.js"]
+    restart: unless-stopped
+    environment:
+      REXELL_ENV: production
+      VAULT_DB: /data/vault.sqlite
+      VAULT_PORT: "8090"
+      # Inside the compose network this must bind the service address, not
+      # loopback, or the API cannot reach it.
+      VAULT_HOST: 0.0.0.0
+      VAULT_MASTER_KEY: ${VAULT_MASTER_KEY:?set VAULT_MASTER_KEY in .env}
+      VAULT_RECEIPT_KEY: ${VAULT_RECEIPT_KEY:?set VAULT_RECEIPT_KEY in .env}
+      VAULT_TOKEN: ${VAULT_TOKEN:?set VAULT_TOKEN in .env}
+    volumes:
+      - vault-data:/data
+    networks: [private]
+
+  api:
+    build: .
+    command: ["node", "apps/api/dist/server.js"]
+    restart: unless-stopped
+    depends_on:
+      vault:
+        condition: service_started
+    environment:
+      REXELL_ENV: production
+      PORT: "8080"
+      HOST: 0.0.0.0
+      REXELL_DB: /data/rexell.sqlite
+      VAULT_URL: http://vault:8090
+      VAULT_TOKEN: ${VAULT_TOKEN:?set VAULT_TOKEN in .env}
+      ONSALE_SECRET: ${ONSALE_SECRET:?set ONSALE_SECRET in .env}
+      # One of these two is required. Leave SIGNUP_INVITE_TOKEN set unless you
+      # genuinely intend strangers to be able to mint organizer API keys.
+      SIGNUP_INVITE_TOKEN: ${SIGNUP_INVITE_TOKEN:-}
+      SIGNUP_OPEN: ${SIGNUP_OPEN:-}
+      # Caddy terminates TLS and overwrites x-forwarded-for, so the rate
+      # limiter can believe it.
+      TRUST_PROXY: "true"
+    volumes:
+      - api-data:/data
+    networks: [private, edge]
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:8080/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 20s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+
+  fan:
+    build: .
+    command: ["node", "apps/fan/serve.js"]
+    restart: unless-stopped
+    environment:
+      FAN_PORT: "8120"
+      REXELL_API: ${PUBLIC_API_URL:?set PUBLIC_API_URL in .env}
+      PUBLIC_HTTPS: "true"
+    networks: [edge]
+
+  console:
+    build: .
+    command: ["node", "apps/console/serve.js"]
+    restart: unless-stopped
+    environment:
+      CONSOLE_PORT: "8110"
+      REXELL_API: ${PUBLIC_API_URL:?set PUBLIC_API_URL in .env}
+      PUBLIC_HTTPS: "true"
+    networks: [edge]
+
+  scanner:
+    build: .
+    command: ["node", "apps/scanner/serve.js"]
+    restart: unless-stopped
+    environment:
+      SCANNER_PORT: "8100"
+      REXELL_API: ${PUBLIC_API_URL:?set PUBLIC_API_URL in .env}
+      PUBLIC_HTTPS: "true"
+    networks: [edge]
+
+  # TLS, and the only thing bound to the host.
+  #
+  # The camera is why this is not optional: getUserMedia is refused on plain
+  # HTTP anywhere but localhost, so without TLS neither enrolment nor the gate
+  # works at all on a real device.
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    depends_on: [api, fan, console, scanner]
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      PUBLIC_FAN_HOST: ${PUBLIC_FAN_HOST:?set PUBLIC_FAN_HOST in .env}
+      PUBLIC_CONSOLE_HOST: ${PUBLIC_CONSOLE_HOST:?set PUBLIC_CONSOLE_HOST in .env}
+      PUBLIC_SCANNER_HOST: ${PUBLIC_SCANNER_HOST:?set PUBLIC_SCANNER_HOST in .env}
+      PUBLIC_API_HOST: ${PUBLIC_API_HOST:?set PUBLIC_API_HOST in .env}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    networks: [edge]
+
+networks:
+  # The vault sits here with the API and nothing else.
+  private:
+    internal: true
+  edge:
+
+volumes:
+  api-data:
+  vault-data:
+  caddy-data:
+  caddy-config:

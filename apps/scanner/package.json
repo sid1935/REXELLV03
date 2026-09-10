@@ -4,5 +4,10 @@
   "private": true,
   "type": "module",
   "description": "Offline-first gate scanner PWA.",
-  "scripts": { "dev": "node serve.js" }
+  "scripts": {
+    "dev": "node serve.js"
+  },
+  "dependencies": {
+    "@rexell/ui": "*"
+  }
 }

@@ -1,0 +1,40 @@
+# TLS and routing. Caddy obtains and renews certificates automatically, which
+# is the whole reason it is here: the fan app and the scanner both need a
+# camera, and getUserMedia is refused on plain HTTP anywhere but localhost.
+
+{
+	# Fail fast on a bad config rather than serving a half-configured edge.
+	admin off
+}
+
+(common) {
+	encode zstd gzip
+	header {
+		# The edge is the only place that knows TLS is real, so this is the
+		# only place HSTS is asserted.
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		-Server
+	}
+}
+
+{$PUBLIC_FAN_HOST} {
+	import common
+	reverse_proxy fan:8120
+}
+
+{$PUBLIC_CONSOLE_HOST} {
+	import common
+	reverse_proxy console:8110
+}
+
+{$PUBLIC_SCANNER_HOST} {
+	import common
+	reverse_proxy scanner:8100
+}
+
+{$PUBLIC_API_HOST} {
+	import common
+	# Caddy sets X-Forwarded-For itself and overwrites what the client sent,
+	# which is what makes TRUST_PROXY=true safe on the API.
+	reverse_proxy api:8080
+}

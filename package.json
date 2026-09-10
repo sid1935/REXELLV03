@@ -25,7 +25,9 @@
     "train:risk": "tsx scripts/train-risk.ts",
     "console": "node apps/console/serve.js",
     "start": "npm run build && tsx scripts/dev.ts",
-    "fan": "node apps/fan/serve.js"
+    "fan": "node apps/fan/serve.js",
+    "seed:demo": "tsx scripts/seed-demo.ts",
+    "backup": "tsx scripts/backup.ts"
   },
   "engines": {
     "node": ">=20"

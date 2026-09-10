@@ -2,6 +2,12 @@
   "name": "@rexell/ui",
   "version": "0.1.0",
   "private": true,
-  "description": "Shared design system. One stylesheet, three surfaces.",
-  "files": ["ui.css"]
+  "type": "module",
+  "description": "Shared design system and the static server behind all three surfaces.",
+  "exports": {
+    "./ui.css": "./ui.css",
+    "./logo.svg": "./logo.svg",
+    "./static-server": "./static-server.js"
+  },
+  "files": ["ui.css", "logo.svg", "static-server.js"]
 }

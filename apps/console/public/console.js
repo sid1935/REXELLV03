@@ -10,7 +10,24 @@
  */
 
 const $ = (id) => document.getElementById(id);
-const API = new URLSearchParams(location.search).get('api') ?? 'http://127.0.0.1:8080';
+/**
+ * Where the API lives.
+ *
+ * From `/config.js`, which the static server writes from its own environment.
+ * This used to read `?api=` from the query string, which meant a link could
+ * point this page — including enrolment, where a face is captured — at a server
+ * chosen by whoever wrote the link. The override survives on localhost, where
+ * it is a development convenience rather than a vector.
+ */
+const API = (() => {
+  const local = ['localhost', '127.0.0.1', '[::1]', ''].includes(location.hostname);
+  const override = new URLSearchParams(location.search).get('api');
+  if (override) {
+    if (local) return override;
+    console.error('Ignoring ?api= — an API origin from the URL is only honoured on localhost.');
+  }
+  return window.__REXELL_API__ ?? (local ? 'http://127.0.0.1:8080' : location.origin);
+})();
 
 let key = localStorage.getItem('rexell.key') ?? '';
 let events = [];
@@ -241,7 +258,7 @@ function previewDials() {
   const face = Number($('evFace').value) || 0;
   const capped = $('rsMode').value === 'capped';
   $('modeTag').textContent = capped ? 'Capped' : 'Soulbound';
-  $('modeTag').className = capped ? 'tag tag-teal' : 'tag tag-warn';
+  $('modeTag').className = capped ? 'tag tag-brand' : 'tag tag-warn';
 
   if (!capped) {
     $('dialPreview').className = 'note note-warn dial-preview';

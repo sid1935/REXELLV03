@@ -1,0 +1,413 @@
+<title>ReXell Demo Script</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&display=swap">
+<style>
+:root{
+  --paper:#eef2f1; --surface:#ffffff; --surface-2:#f5f8f7; --sunk:#e2e9e7;
+  --ink:#0c1412; --ink-2:#3a4a46; --ink-3:#6c7b77;
+  --rule:#d2dbd9; --rule-2:#e4eae8;
+  --teal:#0d6b60; --teal-wash:#dbeae7; --teal-line:#9cc6bf;
+  /* The one second hue in the system, spent entirely on the lines you say out
+     loud. Nothing else on the page is warm, so they are findable at a glance
+     while you are talking to somebody. */
+  --say:#7d4a12; --say-wash:#f8efe1; --say-line:#dcc39a;
+  --warn:#9c6a06; --warn-wash:#f7ecd4;
+  --bad:#b7380f; --bad-wash:#f8e3da;
+  --ok:#136f46;
+  --shadow:0 1px 2px rgba(12,20,18,.05);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --paper:#090f0e; --surface:#121a18; --surface-2:#172120; --sunk:#0c1413;
+    --ink:#e9efed; --ink-2:#b0bebb; --ink-3:#7d8c88;
+    --rule:#27322f; --rule-2:#1c2624;
+    --teal:#46bfae; --teal-wash:#0f302c; --teal-line:#1d4c45;
+    --say:#e0a765; --say-wash:#2c1e0c; --say-line:#5a4020;
+    --warn:#d5a32c; --warn-wash:#2c2308;
+    --bad:#ff7b48; --bad-wash:#331610;
+    --ok:#3eb679;
+    --shadow:0 1px 2px rgba(0,0,0,.4);
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#090f0e; --surface:#121a18; --surface-2:#172120; --sunk:#0c1413;
+  --ink:#e9efed; --ink-2:#b0bebb; --ink-3:#7d8c88;
+  --rule:#27322f; --rule-2:#1c2624;
+  --teal:#46bfae; --teal-wash:#0f302c; --teal-line:#1d4c45;
+  --say:#e0a765; --say-wash:#2c1e0c; --say-line:#5a4020;
+  --warn:#d5a32c; --warn-wash:#2c2308;
+  --bad:#ff7b48; --bad-wash:#331610;
+  --ok:#3eb679;
+  --shadow:0 1px 2px rgba(0,0,0,.4);
+}
+*,*::before,*::after{box-sizing:border-box}
+body{
+  margin:0;background:var(--paper);color:var(--ink);
+  font:400 16.5px/1.62 "Source Serif 4",Georgia,serif;
+  -webkit-font-smoothing:antialiased;
+}
+h1,h2,h3,h4,.ui{font-family:Archivo,"Helvetica Neue",Arial,sans-serif;text-wrap:balance}
+.mono,code,kbd,.rail,.time,.eyebrow{font-family:"IBM Plex Mono",ui-monospace,monospace;font-variant-numeric:tabular-nums}
+p{margin:0 0 14px;max-width:66ch}
+ul{margin:0 0 14px;padding-left:20px;max-width:66ch}
+li{margin:0 0 7px}
+li::marker{color:var(--ink-3)}
+strong{font-weight:600}
+a{color:var(--teal);text-underline-offset:2px}
+code{
+  font-size:.87em;background:var(--surface-2);border:1px solid var(--rule-2);
+  border-radius:4px;padding:1px 5px;color:var(--teal);
+}
+:focus-visible{outline:2px solid var(--teal);outline-offset:2px;border-radius:3px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+
+/* ── masthead ─────────────────────────────────────────────────────────── */
+.mast{background:var(--surface);border-bottom:1px solid var(--rule)}
+.mast .inner{max-width:1180px;margin:0 auto;padding:40px 28px 30px}
+.brandline{display:flex;align-items:center;gap:10px;margin-bottom:20px}
+.mark{
+  width:22px;height:22px;border-radius:6px;background:var(--teal);
+  position:relative;overflow:hidden;flex:none;
+}
+.mark::before,.mark::after{
+  content:"";position:absolute;top:50%;width:7px;height:7px;border-radius:50%;
+  background:var(--surface);transform:translateY(-50%);
+}
+.mark::before{left:-3.5px}.mark::after{right:-3.5px}
+.brandline b{font:800 15px/1 Archivo,sans-serif;letter-spacing:-.03em}
+.eyebrow{font-size:11px;letter-spacing:.15em;text-transform:uppercase;color:var(--ink-3)}
+h1{font-size:clamp(30px,4.6vw,50px);line-height:1.04;font-weight:800;letter-spacing:-.028em;margin:0;max-width:19ch}
+h1 em{font-style:normal;color:var(--teal)}
+.standfirst{font-size:19px;line-height:1.5;color:var(--ink-2);max-width:56ch;margin:18px 0 0}
+
+.setup{
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));
+  gap:1px;background:var(--rule-2);border:1px solid var(--rule);
+  border-radius:12px;overflow:hidden;margin-top:30px;
+}
+.setup div{background:var(--surface);padding:14px 16px}
+.setup dt{font:600 10.5px/1 "IBM Plex Mono",monospace;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3);margin-bottom:6px}
+.setup dd{margin:0;font:600 14px/1.35 Archivo,sans-serif}
+.setup dd span{display:block;font-weight:400;font-size:12px;color:var(--ink-3);font-family:"IBM Plex Mono",monospace;margin-top:3px}
+
+/* ── shell ────────────────────────────────────────────────────────────── */
+.shell{max-width:1180px;margin:0 auto;padding:0 28px 90px;display:grid;grid-template-columns:196px minmax(0,1fr);gap:44px}
+.rail{position:sticky;top:22px;align-self:start;padding-top:38px;font-size:12px}
+.rail-title{font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3);margin-bottom:12px}
+.rail ol{list-style:none;margin:0;padding:0}
+.rail li{display:flex;gap:9px;padding:6px 0;border-bottom:1px solid var(--rule-2);align-items:baseline}
+.rail li:last-child{border-bottom:0}
+.rail a{color:var(--ink-2);text-decoration:none;flex:1}
+.rail a:hover{color:var(--teal)}
+.rail .n{color:var(--teal);font-weight:600;min-width:14px}
+.rail .at{color:var(--ink-3);font-size:11px}
+.rail-note{margin-top:18px;padding-top:14px;border-top:1px solid var(--rule);color:var(--ink-3);line-height:1.5}
+
+main{padding-top:38px;min-width:0}
+section{padding-top:14px;margin-bottom:44px;scroll-margin-top:22px}
+h2{font-size:26px;font-weight:700;letter-spacing:-.02em;margin:0 0 4px}
+h3{font-size:16.5px;font-weight:700;margin:28px 0 8px;font-family:Archivo,sans-serif}
+.sub{color:var(--ink-3);font-size:14.5px;max-width:62ch;margin:0 0 20px;font-family:Archivo,sans-serif}
+
+.step-head{display:flex;align-items:baseline;gap:13px;margin-bottom:6px}
+.step-n{
+  font:700 13px/1 "IBM Plex Mono",monospace;color:var(--teal);
+  background:var(--teal-wash);border:1px solid var(--teal-line);
+  border-radius:6px;padding:6px 9px;flex:none;
+}
+.time{
+  margin-left:auto;font-size:11.5px;color:var(--ink-3);border:1px solid var(--rule);
+  border-radius:100px;padding:4px 10px;white-space:nowrap;flex:none;
+}
+
+/* ── the lines you say out loud ───────────────────────────────────────── */
+.say{
+  position:relative;background:var(--say-wash);border:1px solid var(--say-line);
+  border-left-width:3px;border-radius:0 10px 10px 0;
+  padding:15px 18px 15px 46px;margin:0 0 16px;max-width:64ch;
+  font-size:17px;line-height:1.55;color:var(--ink);
+}
+.say::before{
+  content:"“";position:absolute;left:15px;top:6px;
+  font:700 40px/1 "Source Serif 4",Georgia,serif;color:var(--say);opacity:.55;
+}
+.say .who{
+  display:block;font:600 10px/1 "IBM Plex Mono",monospace;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--say);margin-bottom:7px;
+}
+
+/* ── commands ─────────────────────────────────────────────────────────── */
+.cmd{
+  background:var(--sunk);border:1px solid var(--rule);border-radius:10px;
+  padding:14px 16px;margin:0 0 16px;overflow-x:auto;
+  font:500 13.5px/1.75 "IBM Plex Mono",monospace;color:var(--ink);
+}
+.cmd .p{color:var(--ink-3);user-select:none}
+.cmd .c{color:var(--ink-3)}
+
+/* ── notes ────────────────────────────────────────────────────────────── */
+.note{
+  border:1px solid var(--teal-line);border-left-width:3px;background:var(--teal-wash);
+  border-radius:0 10px 10px 0;padding:14px 17px;margin:0 0 18px;max-width:66ch;
+  font-size:15.5px;line-height:1.55;
+}
+.note p{margin:0;font-size:inherit}
+.note p+p{margin-top:9px}
+.note-warn{border-color:var(--warn);background:var(--warn-wash)}
+.note-bad{border-color:var(--bad);background:var(--bad-wash)}
+.note b{font-weight:600}
+
+/* ── tables ───────────────────────────────────────────────────────────── */
+.tw{overflow-x:auto;border:1px solid var(--rule);border-radius:12px;background:var(--surface);margin:0 0 20px}
+table{border-collapse:collapse;width:100%;font-size:14.5px;min-width:520px;font-family:Archivo,sans-serif}
+th{
+  text-align:left;font:600 10.5px/1 "IBM Plex Mono",monospace;letter-spacing:.11em;
+  text-transform:uppercase;color:var(--ink-3);padding:12px 16px;
+  border-bottom:1px solid var(--rule);background:var(--surface-2);white-space:nowrap;
+}
+td{padding:12px 16px;border-bottom:1px solid var(--rule-2);color:var(--ink-2);vertical-align:top;line-height:1.5}
+tr:last-child td{border-bottom:0}
+td:first-child{color:var(--ink);font-weight:600}
+.pill{
+  display:inline-block;font:600 10.5px/1 "IBM Plex Mono",monospace;letter-spacing:.05em;
+  text-transform:uppercase;padding:4px 8px;border-radius:5px;white-space:nowrap;
+  border:1px solid var(--rule);background:var(--surface-2);color:var(--ink-2);
+}
+.pill-off{border-color:var(--warn);color:var(--warn);background:var(--warn-wash)}
+.pill-cap{border-color:var(--teal-line);color:var(--teal);background:var(--teal-wash)}
+.pill-live{border-color:var(--ok);color:var(--ok);background:var(--teal-wash)}
+
+/* ── q&a ──────────────────────────────────────────────────────────────── */
+.qa{border-top:1px solid var(--rule);padding-top:18px;margin-top:6px}
+.qa + .qa{margin-top:22px}
+.q{font:700 17px/1.35 Archivo,sans-serif;margin:0 0 9px;color:var(--ink)}
+
+footer{border-top:1px solid var(--rule);background:var(--surface);padding:26px 0 44px}
+footer .inner{max-width:1180px;margin:0 auto;padding:0 28px;font-size:13.5px;color:var(--ink-3)}
+footer a{color:var(--ink-2)}
+footer ul{columns:2;column-gap:36px;max-width:none;padding-left:18px;margin-top:10px}
+
+@media (max-width:900px){
+  .shell{grid-template-columns:1fr;gap:0;padding-bottom:60px}
+  .rail{position:static;padding-top:26px}
+  .rail ol{columns:2;column-gap:24px}
+  main{padding-top:20px}
+  body{font-size:16px}
+}
+</style>
+
+<header class="mast">
+  <div class="inner">
+    <div class="brandline"><span class="mark"></span><b>ReXell</b><span class="eyebrow" style="margin-left:6px">Demo script</span></div>
+    <h1>Twelve minutes, four screens, <em>one claim</em>.</h1>
+    <p class="standfirst">A ticket that cannot be scalped, counterfeited, or resold above a price the organizer set. Everything below runs on a laptop, offline, in front of somebody.</p>
+
+    <dl class="setup">
+      <div><dt>Bring it up</dt><dd>npm start<span>vault · api · console · fan</span></dd></div>
+      <div><dt>Fill it</dt><dd>npm run seed:demo<span>6 events · 60 fans · a gate</span></dd></div>
+      <div><dt>The gate</dt><dd>npm run scanner<span>when you get to step 4</span></dd></div>
+      <div><dt>Keys</dt><dd>Printed by the seed<span>keep that terminal open</span></dd></div>
+    </dl>
+  </div>
+</header>
+
+<div class="shell">
+  <nav class="rail" aria-label="Demo steps">
+    <div class="rail-title">Running order</div>
+    <ol>
+      <li><span class="n">1</span><a href="#id">Get an ID</a><span class="at">0:00</span></li>
+      <li><span class="n">2</span><a href="#buy">Buying</a><span class="at">2:00</span></li>
+      <li><span class="n">3</span><a href="#resell">Reselling</a><span class="at">4:00</span></li>
+      <li><span class="n">4</span><a href="#gate">The gate</a><span class="at">7:00</span></li>
+      <li><span class="n">5</span><a href="#organizer">The console</a><span class="at">10:00</span></li>
+    </ol>
+    <div class="rail-note">
+      <a href="#catalogue">The catalogue</a><br>
+      <a href="#questions">Questions you'll get</a><br>
+      <a href="#honest">Say it first</a><br>
+      <a href="#wrong">If it breaks</a>
+    </div>
+  </nav>
+
+  <main>
+    <!-- ── catalogue ────────────────────────────────────────────────── -->
+    <section id="catalogue">
+      <h2>The catalogue, and why it looks like that</h2>
+      <p class="sub">Six events, and none of them is a variation on the others. Each sets the resale dials differently, because that is the product.</p>
+
+      <div class="tw">
+        <table>
+          <thead><tr><th>Event</th><th>Resale</th><th>Why it is set that way</th></tr></thead>
+          <tbody>
+            <tr><td>Lollapalooza India 2027<br><span style="font-weight:400;color:var(--ink-3);font-size:13px">Mahalaxmi Racecourse, Mumbai</span></td><td><span class="pill pill-cap">110% · 7%</span></td><td>A market they take a cut of beats a market they cannot see.</td></tr>
+            <tr><td>Guns N' Roses<br><span style="font-weight:400;color:var(--ink-3);font-size:13px">NICE Grounds, Bengaluru</span></td><td><span class="pill pill-cap">105% · 2 max</span> <span class="pill pill-off">Gold bound</span></td><td>A scalper magnet. The tier where fraud hurts most cannot be resold at all.</td></tr>
+            <tr><td>Anyma<br><span style="font-weight:400;color:var(--ink-3);font-size:13px">Mahalaxmi Race Course, Mumbai</span></td><td><span class="pill pill-cap">115% · artist 4%</span></td><td>The rights-holder takes a share of the secondary market.</td></tr>
+            <tr><td>NH7 Weekender<br><span style="font-weight:400;color:var(--ink-3);font-size:13px">Mahalaxmi Lawns, Pune</span></td><td><span class="pill pill-cap">110% · 6 max</span></td><td>Sells to groups of friends rather than to individuals.</td></tr>
+            <tr><td>Chet Faker<br><span style="font-weight:400;color:var(--ink-3);font-size:13px">Phoenix Marketcity, Bengaluru</span></td><td><span class="pill pill-off">Off</span></td><td>A 3,500-capacity room does not need a secondary market.</td></tr>
+            <tr><td>Bengaluru FC vs Mohun Bagan<br><span style="font-weight:400;color:var(--ink-3);font-size:13px">Sree Kanteerava Stadium</span></td><td><span class="pill pill-live">Tonight</span> <span class="pill pill-cap">110%</span></td><td>Doors open, box office still selling, gate running. This is the one to demo.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="note">
+        <p><b>The events are illustrative.</b> They are built from public listings so the demo looks like a real Saturday rather than a wall of “Test Event 1”. ReXell has no relationship with any of these events, venues or promoters, the organizer accounts are fictional, and no ticket is real.</p>
+      </div>
+
+      <div class="note note-warn">
+        <p><b>The camera needs localhost or HTTPS.</b> On <code>127.0.0.1</code> it works. If you are on a shared screen with no camera, every capture step falls back to a deterministic stand-in and the flow still runs — say so, rather than letting somebody think it broke.</p>
+      </div>
+    </section>
+
+    <!-- ── 1 ────────────────────────────────────────────────────────── -->
+    <section id="id">
+      <div class="step-head"><span class="step-n">1</span><h2>A fan gets a ReXell ID</h2><span class="time">2 min</span></div>
+      <p class="sub">Fan app · <span class="mono">127.0.0.1:8120</span></p>
+
+      <p>It opens on <b>Get your ReXell ID</b>, because there is nothing to show until there is. Tap <b>Set it up</b>.</p>
+
+      <div class="say"><span class="who">Say this</span>Every other ticketing app starts with an email and a password. This one starts with the only thing a scalper cannot resell.</div>
+
+      <h3>Slow down on the consent screen</h3>
+      <p>It asks for one thing, for one purpose, and it is not bundled with terms of service or a marketing tick box. Read the three lines out:</p>
+      <ul>
+        <li>a template, not a photograph — the pictures never leave the phone</li>
+        <li>for opening a gate, and nothing else</li>
+        <li>twelve months, or until withdrawal, which deletes it and returns a receipt</li>
+      </ul>
+      <p>And the line underneath: <b>you can attend without this.</b> Staffed entry is always available. An organizer will ask about that; a regulator will ask twice.</p>
+      <p>Then capture. The server picks the challenge action and a nonce, so a template captured earlier cannot be replayed into a later enrolment.</p>
+    </section>
+
+    <!-- ── 2 ────────────────────────────────────────────────────────── -->
+    <section id="buy">
+      <div class="step-head"><span class="step-n">2</span><h2>Buying</h2><span class="time">2 min</span></div>
+
+      <p><b>Discover</b> shows six events with the resale terms on the card, before anybody has spent anything. Chet Faker says <b>no resale</b> in exactly the place the others say <b>resale capped</b> — nobody has to open a terms page to find that out.</p>
+      <p>Open <b>Bengaluru FC vs Mohun Bagan</b>, take a General Stand ticket, buy one. Then go to <b>Tickets</b>.</p>
+
+      <div class="say"><span class="who">Say this</span>There is no QR code here. Not hidden behind a tap — there isn't one. A screenshot of this screen is a screenshot of a receipt. Nothing to forward, nothing to sell in a WhatsApp group, nothing to counterfeit.</div>
+    </section>
+
+    <!-- ── 3 ────────────────────────────────────────────────────────── -->
+    <section id="resell">
+      <div class="step-head"><span class="step-n">3</span><h2>Reselling, and the money</h2><span class="time">3 min</span></div>
+
+      <p>Go to <b>Resell</b>. The ticket is there with the ceiling already stated — ₹330 on a ₹300 ticket. List it. Try a higher number first: the field refuses it, the API would refuse it, and so would the contract. Three layers, and only the third is the enforcement.</p>
+
+      <p>Now switch to the <b>organizer console</b>, paste the <span class="mono">Southside Venues</span> key under Account → <em>I already have a key</em>, and open <b>Settlement</b>.</p>
+
+      <div class="say"><span class="who">Say this</span>Every line here is recomputed from the organizer's own policy and checked to balance to the paisa. They are not being asked to trust a total. And that commission column is money that, today, they do not see at all — the scalper keeps it.</div>
+
+      <p>The <b>on chain</b> column reads <em>pending</em> for a few seconds, then <em>confirmed</em>. Point at it while it is still pending:</p>
+
+      <div class="say"><span class="who">Say this</span>Nothing waits for that. The ticket sold, the gate works, the organizer gets paid. The chain is the receipt, not the rail.</div>
+    </section>
+
+    <!-- ── 4 ────────────────────────────────────────────────────────── -->
+    <section id="gate">
+      <div class="step-head"><span class="step-n">4</span><h2>The gate</h2><span class="time">3 min</span></div>
+
+      <div class="cmd"><span class="p">$</span> npm run scanner</div>
+
+      <p>It prints a provisioning link for lane 1. Open it. The lane registers itself, pulls a <b>sealed</b> manifest, then asks for the key separately — and the key only releases two hours before doors, so a manifest sitting on a stolen device the week before is inert.</p>
+      <p>Tap <b>Simulate</b> a few times. Green, and fast.</p>
+
+      <h3>Then stage the moment</h3>
+      <p>In the fan app, resell a ticket to another fan. Back in the scanner, tap <b>Sync</b>, and scan the seller.</p>
+
+      <div class="say"><span class="who">Say this</span>She has the same face she had a minute ago. The ticket is somebody else's now, so the gate says no. That revocation is what makes the binding worth anything — without it, the face is decoration.</div>
+
+      <p>Now turn the network off. Genuinely — disable wifi — and keep scanning. It keeps working, the pill flips to <b>offline</b>, and the queue counter climbs. Turn it back on and watch the queue drain.</p>
+
+      <div class="say"><span class="who">Say this</span>A venue's cellular collapses under crowd load at exactly the moment the gate needs it. A gate that stops working when nine thousand people arrive is not a gate.</div>
+    </section>
+
+    <!-- ── 5 ────────────────────────────────────────────────────────── -->
+    <section id="organizer">
+      <div class="step-head"><span class="step-n">5</span><h2>What the organizer sees</h2><span class="time">2 min</span></div>
+
+      <p>Back in the console, open <b>Live</b>.</p>
+      <ul>
+        <li><b>Sold, sell-through, gross</b> — the ordinary numbers</li>
+        <li><b>Resale commission</b> — the number that is new</li>
+        <li><b>Fallback rate</b> — the number that decides whether the queue moves. Above 1.5% the tile turns red and says <em>needs attention</em>, because at that point the resolution desk is becoming the queue</li>
+      </ul>
+
+      <p>Then <b>Account → Keys</b>. This organizer signed themselves up, issued their own key, created their own event, provisioned their own gate and read their own settlement.</p>
+
+      <div class="say"><span class="who">Say this</span>Nobody at ReXell touched any of that. Sixty events a year with our employee standing at every gate is a services business. This is the other thing.</div>
+    </section>
+
+    <!-- ── questions ────────────────────────────────────────────────── -->
+    <section id="questions">
+      <h2>Three questions you will get</h2>
+
+      <div class="qa">
+        <p class="q">“What if the camera doesn't recognise me?”</p>
+        <p>It falls back to a staffed lane — always. There is a test asserting that a failed match can never produce a denial. A 1.5% false-reject rate handled that way costs somebody ninety seconds. Handled the other way it is 1.5% of the crowd sent home, and one video.</p>
+      </div>
+
+      <div class="qa">
+        <p class="q">“What about someone who won't scan their face?”</p>
+        <p>They queue at the resolution desk with ID, at no extra cost and no worse position. It is a product requirement rather than a concession — a gate that works only for some bodies is not a gate — and the consent screen says so out loud.</p>
+      </div>
+
+      <div class="qa">
+        <p class="q">“Can't a scalper just pay people to buy for them?”</p>
+        <p>Yes, and the behavioural model barely catches them, because they are real people on real phones. Our measurement is <b>94.6%</b> of <em>scripted</em> automation stopped against a <b>94.7%</b> information ceiling — the honest number, not a round one. What stops a human farm is the ticket meeting the wrong face at the gate. Three layers; only the third is decisive.</p>
+      </div>
+    </section>
+
+    <!-- ── honesty ──────────────────────────────────────────────────── -->
+    <section id="honest">
+      <h2>Say these before anybody asks</h2>
+      <p class="sub">Volunteering them buys more credibility than being caught on them.</p>
+
+      <div class="note note-bad">
+        <p><b>The face matcher recognises nobody.</b> The fan app and the scanner both ship a placeholder that folds pixels into a vector, and neither has liveness detection — a printed photo would pass. The architecture around it is real and tested; a licensed SDK replaces one function.</p>
+      </div>
+
+      <div class="note note-bad">
+        <p><b>The latency claim is unmeasured on a phone.</b> Our own decision path is 8.3 ms against a 12,000-credential gallery, leaving about 420 ms for camera and embedding inside the 800 ms budget. That is an argument, not a measurement, until it runs on a mid-range Android.</p>
+      </div>
+
+      <p>Neither is a coding problem. Both need a purchase order.</p>
+    </section>
+
+    <!-- ── troubleshooting ──────────────────────────────────────────── -->
+    <section id="wrong">
+      <h2>If it breaks</h2>
+
+      <div class="tw">
+        <table>
+          <thead><tr><th>What you see</th><th>What it is</th></tr></thead>
+          <tbody>
+            <tr><td>Cannot reach the API</td><td><code>npm start</code> is not running, or is still booting. Give it ten seconds.</td></tr>
+            <tr><td>Database already has events</td><td>Already seeded. Stop the stack, delete <code>.dev.sqlite*</code> and <code>.dev-vault.sqlite*</code>, start again.</td></tr>
+            <tr><td>Enrolment returns 503</td><td>The vault did not come up. Check the <span class="mono">vault</span> lines in the <code>npm start</code> output.</td></tr>
+            <tr><td>Every purchase says NOT_ENROLLED</td><td>Correct, not broken. The dev server requires real enrolment — there is no shortcut flag.</td></tr>
+            <tr><td>The gate says TOO_EARLY</td><td>Manifest keys release two hours before doors. Only the Bengaluru FC event is live.</td></tr>
+            <tr><td>Camera does nothing</td><td>Not on <code>localhost</code>, or permission denied. The fallback still runs the whole flow.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>Reset between demos</h3>
+      <div class="cmd"><span class="c"># stop npm start first</span>
+<span class="p">$</span> rm -f .dev.sqlite* .dev-vault.sqlite*
+<span class="p">$</span> npm start &amp;&amp; npm run seed:demo</div>
+    </section>
+  </main>
+</div>
+
+<footer>
+  <div class="inner">
+    <div>Event names, venues and dates were taken from public listings in September 2026 and adapted for the demo. Prices and allocations are illustrative.</div>
+    <ul>
+      <li><a href="https://rollingstoneindia.com/lollapalooza-india-2027-dates-announced/">Lollapalooza India 2027 dates — Rolling Stone India</a></li>
+      <li><a href="https://www.stayvista.com/blog/concerts-in-india-2026/">India concert calendar 2026 — StayVista</a></li>
+      <li><a href="https://www.musicfestivalwizard.com/festivals/lollapalooza-india-2027/">Lollapalooza India 2027 — Music Festival Wizard</a></li>
+      <li><a href="https://www.bengalurufc.com/home-stadium">Sree Kanteerava Stadium — Bengaluru FC</a></li>
+    </ul>
+  </div>
+</footer>

@@ -4,5 +4,10 @@
   "private": true,
   "type": "module",
   "description": "Fan app: enrol, buy, hold and resell a ticket that is your face.",
-  "scripts": { "dev": "node serve.js" }
+  "scripts": {
+    "dev": "node serve.js"
+  },
+  "dependencies": {
+    "@rexell/ui": "*"
+  }
 }

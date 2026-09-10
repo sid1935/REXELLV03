@@ -5,7 +5,10 @@ import type { EpochMs } from '@rexell/domain';
 import { epochMs } from '@rexell/domain';
 import { Db, Repo, schemaStatus } from '@rexell/db';
 import { HttpError, errorBody } from './errors.js';
+import { secretEquals } from './auth.js';
 import { registerIdempotency } from './idempotency.js';
+import { registerRateLimit } from './rate-limit.js';
+import type { RateLimitOptions } from './rate-limit.js';
 import { commerceRoutes } from './routes/commerce.js';
 import { identityRoutes } from './routes/identity.js';
 import { gateRoutes } from './routes/gate.js';
@@ -49,6 +52,26 @@ export interface AppOptions {
    * request goes straight to origin — fine in development, not at an onsale.
    */
   onsale?: { drainPerSecond: number; tokenTtlMs?: number; secret?: Buffer; lottery?: boolean };
+  /**
+   * Request throttling. Absent means unthrottled, which is right for tests and
+   * wrong for anything reachable from outside — `server.ts` always sets it.
+   */
+  rateLimit?: RateLimitOptions;
+  /**
+   * Who may call the unauthenticated writes, `POST /v1/organizers` and
+   * `POST /v1/events`.
+   *
+   * `open` is the demo and test posture: anybody can sign themselves up and get
+   * a working key, which is the whole point of M6. `invite` requires a shared
+   * token in `x-signup-token`. There is no third mode — a deployment either
+   * lets strangers create organizers or it does not.
+   */
+  signup?: { mode: 'open' } | { mode: 'invite'; token: string };
+  /**
+   * Whether to believe `x-forwarded-for`. True only when something you control
+   * terminates TLS in front of this process and overwrites that header.
+   */
+  trustProxy?: boolean;
 }
 
 export interface App {
@@ -58,6 +81,8 @@ export interface App {
   tokens?: TokenService;
   risk: RiskEngine;
   queue?: FairQueue;
+  /** Present only when throttling is configured; `server.ts` sweeps it on a timer. */
+  limiter?: { sweep: () => void };
 }
 
 export function buildApp(options: AppOptions = {}): App {
@@ -65,7 +90,15 @@ export function buildApp(options: AppOptions = {}): App {
   const repo = new Repo(db);
   const now = options.now ?? (() => epochMs(Date.now()));
 
-  const server = Fastify({ logger: options.logger ?? false });
+  const server = Fastify({
+    logger: options.logger ?? false,
+    // Off unless a proxy really is in front. With it on and the port directly
+    // reachable, a caller chooses its own rate-limit bucket with one header.
+    trustProxy: options.trustProxy ?? false,
+    // A body larger than this is not a purchase, and parsing it is free work
+    // done on somebody else's behalf.
+    bodyLimit: 256 * 1024,
+  });
 
   server.setErrorHandler((error, _req, reply) => {
     if (error instanceof HttpError) {
@@ -95,6 +128,45 @@ export function buildApp(options: AppOptions = {}): App {
     reply.header('access-control-allow-methods', 'GET,POST,DELETE,OPTIONS');
     if (req.method === 'OPTIONS') await reply.code(204).send();
   });
+
+  /**
+   * The response headers that cost nothing and close whole categories.
+   *
+   * No HSTS here: this process speaks plain HTTP and the proxy in front of it
+   * is what knows whether TLS is real. Setting it from here would either be a
+   * lie in development or a duplicate in production.
+   */
+  server.addHook('onSend', async (_req, reply, payload) => {
+    reply.header('x-content-type-options', 'nosniff');
+    reply.header('referrer-policy', 'no-referrer');
+    // This is a JSON API. Nothing it returns should ever be framed, and no
+    // browser should be executing anything it sends.
+    reply.header('x-frame-options', 'DENY');
+    reply.header('content-security-policy', "default-src 'none'; frame-ancestors 'none'");
+    return payload;
+  });
+
+  // Before idempotency and before the routes: work refused for rate is work
+  // that should not reach a database transaction.
+  const limiter = options.rateLimit ? registerRateLimit(server, options.rateLimit, now) : undefined;
+
+  if (options.signup?.mode === 'invite') {
+    const expected = options.signup.token;
+    server.addHook('onRequest', async (req) => {
+      if (req.method !== 'POST') return;
+      const path = (req.url.split('?')[0] ?? '').replace(/\/+$/, '');
+      if (path !== '/v1/organizers' && path !== '/v1/events') return;
+
+      const presented = req.headers['x-signup-token'];
+      if (typeof presented !== 'string' || !secretEquals(presented, expected)) {
+        throw new HttpError(
+          403,
+          'SIGNUP_CLOSED',
+          'Organizer signup on this deployment is by invitation. Present a valid `x-signup-token`.',
+        );
+      }
+    });
+  }
 
   registerIdempotency(server, repo, now);
 
@@ -135,5 +207,6 @@ export function buildApp(options: AppOptions = {}): App {
     risk,
     ...(tokens ? { tokens } : {}),
     ...(queue ? { queue } : {}),
+    ...(limiter ? { limiter } : {}),
   };
 }

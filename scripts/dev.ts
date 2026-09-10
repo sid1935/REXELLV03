@@ -26,6 +26,13 @@ const shared = {
   VAULT_TOKEN,
   VAULT_MASTER_KEY: process.env['VAULT_MASTER_KEY'] ?? b64(),
   VAULT_RECEIPT_KEY: process.env['VAULT_RECEIPT_KEY'] ?? b64(),
+  // Development posture, stated rather than defaulted. In production every one
+  // of these is either required or refused — see apps/api/src/config.ts.
+  REXELL_ENV: process.env['REXELL_ENV'] ?? 'development',
+  // Open signup is what makes the demo's "the organizer signed themselves up"
+  // step work. It is the single most dangerous thing to leak into production,
+  // so production requires it to be asked for by name.
+  SIGNUP_OPEN: process.env['SIGNUP_OPEN'] ?? 'true',
 };
 
 interface Service {
