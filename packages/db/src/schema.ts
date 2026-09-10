@@ -62,10 +62,30 @@ CREATE TABLE IF NOT EXISTS consents (
 -- ─── inventory ───────────────────────────────────────────────────────────────
 
 CREATE TABLE IF NOT EXISTS organizers (
-  organizer_id  TEXT PRIMARY KEY,
-  name          TEXT NOT NULL,
-  created_at    INTEGER NOT NULL
+  organizer_id   TEXT PRIMARY KEY,
+  name           TEXT NOT NULL,
+  contact_email  TEXT,
+  state          TEXT NOT NULL DEFAULT 'active' CHECK (state IN ('active','suspended')),
+  created_at     INTEGER NOT NULL
 );
+
+-- Self-serve credentials.
+--
+-- Only the hash is stored, so a stolen database yields no working key. The
+-- prefix is kept for display, because an operator with four keys needs to know
+-- which one to revoke and cannot be shown the secret to find out.
+CREATE TABLE IF NOT EXISTS api_keys (
+  key_id        TEXT PRIMARY KEY,
+  organizer_id  TEXT NOT NULL REFERENCES organizers(organizer_id),
+  name          TEXT NOT NULL,
+  key_hash      TEXT NOT NULL UNIQUE,
+  prefix        TEXT NOT NULL,
+  scopes        TEXT NOT NULL,
+  created_at    INTEGER NOT NULL,
+  last_used_at  INTEGER,
+  revoked_at    INTEGER
+);
+CREATE INDEX IF NOT EXISTS api_keys_by_organizer ON api_keys(organizer_id, revoked_at);
 
 CREATE TABLE IF NOT EXISTS events (
   event_id                  TEXT PRIMARY KEY,

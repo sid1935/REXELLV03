@@ -12,6 +12,7 @@ import { gateRoutes } from './routes/gate.js';
 import { chainRoutes } from './routes/chain.js';
 import { scannerRoutes } from './routes/scanners.js';
 import { RiskEngine, onsaleRoutes } from './routes/onsale.js';
+import { organizerRoutes } from './routes/organizer.js';
 import { FairQueue } from '@rexell/risk';
 import { TokenService } from './chain/token-service.js';
 import type { ChainClient } from './chain/client.js';
@@ -80,6 +81,20 @@ export function buildApp(options: AppOptions = {}): App {
     reply.code(404).send(errorBody('NOT_FOUND', `No route for ${req.method} ${req.url}.`)),
   );
 
+  /**
+   * CORS for the organizer console, which is served as static files from a
+   * different origin. Wide open on purpose: every route behind it is
+   * authenticated by an API key in a header, and a key in a header is not sent
+   * automatically by a browser the way a cookie is — so there is no CSRF surface
+   * for an origin allowlist to protect.
+   */
+  server.addHook('onRequest', async (req, reply) => {
+    reply.header('access-control-allow-origin', '*');
+    reply.header('access-control-allow-headers', 'content-type,authorization,x-api-key,idempotency-key');
+    reply.header('access-control-allow-methods', 'GET,POST,DELETE,OPTIONS');
+    if (req.method === 'OPTIONS') await reply.code(204).send();
+  });
+
   registerIdempotency(server, repo, now);
 
   server.get('/health', async () => ({ ok: true, at: now() }));
@@ -102,6 +117,7 @@ export function buildApp(options: AppOptions = {}): App {
   const tokens = options.chain ? new TokenService(repo, options.chain, now) : undefined;
   chainRoutes(server, { tokens, chain: options.chain, now });
   onsaleRoutes(server, { repo, now, queue }, risk);
+  organizerRoutes(server, { repo, now });
 
   return {
     server,

@@ -283,3 +283,48 @@ something better than a CAPTCHA to fall back on, because that person already
 proved they are a specific human and dedupe caps how many accounts one human can
 hold. A farm cannot exploit it: enrolling every mule is exactly what dedupe
 catches.
+
+## Organizer self-serve
+
+```bash
+npm run dev       # the API
+npm run console   # the organizer console
+```
+
+An organizer signs themselves up, gets an API key, creates an event with its
+resale dials, provisions their own gate, and reconciles their own settlement.
+Nobody at ReXell touches any of it — which is the margin thesis from the business
+plan, executed as `apps/api/test/self-serve.test.ts`.
+
+Every call the console makes is one an organizer could make with curl. If the
+page can do something the public API cannot, the API is incomplete.
+
+### Tenancy
+
+The single most important check in `auth.ts`. An organizer reading another
+organizer's sales is a breach, and it is the kind that happens by forgetting a
+`WHERE` clause rather than by anyone attacking anything. Reading somebody else's
+event returns **404, not 403** — a 403 would confirm the event exists.
+
+### API keys
+
+Shown once, stored only as a SHA-256 hash. No route returns a key and no support
+tool can recover one; the remedy for losing a key is a new key, which is also the
+remedy for leaking one. A key cannot mint a key with scopes it does not itself
+hold. Missing, malformed and revoked keys all produce the same message, because
+distinguishing them tells a caller whether a guessed key exists.
+
+### Settlement is reconciled three ways
+
+An organizer being asked to trust a number is the situation this product exists
+to remove, so every resale line reports:
+
+| Check | Catches |
+|---|---|
+| `recomputed` | the stored split differs from what the tier policy says it should be — a bug, or an edit |
+| `balanced` | the parts do not sum to the sale price |
+| `onChain` | no confirmed transaction yet — normal, and not a fault |
+
+The first two are defects and are listed as such. There is a test that shaves
+₹50 off the organizer's share and moves it to the platform: the row still
+*balances*, and only recomputing from the policy catches it.

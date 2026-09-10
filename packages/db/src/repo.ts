@@ -223,11 +223,13 @@ export class Repo {
   readonly consents: ConsentRepo;
   readonly outbox: OutboxRepo;
   readonly scanners: ScannerRepo;
+  readonly organizers: OrganizerRepo;
 
   constructor(readonly db: Db) {
     this.consents = new ConsentRepo(db);
     this.outbox = new OutboxRepo(db);
     this.scanners = new ScannerRepo(db);
+    this.organizers = new OrganizerRepo(db);
   }
 
   // ─ organizers & identities ─
@@ -994,5 +996,123 @@ export class ScannerRepo {
         admitUntil: endsAt,
         revoked: t.state === 'revoked',
       }));
+  }
+}
+
+// ─── organizers and API keys (M6) ────────────────────────────────────────────
+
+export interface ApiKeyRow {
+  key_id: string;
+  organizer_id: string;
+  name: string;
+  prefix: string;
+  scopes: string;
+  created_at: number;
+  last_used_at: number | null;
+  revoked_at: number | null;
+}
+
+export type Scope = 'events:write' | 'events:read' | 'analytics:read' | 'settlement:read' | 'scanners:write';
+
+export const ALL_SCOPES: readonly Scope[] = [
+  'events:write',
+  'events:read',
+  'analytics:read',
+  'settlement:read',
+  'scanners:write',
+];
+
+/**
+ * Organizer accounts and their credentials.
+ *
+ * The security property that matters here is tenancy: an organizer must never
+ * be able to read another organizer's sales, attendance or settlement. That is
+ * enforced by every read taking an organizerId and every route checking
+ * ownership — not by the caller remembering to filter.
+ */
+export class OrganizerRepo {
+  constructor(private readonly db: Db) {}
+
+  create(o: { id: string; name: string; contactEmail?: string; now: number }): void {
+    this.db.run(
+      'INSERT INTO organizers (organizer_id, name, contact_email, state, created_at) VALUES (?,?,?,?,?)',
+      o.id,
+      o.name,
+      o.contactEmail ?? null,
+      'active',
+      o.now,
+    );
+  }
+
+  get(id: string) {
+    return this.db.get<{ organizer_id: string; name: string; contact_email: string | null; state: string; created_at: number }>(
+      'SELECT * FROM organizers WHERE organizer_id = ?',
+      id,
+    );
+  }
+
+  /** Store only the hash. A stolen table must not yield a working key. */
+  addKey(k: {
+    keyId: string;
+    organizerId: string;
+    name: string;
+    keyHash: string;
+    prefix: string;
+    scopes: readonly string[];
+    now: number;
+  }): void {
+    this.db.run(
+      'INSERT INTO api_keys (key_id, organizer_id, name, key_hash, prefix, scopes, created_at) VALUES (?,?,?,?,?,?,?)',
+      k.keyId,
+      k.organizerId,
+      k.name,
+      k.keyHash,
+      k.prefix,
+      k.scopes.join(','),
+      k.now,
+    );
+  }
+
+  findByHash(hash: string): ApiKeyRow | undefined {
+    return this.db.get<ApiKeyRow>(
+      'SELECT key_id, organizer_id, name, prefix, scopes, created_at, last_used_at, revoked_at FROM api_keys WHERE key_hash = ?',
+      hash,
+    );
+  }
+
+  keysFor(organizerId: string): ApiKeyRow[] {
+    return this.db.all<ApiKeyRow>(
+      'SELECT key_id, organizer_id, name, prefix, scopes, created_at, last_used_at, revoked_at FROM api_keys WHERE organizer_id = ? ORDER BY created_at',
+      organizerId,
+    );
+  }
+
+  revokeKey(organizerId: string, keyId: string, now: number): boolean {
+    return (
+      this.db.run(
+        'UPDATE api_keys SET revoked_at = ? WHERE key_id = ? AND organizer_id = ? AND revoked_at IS NULL',
+        now,
+        keyId,
+        organizerId,
+      ) === 1
+    );
+  }
+
+  touchKey(keyId: string, now: number): void {
+    this.db.run('UPDATE api_keys SET last_used_at = ? WHERE key_id = ?', now, keyId);
+  }
+
+  /** Ownership check. Every organizer-scoped route calls this before anything else. */
+  ownsEvent(organizerId: string, eventId: string): boolean {
+    return (
+      this.db.get('SELECT 1 FROM events WHERE event_id = ? AND organizer_id = ?', eventId, organizerId) !== undefined
+    );
+  }
+
+  eventsFor(organizerId: string) {
+    return this.db.all<{ event_id: string; name: string; capacity: number; doors_open_at: number; created_at: number }>(
+      'SELECT event_id, name, capacity, doors_open_at, created_at FROM events WHERE organizer_id = ? ORDER BY doors_open_at DESC',
+      organizerId,
+    );
   }
 }

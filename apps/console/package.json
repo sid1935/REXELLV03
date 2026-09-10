@@ -1,0 +1,8 @@
+{
+  "name": "@rexell/console",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Organizer console. A thin client over the public organizer API.",
+  "scripts": { "dev": "node serve.js" }
+}

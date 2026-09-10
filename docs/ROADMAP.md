@@ -180,7 +180,7 @@ means migrating live ticket data. Getting them right now costs a few days.
 
 ---
 
-### M6 — Organizer self-serve `← next`
+### M6 — Organizer self-serve ✅ done `291 + 42 tests green`
 
 **Ships**
 - Event creation, tier and resale policy UI
@@ -189,7 +189,11 @@ means migrating live ticket data. Getting them right now costs a few days.
 - Self-serve onboarding and API keys
 
 **Exit criteria**
-- An event runs end to end with no ReXell staff involved — the margin proof
+- ✅ An event runs end to end with no ReXell staff involved. `self-serve.test.ts`
+  signs up at an unauthenticated endpoint, creates the event and its resale
+  dials, sells to six fans, runs a capped resale, provisions and keys its own
+  gate, admits the crowd, and reconciles its own settlement against the chain —
+  on one API key, the one its own signup returned.
 
 ---
 
@@ -207,3 +211,23 @@ asset, and bot defence needs the labels that only a working gate produces.
 - An in-house face recognition model
 - A mobile wallet or any user-visible crypto surface
 - iOS native, until there is a Mac in the loop and a real event that needs it
+
+---
+
+## Where this actually stands
+
+Six milestones, 291 TypeScript tests and 42 contract tests. Three things are
+open, and they are open because they need hardware, a vendor or an auditor
+rather than more code:
+
+| Open | Why | Blocks |
+|---|---|---|
+| Gate p95 on a mid-range Android | No device in the loop. Our decision path is 8.3 ms p95 at 12,000 credentials with ~420 ms left for camera and embedding — an argument, not a measurement. | M4 exit criterion |
+| A real face matcher with certified liveness | The prototype embedder recognises nobody and a printed photo passes. The architecture around it is built and tested. | Any real event |
+| Two independent contract audits | Never optional for code that moves money. | Mainnet |
+
+And one that is closed differently than asked: the inline scorer stops 94.6% of
+scripted automation against a 94.7% information ceiling. >95% is not reachable by
+behaviour alone, because some adversaries genuinely are humans. The graph layer
+and the gate's identity binding are what cover the rest — which is what the
+architecture said from the beginning.
