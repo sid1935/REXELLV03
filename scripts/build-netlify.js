@@ -38,6 +38,9 @@ const SURFACES = {
  */
 const CLIENT_ROUTED = new Set(['site']);
 
+/** Shared files every surface gets, copied in from @rexell/ui. */
+const SHARED_ASSETS = ['ui.css', 'logo.svg', 'logo-lockup.svg', 'logo-lockup.png', 'logo-full.png'];
+
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const output = resolve(root, 'dist');
 
@@ -81,7 +84,7 @@ mkdirSync(output, { recursive: true });
 cpSync(resolve(root, SURFACES[surface]), output, { recursive: true });
 // The shared design system and the marks, which every surface loads from
 // paths that `static-server.js` maps to @rexell/ui at request time.
-for (const asset of ['ui.css', 'logo.svg', 'logo-lockup.svg', 'logo-full.png']) {
+for (const asset of SHARED_ASSETS) {
   cpSync(resolve(root, 'packages/ui', asset), resolve(output, asset));
 }
 
@@ -125,7 +128,18 @@ if (CLIENT_ROUTED.has(surface)) {
    */
   writeFileSync(
     resolve(output, '_redirects'),
-    ['/assets/*          /assets/:splat          404', '/lovable-uploads/* /lovable-uploads/:splat 404', '/*                 /index.html             200', ''].join('\n'),
+    [
+      '/assets/*          /assets/:splat          404',
+      '/lovable-uploads/* /lovable-uploads/:splat 404',
+      // The shared assets sit at the root rather than under /assets, so the
+      // directory rules above do not cover them and a missing one would come
+      // back as the HTML shell with a 200. That is not hypothetical: it is
+      // how a failed deploy of this very logo first presented — the file was
+      // absent and the page served itself in its place.
+      ...SHARED_ASSETS.map((a) => `/${a}`.padEnd(19) + `/${a}`.padEnd(24) + '404'),
+      '/*                 /index.html             200',
+      '',
+    ].join('\n'),
   );
 }
 

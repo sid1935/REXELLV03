@@ -99,7 +99,7 @@ export function staticServer({ root, ui, port, apiOrigin, links = {}, connect = 
     }
 
     // The shared assets come from @rexell/ui; everything else from the app.
-    const base = ['/ui.css', '/logo.svg', '/logo-full.png', '/logo-lockup.svg'].includes(safe) ? ui : root;
+    const base = ['/ui.css', '/logo.svg', '/logo-full.png', '/logo-lockup.svg', '/logo-lockup.png'].includes(safe) ? ui : root;
     const relative = safe === '/' ? 'index.html' : safe.replace(/^\/+/, '');
     const file = join(base, relative);
     // Resolved, then checked. A request must not be able to climb out of the
