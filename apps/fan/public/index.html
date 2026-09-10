@@ -1,14 +1,14 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="color-scheme" content="light dark">
-<meta name="theme-color" content="#080b20">
+<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#020526">
 <title>ReXell</title>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
-<link rel="icon" href="/logo.svg" type="image/svg+xml">
+<link rel="icon" href="/logo-full.png" type="image/png">
 <link rel="stylesheet" href="/ui.css">
 <style>
   .fan-head { display: flex; align-items: center; gap: 10px; padding: 16px 18px 10px; }
@@ -22,7 +22,7 @@
   .event-card:hover { transform: translateY(-1px); box-shadow: var(--lift-2); }
   .event-card .body { padding: 15px 16px; }
   .event-card h3 { font-size: 15.5px; margin-bottom: 3px; }
-  .event-strip { height: 5px; background: linear-gradient(90deg, var(--brand), color-mix(in srgb, var(--brand) 55%, #7cd6c6)); }
+  .event-strip { height: 5px; background: var(--brand-gradient); }
   .price { font: 700 16px/1 var(--sans); font-variant-numeric: tabular-nums; }
   .sheet {
     position: fixed; inset: 0; z-index: 60; display: grid; align-items: end;
@@ -50,7 +50,8 @@
 
 <div class="phone">
   <header class="fan-head">
-    <span class="brand-mark"></span>
+    <span class="brand-lockup brand-lockup--dark"><span class="brand-mark"><img src="/logo-full.png" alt="ReXell"></span></span>
+    <span class="brand brand-lockup brand-lockup--light"><span class="brand-mark"></span><span class="brand-word">ReXell</span></span>
     <h1 id="pageTitle">Your tickets</h1>
     <span class="spacer"></span>
     <span class="tag" id="idTag" hidden></span>

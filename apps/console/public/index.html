@@ -1,13 +1,14 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="color-scheme" content="light dark">
+<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#020526">
 <title>ReXell Organizer</title>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
-<link rel="icon" href="/logo.svg" type="image/svg+xml">
+<link rel="icon" href="/logo-full.png" type="image/png">
 <link rel="stylesheet" href="/ui.css">
 <style>
   /* Console-only refinements. Everything reusable lives in ui.css. */
@@ -36,7 +37,12 @@
 
 <div class="shell">
   <aside class="rail">
-    <a class="brand" href="#"><span class="brand-mark"></span>ReXell</a>
+    <a class="brand brand-lockup brand-lockup--dark" href="#">
+      <img class="brand-logo" src="/logo-full.png" alt="ReXell Technologies">
+    </a>
+    <a class="brand brand-lockup brand-lockup--light" href="#">
+      <span class="brand-mark"></span><span class="brand-word">ReXell</span>
+    </a>
 
     <nav class="rail-nav" id="nav">
       <button data-view="events" aria-current="true">

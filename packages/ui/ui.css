@@ -24,34 +24,31 @@
      only place the brand hues are literal; everything else derives from them.
      They do NOT change between themes — a gradient that shifts with an OS
      setting is no longer a logo. */
-  --grad-1: #35d6e8; /* cyan, bottom-left of the mark */
-  --grad-2: #6e7bf2; /* indigo, the middle */
-  --grad-3: #e24fa0; /* magenta, top-right */
-  --brand-gradient: linear-gradient(120deg, var(--grad-1), var(--grad-2) 52%, var(--grad-3));
+  --grad-1: #00d2ff; /* electric cyan, left of the mark */
+  --grad-2: #2472ff; /* royal blue, the middle */
+  --grad-3: #9d50bb; /* violet, right of the mark */
+  --brand-gradient: linear-gradient(120deg, var(--grad-1), var(--grad-2) 48%, var(--grad-3));
 
-  /* Ground is paper cooled toward the indigo rather than neutral grey, so the
-     accent sits on it rather than on top of it. */
-  --paper: #f1f2fa;
+  /* Light ground — cooled toward the logo navy so the accent reads as one family. */
+  --paper: #eef1fb;
   --surface: #ffffff;
-  --surface-2: #f7f8fd;
-  --sunk: #e9ebf7;
+  --surface-2: #f5f7fd;
+  --sunk: #e4e8f6;
 
-  --ink: #0b0e28;
-  --ink-2: #3c4370;
-  --ink-3: #6b739f;
-  --ink-4: #959bc0;
+  --ink: #020526;
+  --ink-2: #2a3160;
+  --ink-3: #5a6294;
+  --ink-4: #8b92b8;
 
-  --rule: #d7dbee;
-  --rule-2: #e7e9f6;
+  --rule: #d4daf0;
+  --rule-2: #e6eaf7;
 
-  /* The solid accent is the middle stop, darkened until it carries white text
-     at AA on this ground. The gradient itself is for the mark and for
-     deliberate brand moments — never for a control somebody has to read. */
-  --brand: #4a43d6;
-  --brand-hover: #3a34b4;
+  /* Solid accent: royal blue from the mark, darkened for AA on light surfaces. */
+  --brand: #1d5ee8;
+  --brand-hover: #1649c4;
   --brand-ink: #ffffff;
-  --brand-wash: #e9e8fb;
-  --brand-line: #bab6f0;
+  --brand-wash: #e3edff;
+  --brand-line: #a8c4f5;
 
   /* Held away from the magenta stop deliberately: an error and a brand accent
      must never be confusable, and #e24fa0 is close to a warm red. */
@@ -62,7 +59,7 @@
   --bad: #c33a22;
   --bad-wash: #fae2dc;
 
-  --focus: #4a43d6;
+  --focus: #1d5ee8;
 
   /* Depth is a hairline plus a whisper. Anything heavier competes with the
      data, and the data is the point. */
@@ -89,26 +86,25 @@
   :root:not([data-theme='light']) {
     /* The ground the logo was drawn on: a deep indigo, not black. Black flattens
        the cyan stop, and the mark loses one of its three colours. */
-    --paper: #080b20;
-    --surface: #111635;
-    --surface-2: #171d42;
-    --sunk: #0a0e28;
+    --paper: #020526;
+    --surface: #050a30;
+    --surface-2: #0a1140;
+    --sunk: #01041c;
 
-    --ink: #eef0fb;
-    --ink-2: #b4bbde;
-    --ink-3: #7d86b4;
-    --ink-4: #5b6390;
+    --ink: #ffffff;
+    --ink-2: #c8d0f0;
+    --ink-3: #8892c0;
+    --ink-4: #5c6694;
 
-    --rule: #262d57;
-    --rule-2: #1a2045;
+    --rule: #1a2555;
+    --rule-2: #121c48;
 
-    /* Lifted off the middle stop rather than darkened, so the accent reads as
-       the same colour as the mark on both grounds. */
-    --brand: #8b93ff;
-    --brand-hover: #a8aeff;
-    --brand-ink: #080b20;
-    --brand-wash: #1a2050;
-    --brand-line: #333c7a;
+    /* Cyan from the mark, lifted for controls on the navy ground. */
+    --brand: #00d2ff;
+    --brand-hover: #33ddff;
+    --brand-ink: #020526;
+    --brand-wash: #0a1a4a;
+    --brand-line: #1e4a8a;
 
     --ok: #35c98a;
     --ok-wash: #0b2c1f;
@@ -117,7 +113,7 @@
     --bad: #ff8460;
     --bad-wash: #35150f;
 
-    --focus: #8b93ff;
+    --focus: #00d2ff;
 
     --lift: 0 1px 2px rgba(0, 0, 0, 0.45);
     --lift-2: 0 4px 16px -6px rgba(0, 0, 0, 0.6);
@@ -130,26 +126,25 @@
 :root[data-theme='dark'] {
     /* The ground the logo was drawn on: a deep indigo, not black. Black flattens
        the cyan stop, and the mark loses one of its three colours. */
-    --paper: #080b20;
-    --surface: #111635;
-    --surface-2: #171d42;
-    --sunk: #0a0e28;
+    --paper: #020526;
+    --surface: #050a30;
+    --surface-2: #0a1140;
+    --sunk: #01041c;
 
-    --ink: #eef0fb;
-    --ink-2: #b4bbde;
-    --ink-3: #7d86b4;
-    --ink-4: #5b6390;
+    --ink: #ffffff;
+    --ink-2: #c8d0f0;
+    --ink-3: #8892c0;
+    --ink-4: #5c6694;
 
-    --rule: #262d57;
-    --rule-2: #1a2045;
+    --rule: #1a2555;
+    --rule-2: #121c48;
 
-    /* Lifted off the middle stop rather than darkened, so the accent reads as
-       the same colour as the mark on both grounds. */
-    --brand: #8b93ff;
-    --brand-hover: #a8aeff;
-    --brand-ink: #080b20;
-    --brand-wash: #1a2050;
-    --brand-line: #333c7a;
+    /* Cyan from the mark, lifted for controls on the navy ground. */
+    --brand: #00d2ff;
+    --brand-hover: #33ddff;
+    --brand-ink: #020526;
+    --brand-wash: #0a1a4a;
+    --brand-line: #1e4a8a;
 
     --ok: #35c98a;
     --ok-wash: #0b2c1f;
@@ -158,7 +153,7 @@
     --bad: #ff8460;
     --bad-wash: #35150f;
 
-    --focus: #8b93ff;
+    --focus: #00d2ff;
 
     --lift: 0 1px 2px rgba(0, 0, 0, 0.45);
     --lift-2: 0 4px 16px -6px rgba(0, 0, 0, 0.6);
@@ -284,24 +279,76 @@ code {
   text-decoration: none;
 }
 
-/* The mark is a ticket stub: a rounded rectangle with the perforation bitten
-   out of both sides. Small enough to work at 22px, specific enough to be ours. */
 /**
- * The mark.
- *
- * A masked SVG rather than an <img>, so one element carries the artwork and a
- * surface can size it without a second file. The gradient is painted by the
- * element and the SVG only supplies the silhouette, which means the mark stays
- * the brand's own colours on either ground instead of inheriting text colour.
+ * The mark — icon crop from the official lockup on dark surfaces, SVG fallback
+ * on light where the PNG's baked-in navy would read as a box.
  */
 .brand-mark {
+  width: 34px;
+  height: 34px;
+  flex: none;
+  overflow: hidden;
+  border-radius: 4px;
+}
+.brand-mark img {
+  display: block;
+  height: 100%;
+  width: 100%;
+  object-fit: cover;
+  object-position: 16% center;
+}
+
+/* Full horizontal lockup: icon + ReXell Technologies. */
+.brand-logo {
+  display: block;
+  height: 36px;
+  width: auto;
+  flex: none;
+}
+
+.rail .brand-logo { height: 40px; }
+
+.brand-lockup--light { display: none; }
+
+.brand-lockup--light .brand-mark {
   width: 24px;
   height: 24px;
-  flex: none;
+  overflow: visible;
+  border-radius: 0;
   background: var(--brand-gradient);
   -webkit-mask: url('/logo.svg') center / contain no-repeat;
   mask: url('/logo.svg') center / contain no-repeat;
 }
+
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme='dark']) .brand-lockup--dark { display: none; }
+  :root:not([data-theme='dark']) .brand-lockup--light { display: inline-flex; }
+  :root:not([data-theme='dark']) .brand-logo { display: none; }
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) .brand-lockup--light { display: none; }
+  :root:not([data-theme='light']) .brand-lockup--dark { display: inline-flex; }
+  :root:not([data-theme='light']) .brand-mark img { display: block; }
+  :root:not([data-theme='light']) .brand-mark {
+    background: none;
+    -webkit-mask: none;
+    mask: none;
+  }
+}
+
+:root[data-theme='dark'] .brand-lockup--light { display: none; }
+:root[data-theme='dark'] .brand-lockup--dark { display: inline-flex; }
+:root[data-theme='dark'] .brand-mark img { display: block; }
+:root[data-theme='dark'] .brand-mark {
+  background: none;
+  -webkit-mask: none;
+  mask: none;
+}
+
+:root[data-theme='light'] .brand-lockup--dark { display: none; }
+:root[data-theme='light'] .brand-lockup--light { display: inline-flex; }
+:root[data-theme='light'] .brand-logo { display: none; }
 
 /* The wordmark, when the lockup is spelled out rather than iconic. Only the R
    and the X are capitalised — it is ReXell, not Rexell or REXELL. */
@@ -387,12 +434,15 @@ code {
 .btn:disabled { opacity: 0.45; cursor: default; }
 
 .btn-primary {
-  background: var(--brand);
-  border-color: var(--brand);
-  color: var(--brand-ink);
+  background: var(--brand-gradient);
+  border-color: transparent;
+  color: #fff;
   box-shadow: var(--lift);
 }
-.btn-primary:hover:not(:disabled) { background: var(--brand-hover); border-color: var(--brand-hover); }
+.btn-primary:hover:not(:disabled) {
+  filter: brightness(1.08);
+  border-color: transparent;
+}
 
 .btn-quiet { background: none; border-color: transparent; color: var(--ink-2); }
 .btn-quiet:hover:not(:disabled) { background: var(--surface-2); border-color: var(--rule-2); }
@@ -728,7 +778,7 @@ td.key { color: var(--ink); font-weight: 600; }
 }
 .ticket-top {
   padding: 20px;
-  background: linear-gradient(148deg, var(--brand) 0%, color-mix(in srgb, var(--brand) 72%, #0b3b36) 100%);
+  background: var(--brand-gradient);
   color: #fff;
 }
 .ticket-top .eyebrow { color: rgba(255, 255, 255, 0.72); }

@@ -7,7 +7,8 @@
   "exports": {
     "./ui.css": "./ui.css",
     "./logo.svg": "./logo.svg",
+    "./logo-full.png": "./logo-full.png",
     "./static-server": "./static-server.js"
   },
-  "files": ["ui.css", "logo.svg", "static-server.js"]
+  "files": ["ui.css", "logo.svg", "logo-full.png", "static-server.js"]
 }
