@@ -98,10 +98,27 @@ host even if something else on the box is compromised.
 
 ## Backups
 
+The API container can only see its own volume, and the vault's database is on a
+separate one, so a full backup is two commands:
+
 ```bash
-docker compose exec api node -e "..."   # or, on the host:
+docker compose exec api     node scripts/backup.js /data/backups
+docker compose exec vault   node scripts/backup.js /data/backups
+```
+
+Each writes a timestamped directory and skips the database it cannot see. On a
+host checkout, point it at both:
+
+```bash
 REXELL_DB=/path/rexell.sqlite VAULT_DB=/path/vault.sqlite npm run backup -- /var/backups/rexell
 ```
+
+The script is plain JavaScript rather than TypeScript because the runtime image
+prunes dev dependencies, `tsx` among them — a backup command that only runs on
+a developer's laptop is not a backup command.
+
+Copy the timestamped directories off the host on a schedule. A backup sitting
+on the volume you are protecting is not a backup.
 
 `VACUUM INTO`, not a file copy: SQLite in WAL mode is several files, and copying
 the main database mid-write produces something that looks fine and restores
