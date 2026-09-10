@@ -674,6 +674,129 @@ async function renderYou() {
   });
 }
 
+// ─── landing ─────────────────────────────────────────────────────────────────
+
+/**
+ * The front door.
+ *
+ * Shown to anybody who has not enrolled on this device. A fan who already has
+ * a ReXell ID here goes straight to their tickets — a landing page in front of
+ * somebody who has already signed up is an obstacle, not a welcome.
+ */
+function showLanding() {
+  $('landing').hidden = false;
+  // Nothing behind it should be reachable by keyboard while it covers the app.
+  document.querySelector('.phone').setAttribute('inert', '');
+}
+
+function enterApp(view = 'tickets') {
+  $('landing').hidden = true;
+  document.querySelector('.phone').removeAttribute('inert');
+  go(view);
+}
+
+/**
+ * "I already have one."
+ *
+ * An honest screen rather than a login box.
+ *
+ * There is no fan account to sign in to: a ReXell ID is created on the device
+ * and stored there, and the API has no way to look one up — no password, no
+ * email, no recovery. Drawing a familiar-looking login form over that would
+ * imply an account system that does not exist, and the first person to try it
+ * from a new phone would discover that the hard way.
+ *
+ * So it says what is true, and offers the one thing that does work: pasting
+ * the ID itself, with the risk of doing that stated rather than buried.
+ */
+function loginSheet() {
+  const known = state.identityId;
+
+  sheet(`
+    <h2 style="margin-bottom:6px">${known ? 'Welcome back' : 'Signing in'}</h2>
+    ${
+      known
+        ? `<p class="lede" style="margin-bottom:16px">This device already holds a ReXell ID. Carry on where you left off.</p>
+           <div class="field"><span>Your ReXell ID</span><div class="keyout num" style="font-size:12px;word-break:break-all;background:var(--sunk);border:1px solid var(--rule);border-radius:var(--r);padding:11px">${esc(known)}</div></div>
+           <button class="btn btn-primary btn-block" id="loginContinue" style="margin-top:16px">Continue</button>`
+        : `<p class="lede" style="margin-bottom:14px">
+             Your ReXell ID lives on the device that created it. There is no
+             password to enter, because there is no account to sign in to —
+             your face is the credential, and it never leaves your phone.
+           </p>
+           <div class="consent-item" style="margin-bottom:14px">
+             <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/></svg>
+             <div>
+               <b style="display:block;font-size:13.5px;margin-bottom:2px">Moving to a new phone?</b>
+               <span class="hint">Paste the ID from your old device below. Treat it like a password — anyone who has it can list your tickets for resale, though they still cannot get through a gate with your face.</span>
+             </div>
+           </div>
+           <div class="field">
+             <span>ReXell ID</span>
+             <input id="loginId" class="input" placeholder="idn_…" autocomplete="off" spellcheck="false">
+           </div>
+           <button class="btn btn-primary btn-block" id="loginRestore" style="margin-top:14px">Restore this ID</button>
+           <button class="btn btn-quiet btn-block" id="loginNew" style="margin-top:8px">Create a new one instead</button>`
+    }
+  `);
+
+  $('loginContinue')?.addEventListener('click', () => {
+    closeSheet();
+    enterApp('tickets');
+  });
+
+  $('loginNew')?.addEventListener('click', () => {
+    closeSheet();
+    consentSheet();
+  });
+
+  $('loginRestore')?.addEventListener('click', async () => {
+    const id = $('loginId').value.trim();
+    if (!id) return toast('Paste your ReXell ID first.', true);
+
+    // Verified against the API before it is stored. Accepting any string would
+    // put the app into a state where every later call fails with a 404 and
+    // nothing explains why.
+    try {
+      const consents = await fetch(`${API}/v1/identities/${encodeURIComponent(id)}/consents`).then((r) => {
+        if (!r.ok) throw new Error(r.status === 404 ? 'No such ReXell ID.' : 'Could not reach ReXell.');
+        return r.json();
+      });
+      state.identityId = id;
+      // The endpoint returns `current` — one entry per purpose with a resolved
+      // state — alongside the full `history`. `granted` is the only state that
+      // means this ID can pass a gate.
+      state.enrolled = consents.current?.some((c) => c.purpose === 'biometric_enrolment' && c.state === 'granted') ?? false;
+      localStorage.setItem('rexell.fan.id', id);
+      localStorage.setItem('rexell.fan.enrolled', String(state.enrolled));
+      closeSheet();
+      enterApp('tickets');
+      toast('Signed in.');
+    } catch (e) {
+      toast(e.message, true);
+    }
+  });
+}
+
+$('landingSignup').addEventListener('click', () => {
+  enterApp('tickets');
+  consentSheet();
+});
+$('landingLogin').addEventListener('click', () => {
+  enterApp('tickets');
+  loginSheet();
+});
+// Looking before committing is a reasonable thing to want to do, and the
+// catalogue is public — nothing here needs an identity to read.
+$('landingBrowse').addEventListener('click', () => enterApp('discover'));
+
 // ─── boot ────────────────────────────────────────────────────────────────────
 
-go('tickets');
+if (state.enrolled && state.identityId) {
+  enterApp('tickets');
+} else {
+  showLanding();
+  // Rendered underneath, so dismissing the landing reveals a ready app rather
+  // than an empty frame that then populates.
+  go('tickets');
+}
