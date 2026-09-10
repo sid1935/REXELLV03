@@ -1,6 +1,7 @@
 import { DatabaseSync } from 'node:sqlite';
 import { randomUUID } from 'node:crypto';
-import { SCHEMA_SQL } from './schema.js';
+import { migrate } from './migrate.js';
+import type { MigrationResult } from './migrate.js';
 
 export type Row = Record<string, unknown>;
 
@@ -16,15 +17,32 @@ export class Db {
   readonly handle: DatabaseSync;
   #statements = new Map<string, ReturnType<DatabaseSync['prepare']>>();
   #txDepth = 0;
+  /** What opening this database changed, if anything. Logged by the server. */
+  readonly migration: MigrationResult;
 
   constructor(location = ':memory:') {
     this.handle = new DatabaseSync(location);
-    // WAL lets readers run while a writer holds the write lock. Irrelevant in
-    // memory, essential on disk under an onsale.
-    if (location !== ':memory:') this.handle.exec('PRAGMA journal_mode = WAL');
-    this.handle.exec('PRAGMA foreign_keys = ON');
-    this.handle.exec('PRAGMA busy_timeout = 5000');
-    this.handle.exec(SCHEMA_SQL);
+    try {
+      // WAL lets readers run while a writer holds the write lock. Irrelevant in
+      // memory, essential on disk under an onsale.
+      if (location !== ':memory:') this.handle.exec('PRAGMA journal_mode = WAL');
+      this.handle.exec('PRAGMA foreign_keys = ON');
+      this.handle.exec('PRAGMA busy_timeout = 5000');
+      // Opening a database and migrating it are the same act. There is no separate
+      // command to forget, and no window where the process serves requests against
+      // a schema it does not match.
+      this.migration = migrate(this.handle);
+    } catch (cause) {
+      // A constructor that throws leaves no object for anyone to close, so the
+      // handle would leak — a file descriptor per failed start, and on Windows a
+      // lock nobody can release without ending the process.
+      try {
+        this.handle.close();
+      } catch {
+        // Already closed, or never opened. The original failure is the one that matters.
+      }
+      throw cause;
+    }
   }
 
   prepare(sql: string) {

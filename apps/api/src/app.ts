@@ -3,7 +3,7 @@ import Fastify from 'fastify';
 import type { FastifyInstance } from 'fastify';
 import type { EpochMs } from '@rexell/domain';
 import { epochMs } from '@rexell/domain';
-import { Db, Repo } from '@rexell/db';
+import { Db, Repo, schemaStatus } from '@rexell/db';
 import { HttpError, errorBody } from './errors.js';
 import { registerIdempotency } from './idempotency.js';
 import { commerceRoutes } from './routes/commerce.js';
@@ -97,7 +97,13 @@ export function buildApp(options: AppOptions = {}): App {
 
   registerIdempotency(server, repo, now);
 
-  server.get('/health', async () => ({ ok: true, at: now() }));
+  server.get('/health', async (_req, reply) => {
+    const schema = schemaStatus(db.handle);
+    // A process serving traffic against a schema it does not match is the state
+    // this reports. It answers unhealthy so a load balancer takes it out rather
+    // than a human noticing later.
+    return reply.code(schema.upToDate ? 200 : 503).send({ ok: schema.upToDate, at: now(), schema });
+  });
 
   const risk = new RiskEngine();
   const queue = options.onsale

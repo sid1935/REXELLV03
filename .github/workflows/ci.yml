@@ -1,0 +1,52 @@
+name: check
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+
+# A queued run against an old commit tells you nothing once a newer one exists.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          # `node:sqlite` is used directly and unflagged; 22 is the floor.
+          node-version: '24'
+          cache: npm
+
+      - run: npm ci
+
+      - name: Typecheck sources and tests
+        run: npm run typecheck
+
+      - name: Tests
+        run: npm test
+
+      # Cached separately: solc is a download, and re-fetching it on every run
+      # is most of the wall clock for this job.
+      - name: Cache solc
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/hardhat-nodejs
+          key: solc-${{ runner.os }}-0.8.28
+
+      - name: Contract tests
+        run: npm run test:contracts
+
+      # Not an assertion, a report. The p95 that matters is measured on an
+      # Android device, and this only catches an accidental O(n²).
+      - name: Gate latency
+        run: npm run bench:gate
+
+      - name: Seed runs end to end
+        run: npm run seed

@@ -328,3 +328,34 @@ to remove, so every resale line reports:
 The first two are defects and are listed as such. There is a test that shaves
 ₹50 off the organizer's share and moves it to the platform: the row still
 *balances*, and only recomputing from the policy catches it.
+
+## Schema changes
+
+`CREATE TABLE IF NOT EXISTS` stands a database up; it cannot change one. It
+silently does nothing when the table already exists, so a column added in a later
+milestone never appears on an older database and the failure arrives much later,
+as a raw SQLite error from inside a route. That shipped once here — M6 added
+columns to `organizers` and any pre-M6 database would fail its first signup.
+
+Opening a database now migrates it, in the same call, so there is no separate
+command to forget:
+
+```ts
+const db = new Db('rexell.sqlite');  // creates, migrates, and reports what it did
+db.migration; // { from: 0, to: 3, applied: [...] }
+```
+
+Rules for `packages/db/src/migrate.ts`, in order of how much trouble breaking
+them causes:
+
+1. **Append only.** Never renumber and never edit an entry that has run
+   somewhere, or two databases silently disagree about what version 3 was.
+2. **Idempotent.** Every migration introspects before it changes anything, so it
+   is safe on a fresh database that already has the change and on an old one
+   that does not. There is a test that runs all of them twice.
+3. **One transaction each.** A failure leaves the database at the last version
+   that fully applied, never between two.
+4. **Old code refuses a newer database.** It does not know what changed and may
+   write rows the newer schema rejects. `GET /health` returns 503 when the
+   running build and the schema disagree, so a load balancer removes it rather
+   than a human noticing later.
