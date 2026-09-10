@@ -35,7 +35,10 @@ ReadWritePaths=/var/lib/rexell
 ProtectKernelTunables=true
 ProtectControlGroups=true
 RestrictAddressFamilies=AF_INET AF_INET6
-MemoryDenyWriteExecute=true
+# MemoryDenyWriteExecute is deliberately NOT set. V8 is a JIT and needs pages
+# that are both writable and executable; with it on, node dies inside
+# v8::Isolate::Initialize with SIGTRAP before running a line of code, and the
+# stack trace names V8 rather than the sandbox setting that caused it.
 
 [Install]
 WantedBy=multi-user.target
