@@ -3,41 +3,41 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&display=swap">
 <style>
 :root{
-  --paper:#eef2f1; --surface:#ffffff; --surface-2:#f5f8f7; --sunk:#e2e9e7;
-  --ink:#0c1412; --ink-2:#3a4a46; --ink-3:#6c7b77;
-  --rule:#d2dbd9; --rule-2:#e4eae8;
-  --teal:#0d6b60; --teal-wash:#dbeae7; --teal-line:#9cc6bf;
+  --paper:#eef1fb; --surface:#ffffff; --surface-2:#f6f8fe; --sunk:#e6ebf9;
+  --ink:#020526; --ink-2:#39406b; --ink-3:#6b7398;
+  --rule:#d5dcf0; --rule-2:#e6eaf7;
+  --brand:#1d5ee8; --brand-wash:#e4ebfd; --brand-line:#a9c0f6;
   /* The one second hue in the system, spent entirely on the lines you say out
      loud. Nothing else on the page is warm, so they are findable at a glance
      while you are talking to somebody. */
   --say:#7d4a12; --say-wash:#f8efe1; --say-line:#dcc39a;
   --warn:#9c6a06; --warn-wash:#f7ecd4;
   --bad:#b7380f; --bad-wash:#f8e3da;
-  --ok:#136f46;
-  --shadow:0 1px 2px rgba(12,20,18,.05);
+  --ok:#0e7a4e;
+  --shadow:0 1px 2px rgba(2,5,38,.06);
 }
 @media (prefers-color-scheme:dark){
   :root:not([data-theme="light"]){
-    --paper:#090f0e; --surface:#121a18; --surface-2:#172120; --sunk:#0c1413;
-    --ink:#e9efed; --ink-2:#b0bebb; --ink-3:#7d8c88;
-    --rule:#27322f; --rule-2:#1c2624;
-    --teal:#46bfae; --teal-wash:#0f302c; --teal-line:#1d4c45;
+    --paper:#050a1e; --surface:#0e1430; --surface-2:#141b3d; --sunk:#080d26;
+    --ink:#eaeefb; --ink-2:#b0b8dd; --ink-3:#7b84ad;
+    --rule:#232b52; --rule-2:#181f42;
+    --brand:#6f9bff; --brand-wash:#13204a; --brand-line:#2a3a74;
     --say:#e0a765; --say-wash:#2c1e0c; --say-line:#5a4020;
     --warn:#d5a32c; --warn-wash:#2c2308;
     --bad:#ff7b48; --bad-wash:#331610;
-    --ok:#3eb679;
+    --ok:#35c98a;
     --shadow:0 1px 2px rgba(0,0,0,.4);
   }
 }
 :root[data-theme="dark"]{
-  --paper:#090f0e; --surface:#121a18; --surface-2:#172120; --sunk:#0c1413;
-  --ink:#e9efed; --ink-2:#b0bebb; --ink-3:#7d8c88;
-  --rule:#27322f; --rule-2:#1c2624;
-  --teal:#46bfae; --teal-wash:#0f302c; --teal-line:#1d4c45;
+  --paper:#050a1e; --surface:#0e1430; --surface-2:#141b3d; --sunk:#080d26;
+  --ink:#eaeefb; --ink-2:#b0b8dd; --ink-3:#7b84ad;
+  --rule:#232b52; --rule-2:#181f42;
+  --brand:#6f9bff; --brand-wash:#13204a; --brand-line:#2a3a74;
   --say:#e0a765; --say-wash:#2c1e0c; --say-line:#5a4020;
   --warn:#d5a32c; --warn-wash:#2c2308;
   --bad:#ff7b48; --bad-wash:#331610;
-  --ok:#3eb679;
+  --ok:#35c98a;
   --shadow:0 1px 2px rgba(0,0,0,.4);
 }
 *,*::before,*::after{box-sizing:border-box}
@@ -53,31 +53,32 @@ ul{margin:0 0 14px;padding-left:20px;max-width:66ch}
 li{margin:0 0 7px}
 li::marker{color:var(--ink-3)}
 strong{font-weight:600}
-a{color:var(--teal);text-underline-offset:2px}
+a{color:var(--brand);text-underline-offset:2px}
 code{
   font-size:.87em;background:var(--surface-2);border:1px solid var(--rule-2);
-  border-radius:4px;padding:1px 5px;color:var(--teal);
+  border-radius:4px;padding:1px 5px;color:var(--brand);
 }
-:focus-visible{outline:2px solid var(--teal);outline-offset:2px;border-radius:3px}
+:focus-visible{outline:2px solid var(--brand);outline-offset:2px;border-radius:3px}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 
 /* ── masthead ─────────────────────────────────────────────────────────── */
 .mast{background:var(--surface);border-bottom:1px solid var(--rule)}
 .mast .inner{max-width:1180px;margin:0 auto;padding:40px 28px 30px}
 .brandline{display:flex;align-items:center;gap:10px;margin-bottom:20px}
+/* The hexagonal shield from the ReXell mark, clipped rather than drawn: this
+   document is one file with no assets, and a polygon is cheaper than an
+   inlined SVG for a 22px shape. The gradient is the brand's own three stops
+   and does not change between themes — a logo that shifts with an OS setting
+   is not a logo. */
 .mark{
-  width:22px;height:22px;border-radius:6px;background:var(--teal);
-  position:relative;overflow:hidden;flex:none;
+  width:22px;height:22px;flex:none;
+  background:linear-gradient(120deg,#00d2ff,#2472ff 52%,#9d50bb);
+  clip-path:polygon(50% 0%,100% 25%,100% 75%,50% 100%,0% 75%,0% 25%);
 }
-.mark::before,.mark::after{
-  content:"";position:absolute;top:50%;width:7px;height:7px;border-radius:50%;
-  background:var(--surface);transform:translateY(-50%);
-}
-.mark::before{left:-3.5px}.mark::after{right:-3.5px}
 .brandline b{font:800 15px/1 Archivo,sans-serif;letter-spacing:-.03em}
 .eyebrow{font-size:11px;letter-spacing:.15em;text-transform:uppercase;color:var(--ink-3)}
 h1{font-size:clamp(30px,4.6vw,50px);line-height:1.04;font-weight:800;letter-spacing:-.028em;margin:0;max-width:19ch}
-h1 em{font-style:normal;color:var(--teal)}
+h1 em{font-style:normal;color:var(--brand)}
 .standfirst{font-size:19px;line-height:1.5;color:var(--ink-2);max-width:56ch;margin:18px 0 0}
 
 .setup{
@@ -98,8 +99,8 @@ h1 em{font-style:normal;color:var(--teal)}
 .rail li{display:flex;gap:9px;padding:6px 0;border-bottom:1px solid var(--rule-2);align-items:baseline}
 .rail li:last-child{border-bottom:0}
 .rail a{color:var(--ink-2);text-decoration:none;flex:1}
-.rail a:hover{color:var(--teal)}
-.rail .n{color:var(--teal);font-weight:600;min-width:14px}
+.rail a:hover{color:var(--brand)}
+.rail .n{color:var(--brand);font-weight:600;min-width:14px}
 .rail .at{color:var(--ink-3);font-size:11px}
 .rail-note{margin-top:18px;padding-top:14px;border-top:1px solid var(--rule);color:var(--ink-3);line-height:1.5}
 
@@ -111,8 +112,8 @@ h3{font-size:16.5px;font-weight:700;margin:28px 0 8px;font-family:Archivo,sans-s
 
 .step-head{display:flex;align-items:baseline;gap:13px;margin-bottom:6px}
 .step-n{
-  font:700 13px/1 "IBM Plex Mono",monospace;color:var(--teal);
-  background:var(--teal-wash);border:1px solid var(--teal-line);
+  font:700 13px/1 "IBM Plex Mono",monospace;color:var(--brand);
+  background:var(--brand-wash);border:1px solid var(--brand-line);
   border-radius:6px;padding:6px 9px;flex:none;
 }
 .time{
@@ -147,7 +148,7 @@ h3{font-size:16.5px;font-weight:700;margin:28px 0 8px;font-family:Archivo,sans-s
 
 /* ── notes ────────────────────────────────────────────────────────────── */
 .note{
-  border:1px solid var(--teal-line);border-left-width:3px;background:var(--teal-wash);
+  border:1px solid var(--brand-line);border-left-width:3px;background:var(--brand-wash);
   border-radius:0 10px 10px 0;padding:14px 17px;margin:0 0 18px;max-width:66ch;
   font-size:15.5px;line-height:1.55;
 }
@@ -174,8 +175,8 @@ td:first-child{color:var(--ink);font-weight:600}
   border:1px solid var(--rule);background:var(--surface-2);color:var(--ink-2);
 }
 .pill-off{border-color:var(--warn);color:var(--warn);background:var(--warn-wash)}
-.pill-cap{border-color:var(--teal-line);color:var(--teal);background:var(--teal-wash)}
-.pill-live{border-color:var(--ok);color:var(--ok);background:var(--teal-wash)}
+.pill-cap{border-color:var(--brand-line);color:var(--brand);background:var(--brand-wash)}
+.pill-live{border-color:var(--ok);color:var(--ok);background:var(--brand-wash)}
 
 /* ── q&a ──────────────────────────────────────────────────────────────── */
 .qa{border-top:1px solid var(--rule);padding-top:18px;margin-top:6px}
@@ -199,7 +200,7 @@ footer ul{columns:2;column-gap:36px;max-width:none;padding-left:18px;margin-top:
 <header class="mast">
   <div class="inner">
     <div class="brandline"><span class="mark"></span><b>ReXell</b><span class="eyebrow" style="margin-left:6px">Demo script</span></div>
-    <h1>Twelve minutes, four screens, <em>one claim</em>.</h1>
+    <h1>Thirteen minutes, four screens, <em>one claim</em>.</h1>
     <p class="standfirst">A ticket that cannot be scalped, counterfeited, or resold above a price the organizer set. Everything below runs on a laptop, offline, in front of somebody.</p>
 
     <dl class="setup">
@@ -216,10 +217,10 @@ footer ul{columns:2;column-gap:36px;max-width:none;padding-left:18px;margin-top:
     <div class="rail-title">Running order</div>
     <ol>
       <li><span class="n">1</span><a href="#id">Get an ID</a><span class="at">0:00</span></li>
-      <li><span class="n">2</span><a href="#buy">Buying</a><span class="at">2:00</span></li>
-      <li><span class="n">3</span><a href="#resell">Reselling</a><span class="at">4:00</span></li>
-      <li><span class="n">4</span><a href="#gate">The gate</a><span class="at">7:00</span></li>
-      <li><span class="n">5</span><a href="#organizer">The console</a><span class="at">10:00</span></li>
+      <li><span class="n">2</span><a href="#buy">Buying</a><span class="at">3:00</span></li>
+      <li><span class="n">3</span><a href="#resell">Reselling</a><span class="at">5:00</span></li>
+      <li><span class="n">4</span><a href="#gate">The gate</a><span class="at">8:00</span></li>
+      <li><span class="n">5</span><a href="#organizer">The console</a><span class="at">11:00</span></li>
     </ol>
     <div class="rail-note">
       <a href="#catalogue">The catalogue</a><br>
@@ -260,12 +261,12 @@ footer ul{columns:2;column-gap:36px;max-width:none;padding-left:18px;margin-top:
 
     <!-- ── 1 ────────────────────────────────────────────────────────── -->
     <section id="id">
-      <div class="step-head"><span class="step-n">1</span><h2>A fan gets a ReXell ID</h2><span class="time">2 min</span></div>
+      <div class="step-head"><span class="step-n">1</span><h2>A fan gets a ReXell ID</h2><span class="time">3 min</span></div>
       <p class="sub">Fan app · <span class="mono">127.0.0.1:8120</span></p>
 
-      <p>It opens on <b>Get your ReXell ID</b>, because there is nothing to show until there is. Tap <b>Set it up</b>.</p>
+      <p>It opens on the landing screen — <b>Your face is the ticket</b> — with three ways in: create an ID, sign in, or browse events first. Tap <b>Create your ReXell ID</b>.</p>
 
-      <div class="say"><span class="who">Say this</span>Every other ticketing app starts with an email and a password. This one starts with the only thing a scalper cannot resell.</div>
+      <div class="say"><span class="who">Say this</span>Every other ticketing app starts with an email and a password. This one never asks for either.</div>
 
       <h3>Slow down on the consent screen</h3>
       <p>It asks for one thing, for one purpose, and it is not bundled with terms of service or a marketing tick box. Read the three lines out:</p>
@@ -276,6 +277,13 @@ footer ul{columns:2;column-gap:36px;max-width:none;padding-left:18px;margin-top:
       </ul>
       <p>And the line underneath: <b>you can attend without this.</b> Staffed entry is always available. An organizer will ask about that; a regulator will ask twice.</p>
       <p>Then capture. The server picks the challenge action and a nonce, so a template captured earlier cannot be replayed into a later enrolment.</p>
+
+      <h3>Then the recovery code</h3>
+      <p>Shown once, and never again. <b>Continue</b> stays disabled until the box is ticked, because this is the only screen in the app where swiping a sheet away costs somebody their tickets.</p>
+
+      <div class="say"><span class="who">Say this</span>That is the whole account. No email to harvest, no password to reuse, no phone number to sell — one line of text, and a face that never leaves the phone.</div>
+
+      <p>If somebody asks what happens when a phone is lost, show them rather than answer: <b>I already have one</b> on the landing screen takes that code. It works exactly once and hands back a replacement, so a code read over a shoulder is spent the moment it is used.</p>
     </section>
 
     <!-- ── 2 ────────────────────────────────────────────────────────── -->
