@@ -1,6 +1,6 @@
 # ReXell — the demo
 
-Twelve minutes, four screens, one claim: a ticket that cannot be scalped,
+Thirteen minutes, four screens, one claim: a ticket that cannot be scalped,
 counterfeited, or resold above a price the organizer set.
 
 ```bash
@@ -58,17 +58,17 @@ live gate are both true at the same moment, which is a real Saturday.
 
 ---
 
-## The twelve minutes
+## The thirteen minutes
 
-### 1 · A fan gets a ReXell ID — 2 min
+### 1 · A fan gets a ReXell ID — 3 min
 
-Open the **fan app**. It says *Get your ReXell ID*, because there is nothing to
-show until there is.
-
-Tap **Set it up**.
+Open the **fan app**. It opens on the landing screen: *Your face is the
+ticket.* Three ways in — create an ID, sign in, or browse events first.
 
 > **Say this:** every other ticketing app starts with an email and a password.
-> This starts with the only thing a scalper cannot resell.
+> This one never asks for either.
+
+Tap **Create your ReXell ID**.
 
 **The consent screen is the one to slow down on.** It asks for one thing, for
 one purpose, and it is not bundled with terms of service or a marketing tick
@@ -83,6 +83,19 @@ always available. An organizer will ask; a regulator will ask twice.
 
 Then capture. The server picks the challenge action and a nonce, so a template
 captured earlier cannot be replayed into a later enrolment.
+
+**Then the recovery code**, shown once and never again. Continue stays disabled
+until the box is ticked, because this is the only screen where swiping a sheet
+away costs somebody their tickets.
+
+> **Say this:** this is the whole account. No email to harvest, no password to
+> reuse, no phone number to sell — one line of text, and a face that never
+> leaves the phone.
+
+If somebody asks what happens when a phone is lost, show them: **I already
+have one** on the landing screen takes the code. It works exactly once and
+hands back a replacement, so a code read over a shoulder is spent the moment
+it is used.
 
 ---
 

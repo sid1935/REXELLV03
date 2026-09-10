@@ -98,8 +98,15 @@ export interface RateLimitOptions {
   creates: Allowance;
 }
 
-/** The unauthenticated creates. Anything here is charged the stricter bucket. */
-const CREATE_ROUTES = new Set(['/v1/organizers', '/v1/events']);
+/**
+ * The unauthenticated routes charged the stricter bucket.
+ *
+ * Two kinds. Organizer signup and event creation, where an abusive caller
+ * costs storage; and recovery, where the abuse is guessing. A recovery code
+ * carries 100 bits, so this is not what stops a brute force — it stops a
+ * script pointing itself at the route and staying there.
+ */
+const CREATE_ROUTES = new Set(['/v1/organizers', '/v1/events', '/v1/identities/recover']);
 
 export function registerRateLimit(
   app: FastifyInstance,

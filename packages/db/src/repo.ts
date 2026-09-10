@@ -265,6 +265,48 @@ export class Repo {
     this.db.run('UPDATE identities SET enrolled = ? WHERE identity_id = ?', enrolled ? 1 : 0, id);
   }
 
+  // ─ recovery codes ─
+
+  /**
+   * Replace whatever live code this identity has with a new one.
+   *
+   * One transaction, because the partial unique index permits exactly one
+   * unused row per identity: retiring the old one and inserting the new one
+   * are not two facts that may briefly disagree.
+   */
+  issueRecoveryCode(id: IdentityId, codeHash: string, now: EpochMs): void {
+    this.db.tx(() => {
+      this.db.run('UPDATE recovery_codes SET used_at = ? WHERE identity_id = ? AND used_at IS NULL', now, id);
+      this.db.run(
+        'INSERT INTO recovery_codes (code_hash, identity_id, created_at, used_at) VALUES (?, ?, ?, NULL)',
+        codeHash,
+        id,
+        now,
+      );
+    });
+  }
+
+  /**
+   * Spend a recovery code.
+   *
+   * The `used_at IS NULL` in the UPDATE is the guard, not a preceding SELECT:
+   * two devices racing the same code both see it unused, and only the one
+   * whose UPDATE reports a changed row may act on it.
+   */
+  redeemRecoveryCode(codeHash: string, now: EpochMs): IdentityId | undefined {
+    const row = this.db.get<{ identity_id: string }>(
+      'SELECT identity_id FROM recovery_codes WHERE code_hash = ? AND used_at IS NULL',
+      codeHash,
+    );
+    if (!row) return undefined;
+    const changed = this.db.run(
+      'UPDATE recovery_codes SET used_at = ? WHERE code_hash = ? AND used_at IS NULL',
+      now,
+      codeHash,
+    );
+    return changed === 1 ? (row.identity_id as IdentityId) : undefined;
+  }
+
   // ─ events ─
 
   createEvent(event: EventDef, now: EpochMs): void {

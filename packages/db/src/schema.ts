@@ -312,4 +312,16 @@ CREATE TABLE IF NOT EXISTS idempotency_keys (
   response_json  TEXT NOT NULL,
   created_at     INTEGER NOT NULL
 );
+
+-- Recovery codes. Only the hash is kept; the code itself is shown once at
+-- enrolment and cannot be retrieved afterwards. The partial unique index is
+-- the invariant: at most one live code per identity.
+CREATE TABLE IF NOT EXISTS recovery_codes (
+  code_hash    TEXT PRIMARY KEY,
+  identity_id  TEXT NOT NULL REFERENCES identities(identity_id),
+  created_at   INTEGER NOT NULL,
+  used_at      INTEGER
+);
+CREATE UNIQUE INDEX IF NOT EXISTS recovery_codes_live
+  ON recovery_codes (identity_id) WHERE used_at IS NULL;
 `;

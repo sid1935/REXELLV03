@@ -1,9 +1,12 @@
-import { randomUUID } from 'node:crypto';
+import { createHash, randomBytes, randomUUID } from 'node:crypto';
 import type { FastifyInstance } from 'fastify';
 import {
+  canonicalRecoveryCode,
   consentId as toConsentId,
   effectiveConsent,
+  formatRecoveryCode,
   grant,
+  normaliseRecoveryCode,
   identityId as toIdentityId,
   requireConsent,
   validateUnbundled,
@@ -30,6 +33,27 @@ export const CONSENT_TEXT_VERSIONS: Readonly<Record<ConsentPurpose, string>> = O
 });
 
 const PURPOSES = Object.keys(CONSENT_TEXT_VERSIONS) as ConsentPurpose[];
+
+/**
+ * A fresh recovery code.
+ *
+ * 32 random bytes reduced to 20 Crockford base32 symbols — 100 bits, which is
+ * far past anything guessable, so the rate limit on the recover route is there
+ * for the abusive case rather than as a real line of defence.
+ */
+function newRecoveryCode(): string {
+  return formatRecoveryCode(randomBytes(32));
+}
+
+/**
+ * SHA-256, like the organizer API keys and for the same reason: this is 100
+ * bits of CSPRNG output rather than something a person chose, so there is
+ * nothing to brute-force and no reason to pay bcrypt's cost on a route that
+ * an onsale crowd might hit.
+ */
+function hashRecoveryCode(code: string): string {
+  return createHash('sha256').update(code).digest('hex');
+}
 
 interface Deps {
   repo: Repo;
@@ -146,6 +170,50 @@ export function identityRoutes(app: FastifyInstance, { repo, now, vault }: Deps)
 
   // ─ enrolment ─
 
+  /**
+   * Recover an identity on a new device.
+   *
+   * The code is spent when it is used and a replacement is issued in the same
+   * transaction, so a code read off a screenshot or a shoulder cannot be used
+   * twice. That does mean an attacker who redeems first locks the owner out —
+   * but they already had the code, and a code that stayed valid forever would
+   * leave them with indefinite access instead of one use the owner can notice.
+   *
+   * The response deliberately does not distinguish "no such code" from "that
+   * code has already been used". Both are the same sentence, because telling
+   * somebody their guess was once a real code is telling them something.
+   */
+  app.post<{ Body: { code?: string } }>('/v1/identities/recover', async (req, reply) => {
+    const raw = req.body?.code;
+    if (typeof raw !== 'string' || raw.trim() === '') throw badRequest('`code` is required.');
+
+    const normalised = normaliseRecoveryCode(raw);
+    // A malformed code is refused with the same message as a wrong one. The
+    // shape of a valid code is public; which strings are live is not.
+    const identity = normalised
+      ? repo.redeemRecoveryCode(hashRecoveryCode(canonicalRecoveryCode(normalised)), now())
+      : undefined;
+
+    if (!identity) {
+      throw new HttpError(
+        404,
+        'RECOVERY_CODE_INVALID',
+        'That recovery code is not valid. It may have been used already — each one works once.',
+      );
+    }
+
+    const replacement = newRecoveryCode();
+    repo.issueRecoveryCode(identity, hashRecoveryCode(replacement), now());
+
+    const row = repo.getIdentity(identity);
+    return reply.code(200).send({
+      identityId: identity,
+      enrolled: Boolean(row?.enrolled),
+      recoveryCode: replacement,
+      recoveryWarning: 'The code you just used is spent. This is its replacement — write it down.',
+    });
+  });
+
   app.post<{ Params: { id: string } }>('/v1/identities/:id/enrolment/challenge', async (req, reply) => {
     if (!repo.getIdentity(toIdentityId(req.params.id))) throw notFound('identity', req.params.id);
     try {
@@ -192,11 +260,20 @@ export function identityRoutes(app: FastifyInstance, { repo, now, vault }: Deps)
       // refuses an unenrolled buyer.
       repo.setEnrolled(identity, true);
 
+      // Issued here, at the first moment there is something worth recovering.
+      // Shown once in this response and never again — there is no route that
+      // returns it and no support tool that can, which is the same rule the
+      // organizer API keys follow and for the same reason.
+      const code = newRecoveryCode();
+      repo.issueRecoveryCode(identity, hashRecoveryCode(code), now());
+
       return reply.code(201).send({
         enrolled: true,
         templateRef: result.templateRef,
         replaced: result.replaced,
         dedupe: result.dedupe,
+        recoveryCode: code,
+        recoveryWarning: 'Write this down now. It is the only way back in from another device, and it cannot be shown again.',
       });
     } catch (e) {
       throw asHttpError(e);

@@ -87,6 +87,32 @@ export const MIGRATIONS: readonly Migration[] = [
       addColumn(db, 'events', 'manifest_sequence', 'INTEGER NOT NULL DEFAULT 0');
     },
   },
+  {
+    version: 4,
+    name: 'recovery codes, so losing a phone does not lose the tickets',
+    up(db) {
+      // Only the hash is stored. A recovery code is shown once at enrolment
+      // and never again — there is no route that returns one, and no support
+      // tool that can recover it, for the same reason that applies to an
+      // organizer's API key.
+      db.exec(`
+        CREATE TABLE IF NOT EXISTS recovery_codes (
+          code_hash    TEXT PRIMARY KEY,
+          identity_id  TEXT NOT NULL REFERENCES identities(identity_id),
+          created_at   INTEGER NOT NULL,
+          used_at      INTEGER
+        );
+      `);
+      // One live code per identity is the invariant this index enforces:
+      // rotating on use writes the replacement and marks the old one used, and
+      // a bug that left two unused codes for one person would double the
+      // surface without anybody noticing.
+      db.exec(`
+        CREATE UNIQUE INDEX IF NOT EXISTS recovery_codes_live
+          ON recovery_codes (identity_id) WHERE used_at IS NULL;
+      `);
+    },
+  },
 ];
 
 export const CURRENT_VERSION = MIGRATIONS.reduce((n, m) => Math.max(n, m.version), 0);

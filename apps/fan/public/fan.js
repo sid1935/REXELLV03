@@ -223,7 +223,7 @@ function enrolSheet() {
       await new Promise((r) => setTimeout(r, 700));
 
       const vector = captureVector();
-      await call(`/v1/identities/${id}/enrolment`, {
+      const enrolment = await call(`/v1/identities/${id}/enrolment`, {
         scope: 'global',
         vector,
         liveness: { challengeId: challenge.id, nonce: challenge.nonce, passiveScore: 0.96, actionCompleted: true },
@@ -234,9 +234,10 @@ function enrolSheet() {
       localStorage.setItem('rexell.fan.enrolled', 'true');
       stopCamera();
       await new Promise((r) => setTimeout(r, 400));
-      closeSheet();
-      toast('Your ReXell ID is ready.');
       render();
+      // The last step of signing up, not an afterthought: this is the only
+      // time the code is ever shown.
+      recoveryCodeSheet(enrolment.recoveryCode, 'ready');
     } catch (e) {
       toast(e.message, true);
       btn.disabled = false;
@@ -696,18 +697,82 @@ function enterApp(view = 'tickets') {
 }
 
 /**
+ * The recovery code, shown once.
+ *
+ * Twice in the life of an ID: at the end of signing up, and again after it has
+ * been used to recover, because using one spends it and issues a replacement.
+ * There is no route that returns it and no support tool that can recover it —
+ * the same rule the organizer API keys follow, for the same reason.
+ *
+ * Dismissing requires ticking the box. A sheet that can be swiped away is a
+ * sheet somebody swipes away, and this is the only screen where doing that
+ * costs them their tickets.
+ */
+function recoveryCodeSheet(code, reason) {
+  if (!code) {
+    // Nothing to show rather than an empty box: an older API that does not
+    // issue codes should not produce a broken screen.
+    toast(reason === 'ready' ? 'Your ReXell ID is ready.' : 'Signed in.');
+    return;
+  }
+
+  sheet(`
+    <div class="eyebrow">${reason === 'ready' ? 'Last step' : 'Your code has changed'}</div>
+    <h2 style="margin:8px 0 6px">${reason === 'ready' ? 'Write this down' : 'Here is your new code'}</h2>
+    <p class="lede" style="margin-bottom:14px">
+      ${
+        reason === 'ready'
+          ? 'This is the only way back into your account from another phone. We cannot show it again and we cannot recover it for you.'
+          : 'The code you just used is spent. This one replaces it.'
+      }
+    </p>
+
+    <!--
+      Sized to fit on one line at 375px, and break-all is deliberately absent:
+      a code that wraps mid-group reads as two shorter groups, which is exactly
+      where a person copying it onto paper makes the mistake. If it ever has to
+      wrap, it wraps at a hyphen.
+    -->
+    <div class="num" id="recoveryCode" style="text-align:center;font-size:clamp(14px,4.4vw,17px);font-weight:600;letter-spacing:0.04em;background:var(--sunk);border:1px solid var(--brand-line);border-radius:var(--r);padding:16px 8px;word-break:normal;overflow-wrap:normal">${esc(code)}</div>
+
+    <button class="btn btn-quiet btn-block" id="copyRecovery" style="margin-top:10px">Copy</button>
+
+    <label class="consent-item" style="margin-top:14px;cursor:pointer;align-items:center">
+      <input type="checkbox" id="recoverySaved" style="width:18px;height:18px;flex:none;accent-color:var(--brand)">
+      <span style="font-size:13.5px">I have written this down somewhere safe.</span>
+    </label>
+
+    <button class="btn btn-primary btn-lg btn-block" id="recoveryDone" style="margin-top:14px" disabled>Continue</button>
+    <p class="hint" style="text-align:center;margin-top:10px">Losing it does not lose your tickets on <em>this</em> phone — only the way back in from a different one.</p>
+  `);
+
+  $('recoverySaved').addEventListener('change', (e) => {
+    $('recoveryDone').disabled = !e.target.checked;
+  });
+  $('copyRecovery').addEventListener('click', async () => {
+    try {
+      await navigator.clipboard.writeText(code);
+      toast('Copied.');
+    } catch {
+      // Clipboard access is refused in plenty of ordinary situations. The code
+      // is on screen either way, which is what matters.
+      toast('Select the code and copy it by hand.', true);
+    }
+  });
+  $('recoveryDone').addEventListener('click', () => {
+    closeSheet();
+    toast(reason === 'ready' ? 'Your ReXell ID is ready.' : 'Signed in.');
+    render();
+  });
+}
+
+/**
  * "I already have one."
  *
- * An honest screen rather than a login box.
- *
- * There is no fan account to sign in to: a ReXell ID is created on the device
- * and stored there, and the API has no way to look one up — no password, no
- * email, no recovery. Drawing a familiar-looking login form over that would
- * imply an account system that does not exist, and the first person to try it
- * from a new phone would discover that the hard way.
- *
- * So it says what is true, and offers the one thing that does work: pasting
- * the ID itself, with the risk of doing that stated rather than buried.
+ * On this device, that is just a matter of carrying on. From a new phone it
+ * needs the recovery code issued at signup — there is no password and no email
+ * on file, because collecting either would mean holding a second piece of
+ * personal data to solve what one printed line solves.
  */
 function loginSheet() {
   const known = state.identityId;
@@ -720,23 +785,18 @@ function loginSheet() {
            <div class="field"><span>Your ReXell ID</span><div class="keyout num" style="font-size:12px;word-break:break-all;background:var(--sunk);border:1px solid var(--rule);border-radius:var(--r);padding:11px">${esc(known)}</div></div>
            <button class="btn btn-primary btn-block" id="loginContinue" style="margin-top:16px">Continue</button>`
         : `<p class="lede" style="margin-bottom:14px">
-             Your ReXell ID lives on the device that created it. There is no
-             password to enter, because there is no account to sign in to —
-             your face is the credential, and it never leaves your phone.
+             Enter the recovery code you were given when you set up your ReXell
+             ID. There is no password — we never asked you for one.
            </p>
-           <div class="consent-item" style="margin-bottom:14px">
-             <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/></svg>
-             <div>
-               <b style="display:block;font-size:13.5px;margin-bottom:2px">Moving to a new phone?</b>
-               <span class="hint">Paste the ID from your old device below. Treat it like a password — anyone who has it can list your tickets for resale, though they still cannot get through a gate with your face.</span>
-             </div>
-           </div>
            <div class="field">
-             <span>ReXell ID</span>
-             <input id="loginId" class="input" placeholder="idn_…" autocomplete="off" spellcheck="false">
+             <span>Recovery code</span>
+             <input id="loginId" class="input num" placeholder="RXL-XXXXX-XXXXX-XXXXX-XXXXX"
+                    autocomplete="one-time-code" spellcheck="false" autocapitalize="characters"
+                    style="letter-spacing:0.04em">
            </div>
-           <button class="btn btn-primary btn-block" id="loginRestore" style="margin-top:14px">Restore this ID</button>
-           <button class="btn btn-quiet btn-block" id="loginNew" style="margin-top:8px">Create a new one instead</button>`
+           <button class="btn btn-primary btn-block" id="loginRestore" style="margin-top:14px">Sign in</button>
+           <p class="hint" style="text-align:center;margin-top:10px">Each code works once. Using it gives you a fresh one.</p>
+           <button class="btn btn-quiet btn-block" id="loginNew" style="margin-top:12px">I do not have a code — start again</button>`
     }
   `);
 
@@ -750,30 +810,29 @@ function loginSheet() {
     consentSheet();
   });
 
-  $('loginRestore')?.addEventListener('click', async () => {
-    const id = $('loginId').value.trim();
-    if (!id) return toast('Paste your ReXell ID first.', true);
+  $('loginRestore')?.addEventListener('click', async (e) => {
+    const code = $('loginId').value.trim();
+    if (!code) return toast('Enter your recovery code first.', true);
 
-    // Verified against the API before it is stored. Accepting any string would
-    // put the app into a state where every later call fails with a 404 and
-    // nothing explains why.
+    const btn = e.currentTarget;
+    btn.disabled = true;
     try {
-      const consents = await fetch(`${API}/v1/identities/${encodeURIComponent(id)}/consents`).then((r) => {
-        if (!r.ok) throw new Error(r.status === 404 ? 'No such ReXell ID.' : 'Could not reach ReXell.');
-        return r.json();
-      });
-      state.identityId = id;
-      // The endpoint returns `current` — one entry per purpose with a resolved
-      // state — alongside the full `history`. `granted` is the only state that
-      // means this ID can pass a gate.
-      state.enrolled = consents.current?.some((c) => c.purpose === 'biometric_enrolment' && c.state === 'granted') ?? false;
-      localStorage.setItem('rexell.fan.id', id);
+      // The server does the normalising — case, spacing, hyphens and the
+      // characters people misread. Doing it here as well would be a second
+      // implementation to keep in step with the first.
+      const result = await call('/v1/identities/recover', { code });
+      state.identityId = result.identityId;
+      state.enrolled = Boolean(result.enrolled);
+      localStorage.setItem('rexell.fan.id', result.identityId);
       localStorage.setItem('rexell.fan.enrolled', String(state.enrolled));
       closeSheet();
       enterApp('tickets');
-      toast('Signed in.');
-    } catch (e) {
-      toast(e.message, true);
+      // Using a code spends it, so the replacement has to be shown with the
+      // same weight as the original.
+      recoveryCodeSheet(result.recoveryCode, 'rotated');
+    } catch (err) {
+      toast(err.message, true);
+      btn.disabled = false;
     }
   });
 }
