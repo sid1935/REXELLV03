@@ -37,6 +37,25 @@ fi
 
 say() { printf '\n\033[36m==> %s\033[0m\n' "$1"; }
 
+# ─── swap ───────────────────────────────────────────────────────────────────
+# Oracle's Always Free micro shape is 1 GB with no swap, and `npm ci` on this
+# repo pulls Hardhat, solc and TypeScript. The install is killed by the OOM
+# reaper partway through, which looks like npm failing for no reason — the
+# kernel logs it and npm does not.
+#
+# 2 GB of swap on a 45 GB disk costs nothing and makes the build finish. It is
+# only touched under pressure, so it does not slow the running services.
+TOTAL_MB=$(free -m | awk '/^Mem:/ {print $2}')
+if [[ "$TOTAL_MB" -lt 2048 ]] && ! swapon --show | grep -q .; then
+  say "Adding 2 GB of swap (${TOTAL_MB} MB RAM, none configured)"
+  fallocate -l 2G /swapfile || dd if=/dev/zero of=/swapfile bs=1M count=2048
+  chmod 600 /swapfile
+  mkswap /swapfile >/dev/null
+  swapon /swapfile
+  grep -q '^/swapfile' /etc/fstab || echo '/swapfile none swap sw 0 0' >> /etc/fstab
+  free -h | awk '/^Swap:/ {print "  swap now: " $2}'
+fi
+
 # ─── packages ───────────────────────────────────────────────────────────────
 say "Installing Node 24, Caddy and git"
 apt-get update -qq
@@ -94,7 +113,12 @@ else
 fi
 
 cd /srv/rexell
-sudo -u rexell npm ci
+# --ignore-scripts skips Hardhat's postinstall, which downloads a solc
+# compiler. The contracts workspace is not in the root tsconfig references, so
+# nothing the server runs is built from it — that download is minutes and
+# hundreds of megabytes spent on a workspace this host never executes. The
+# Dockerfile installs the same way.
+sudo -u rexell npm ci --ignore-scripts
 sudo -u rexell npm run build
 
 # ─── secrets ────────────────────────────────────────────────────────────────
