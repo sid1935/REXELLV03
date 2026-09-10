@@ -188,6 +188,19 @@
                 <label class="field"><span>Organization</span><input id="orgName" placeholder="Pinewood Live"></label>
                 <label class="field"><span>Contact email</span><input id="orgEmail" type="email" placeholder="ops@pinewood.example"></label>
               </div>
+              <!--
+                Most deployments are invitation-only: signup mints a key with
+                events:write and settlement:read, so it cannot be left open to
+                anybody who can reach the port. The field is always shown
+                rather than revealed after a refusal — being told a code was
+                needed only after filling the form in is worse than being
+                asked for it up front.
+              -->
+              <label class="field">
+                <span>Invite code</span>
+                <input id="orgInvite" class="num" placeholder="Given to you by ReXell" autocomplete="off" spellcheck="false">
+                <small class="hint">Leave blank if you were told this deployment is open.</small>
+              </label>
               <div class="row">
                 <button class="btn btn-primary" id="signupBtn">Create account</button>
                 <button class="btn btn-quiet" id="useKeyBtn">I already have a key</button>

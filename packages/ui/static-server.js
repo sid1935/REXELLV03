@@ -30,8 +30,12 @@ const TYPES = {
  * camera, and a camera prompt inside somebody else's iframe is a clickjacking
  * primitive.
  */
-function securityHeaders({ apiOrigin, https }) {
-  const connect = ["'self'", apiOrigin].filter(Boolean).join(' ');
+function securityHeaders({ apiOrigin, https, connect: extra = [] }) {
+  // Extra origins exist for surfaces that are not ours end to end: the
+  // marketing site is a built bundle that talks to its own Supabase project
+  // for the waitlist, and a policy that silently broke that form would be
+  // discovered by whoever stopped receiving sign-ups.
+  const connect = ["'self'", apiOrigin, ...extra].filter(Boolean).join(' ');
   return {
     'x-content-type-options': 'nosniff',
     'referrer-policy': 'no-referrer',
@@ -70,9 +74,18 @@ function securityHeaders({ apiOrigin, https }) {
  * at a server chosen by whoever wrote the link. The override survives for
  * localhost, where it is a development convenience and not a vector.
  */
-export function staticServer({ root, ui, port, apiOrigin, https = false, host = '0.0.0.0', onReady }) {
-  const headers = securityHeaders({ apiOrigin, https });
-  const config = `window.__REXELL_API__=${JSON.stringify(apiOrigin)};\n`;
+export function staticServer({ root, ui, port, apiOrigin, links = {}, connect = [], spa = false, https = false, host = '0.0.0.0', onReady }) {
+  const headers = securityHeaders({ apiOrigin, https, connect });
+  /*
+   * `links` is where the other surfaces live, for the pages that need to send
+   * somebody to one — the marketing site's two calls to action, principally.
+   * Same reasoning as the API origin: a surface is told where its siblings are
+   * by the process that serves it, rather than guessing from the hostname or
+   * taking it from a query string.
+   */
+  const config =
+    `window.__REXELL_API__=${JSON.stringify(apiOrigin)};\n` +
+    `window.__REXELL_LINKS__=${JSON.stringify(links)};\n`;
 
   return createServer(async (req, res) => {
     const requested = decodeURIComponent((req.url ?? '/').split('?')[0]);
@@ -86,7 +99,7 @@ export function staticServer({ root, ui, port, apiOrigin, https = false, host = 
     }
 
     // The shared assets come from @rexell/ui; everything else from the app.
-    const base = safe === '/ui.css' || safe === '/logo.svg' || safe === '/logo-full.png' ? ui : root;
+    const base = ['/ui.css', '/logo.svg', '/logo-full.png', '/logo-lockup.svg'].includes(safe) ? ui : root;
     const relative = safe === '/' ? 'index.html' : safe.replace(/^\/+/, '');
     const file = join(base, relative);
     // Resolved, then checked. A request must not be able to climb out of the
@@ -103,6 +116,26 @@ export function staticServer({ root, ui, port, apiOrigin, https = false, host = 
       });
       res.end(body);
     } catch {
+      /*
+       * Client-routed surfaces hand unknown paths back to index.html, because
+       * the router owns them: the marketing site's /fan-journey and /waitlist
+       * exist only in the browser, and a reload or a pasted link on one of
+       * them would otherwise 404 on a site that works perfectly when reached
+       * by clicking.
+       *
+       * Only for extensionless paths. A missing script or image must still be
+       * a 404 — answering those with HTML turns a broken asset into a parse
+       * error somewhere else entirely.
+       */
+      if (spa && extname(relative) === '') {
+        try {
+          const shell = await readFile(join(root, 'index.html'));
+          res.writeHead(200, { ...headers, 'content-type': TYPES['.html'], 'cache-control': 'no-cache' });
+          return void res.end(shell);
+        } catch {
+          // Fall through to the 404 below.
+        }
+      }
       res.writeHead(404, headers).end('not found');
     }
   }).listen(port, host, onReady);

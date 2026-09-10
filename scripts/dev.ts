@@ -47,6 +47,7 @@ const SERVICES: readonly Service[] = [
   { name: 'api    ', script: 'apps/api/dist/server.js', colour: '[36m', env: { PORT: '8080', REXELL_DB: '.dev.sqlite', VAULT_URL: 'http://127.0.0.1:8090' } },
   { name: 'console', script: 'apps/console/serve.js', colour: '[32m', env: { CONSOLE_PORT: '8110' } },
   { name: 'fan    ', script: 'apps/fan/serve.js', colour: '[33m', env: { FAN_PORT: '8120' } },
+  { name: 'site   ', script: 'apps/site/serve.js', colour: '[34m', env: { SITE_PORT: '8140' } },
 ];
 
 const RESET = '[0m';

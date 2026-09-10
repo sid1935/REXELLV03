@@ -228,11 +228,20 @@ a process alive.** The API still needs the systemd or Compose setup above.
 Each Netlify site points at this repository and differs only in two
 environment variables, under *Site configuration → Environment variables*:
 
-| Site | `NETLIFY_SURFACE` | `REXELL_API` |
+| Site | `NETLIFY_SURFACE` | Also needs |
 |---|---|---|
-| tickets.yourdomain.com | `fan` | `https://api.yourdomain.com` |
-| organizers.yourdomain.com | `console` | `https://api.yourdomain.com` |
-| gate.yourdomain.com | `scanner` | `https://api.yourdomain.com` |
+| yourdomain.com | `site` | `REXELL_FAN`, `REXELL_CONSOLE` |
+| tickets.yourdomain.com | `fan` | — |
+| organizers.yourdomain.com | `console` | — |
+| gate.yourdomain.com | `scanner` | — |
+
+Every site needs `REXELL_API` set to the public HTTPS origin of your API.
+
+The **site** surface is the marketing front door, imported from the previous
+deployment. Its "Join as Fan" and "Join as Organizer" buttons need somewhere
+to go, so it additionally needs `REXELL_FAN` and `REXELL_CONSOLE` — the public
+origins of those two sites. The build refuses without them, because a front
+door whose buttons do nothing deploys looking perfect.
 
 Build settings come from `netlify.toml` and need no changes: the command is
 `npm run build:netlify` and the publish directory is `dist`.

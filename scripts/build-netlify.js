@@ -28,7 +28,15 @@ const SURFACES = {
   fan: 'apps/fan/public',
   console: 'apps/console/public',
   scanner: 'apps/scanner/public',
+  site: 'apps/site/public',
 };
+
+/*
+ * The marketing site is client-routed and its calls to action need to know
+ * where the product lives, so it takes two things the other surfaces do not:
+ * a redirects file, and the fan and console origins in its config.
+ */
+const CLIENT_ROUTED = new Set(['site']);
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const output = resolve(root, 'dist');
@@ -71,13 +79,43 @@ rmSync(output, { force: true, recursive: true });
 mkdirSync(output, { recursive: true });
 
 cpSync(resolve(root, SURFACES[surface]), output, { recursive: true });
-// The shared design system and the mark, which every surface loads from paths
-// that `static-server.js` maps to @rexell/ui at request time.
-for (const asset of ['ui.css', 'logo.svg', 'logo-full.png']) {
+// The shared design system and the marks, which every surface loads from
+// paths that `static-server.js` maps to @rexell/ui at request time.
+for (const asset of ['ui.css', 'logo.svg', 'logo-lockup.svg', 'logo-full.png']) {
   cpSync(resolve(root, 'packages/ui', asset), resolve(output, asset));
 }
 
-writeFileSync(resolve(output, 'config.js'), `window.__REXELL_API__=${JSON.stringify(origin)};\n`);
+/*
+ * Where the sibling surfaces live.
+ *
+ * Only the marketing site uses these today — they are what its two calls to
+ * action point at — but the same mechanism serves any page that has to send
+ * somebody somewhere else in the product.
+ */
+const links = {
+  ...(process.env.REXELL_FAN ? { fan: process.env.REXELL_FAN.replace(/\/+$/, '') } : {}),
+  ...(process.env.REXELL_CONSOLE ? { console: process.env.REXELL_CONSOLE.replace(/\/+$/, '') } : {}),
+};
+
+if (surface === 'site' && (!links.fan || !links.console)) {
+  // The buttons are the whole point of this surface. Built without anywhere
+  // for them to go, it deploys looking perfect and does nothing when pressed.
+  console.error('\n[build] The site surface needs REXELL_FAN and REXELL_CONSOLE.');
+  console.error('[build] They are the public origins of the fan app and the organizer console,');
+  console.error('[build] e.g. https://tickets.example.com and https://organizers.example.com\n');
+  process.exit(78);
+}
+
+writeFileSync(
+  resolve(output, 'config.js'),
+  `window.__REXELL_API__=${JSON.stringify(origin)};\nwindow.__REXELL_LINKS__=${JSON.stringify(links)};\n`,
+);
+
+if (CLIENT_ROUTED.has(surface)) {
+  // Netlify tries files first and falls through to this, so /fan-journey
+  // reaches the router while a genuinely missing /assets/... still 404s.
+  writeFileSync(resolve(output, '_redirects'), '/*  /index.html  200\n');
+}
 
 /*
  * Headers.
@@ -96,7 +134,9 @@ const csp = [
   // data: for canvas output, blob: for the camera frame the fan app draws.
   "img-src 'self' data: blob:",
   "media-src 'self' blob:",
-  `connect-src 'self' ${origin}`,
+  // The marketing site is an imported bundle whose waitlist form posts to its
+  // own Supabase project. Everything else talks only to our API.
+  `connect-src 'self' ${origin}${surface === 'site' ? ' https://ofcchocnplwpfalqlvnv.supabase.co' : ''}`,
   "frame-ancestors 'none'",
   "base-uri 'none'",
   "form-action 'none'",

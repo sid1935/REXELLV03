@@ -105,9 +105,13 @@ $('eventPicker').addEventListener('change', () => {
 $('signupBtn').addEventListener('click', async () => {
   const name = $('orgName').value.trim();
   if (!name) return toast('Give the organization a name.', true);
+  const invite = $('orgInvite').value.trim();
   try {
     const result = await call('/v1/organizers', {
       method: 'POST',
+      // Only sent when supplied. An empty header on an open deployment would
+      // be indistinguishable from a wrong one.
+      ...(invite ? { headers: { 'x-signup-token': invite } } : {}),
       body: JSON.stringify({ name, contactEmail: $('orgEmail').value.trim() || undefined }),
     });
     key = result.apiKey;
@@ -119,6 +123,9 @@ $('signupBtn').addEventListener('click', async () => {
     await loadMe();
   } catch (e) {
     toast(e.message, true);
+    // A refused invite is the one failure with an obvious next action, so put
+    // the cursor where that action is rather than leaving them to find it.
+    if (/invitation|signup/i.test(e.message)) $('orgInvite')?.focus();
   }
 });
 
@@ -496,5 +503,23 @@ async function renderSettlement() {
 (async () => {
   const signedIn = key ? await loadMe() : false;
   const wanted = location.hash.slice(1);
+
+  /*
+   * `#join` is what the marketing site's "Join as Organizer" arrives on. It
+   * is not a view — it is an intent — so it resolves to the account screen
+   * and puts the cursor in the first field. Somebody who pressed a button
+   * saying "join" should land on the form, not on a page listing the events
+   * they do not have yet.
+   *
+   * An organizer already signed in on this device goes to their events
+   * instead: they pressed the button out of habit, not to sign up twice.
+   */
+  if (wanted === 'join') {
+    history.replaceState(null, '', location.pathname + location.search);
+    go(signedIn ? 'events' : 'account');
+    if (!signedIn) $('orgName')?.focus();
+    return;
+  }
+
   go(VIEWS.includes(wanted) ? wanted : signedIn ? 'events' : 'account');
 })();

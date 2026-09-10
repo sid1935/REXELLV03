@@ -1,0 +1,9 @@
+{
+  "name": "@rexell/site",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "The marketing site, and the two buttons that lead into the product.",
+  "scripts": { "dev": "node serve.js" },
+  "dependencies": { "@rexell/ui": "*" }
+}

@@ -8,7 +8,14 @@
     "./ui.css": "./ui.css",
     "./logo.svg": "./logo.svg",
     "./logo-full.png": "./logo-full.png",
-    "./static-server": "./static-server.js"
+    "./static-server": "./static-server.js",
+    "./logo-lockup.svg": "./logo-lockup.svg"
   },
-  "files": ["ui.css", "logo.svg", "logo-full.png", "static-server.js"]
+  "files": [
+    "ui.css",
+    "logo.svg",
+    "logo-lockup.svg",
+    "logo-full.png",
+    "static-server.js"
+  ]
 }

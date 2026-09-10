@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 340 96" role="img" aria-label="ReXell Technologies">
+  <title>ReXell Technologies</title>
+  <!--
+    The horizontal lockup, for places that want the name rather than the icon
+    — principally the marketing site's hero, which previously carried a raster
+    of the old ReXDeX wordmark.
+
+    The type is set with a font stack rather than converted to outlines
+    because this ships as one small file. It is rendered inside an <img>,
+    where a webfont cannot load, so the stack is deliberately a heavy
+    grotesque that exists on every platform.
+  -->
+  <defs>
+    <linearGradient id="lockup-edge" x1="10" y1="86" x2="86" y2="10" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#00D2FF"/>
+      <stop offset="0.48" stop-color="#2472FF"/>
+      <stop offset="1" stop-color="#9D50BB"/>
+    </linearGradient>
+    <linearGradient id="lockup-letter" x1="30" y1="70" x2="68" y2="26" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#00D2FF"/>
+      <stop offset="0.5" stop-color="#3A7FFF"/>
+      <stop offset="1" stop-color="#B060D0"/>
+    </linearGradient>
+  </defs>
+
+  <g transform="translate(4,16) scale(1.0)">
+    <path d="M32 3.4 56.5 17.7 56.5 46.3 32 60.6 7.5 46.3 7.5 17.7Z"
+          fill="none" stroke="url(#lockup-edge)" stroke-width="3.2" stroke-linejoin="round"/>
+    <g fill="none" stroke="url(#lockup-letter)" stroke-width="4.6" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M24 45.5V19h9.4a7.3 7.3 0 0 1 0 14.6H24"/>
+      <path d="M33.2 33.8 41.6 45.5"/>
+    </g>
+  </g>
+
+  <text x="76" y="52" fill="#ffffff"
+        font-family="Archivo, 'Arial Black', 'Helvetica Neue', Helvetica, Arial, sans-serif"
+        font-size="40" font-weight="800" letter-spacing="-1.6">ReXell</text>
+  <text x="79" y="72" fill="#8ea2c8"
+        font-family="'IBM Plex Mono', Consolas, 'Courier New', monospace"
+        font-size="12.5" letter-spacing="4.2">TECHNOLOGIES</text>
+</svg>

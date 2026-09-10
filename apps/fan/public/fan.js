@@ -851,8 +851,27 @@ $('landingBrowse').addEventListener('click', () => enterApp('discover'));
 
 // ─── boot ────────────────────────────────────────────────────────────────────
 
+/*
+ * Where a visit begins.
+ *
+ * `#start` means they arrived from the marketing site having already pressed
+ * "Join as Fan". They have chosen; showing them this app's landing page to
+ * choose again is a step that exists only because the product is two
+ * deployments rather than one.
+ *
+ * `#browse` is the same idea for anybody sent to look at the catalogue.
+ */
+const intent = location.hash;
+// Consumed, so a reload does not restart the flow they may have abandoned.
+if (intent) history.replaceState(null, '', location.pathname + location.search);
+
 if (state.enrolled && state.identityId) {
   enterApp('tickets');
+} else if (intent === '#start') {
+  enterApp('tickets');
+  consentSheet();
+} else if (intent === '#browse') {
+  enterApp('discover');
 } else {
   showLanding();
   // Rendered underneath, so dismissing the landing reveals a ready app rather
