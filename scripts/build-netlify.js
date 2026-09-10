@@ -112,9 +112,21 @@ writeFileSync(
 );
 
 if (CLIENT_ROUTED.has(surface)) {
-  // Netlify tries files first and falls through to this, so /fan-journey
-  // reaches the router while a genuinely missing /assets/... still 404s.
-  writeFileSync(resolve(output, '_redirects'), '/*  /index.html  200\n');
+  /*
+   * Netlify serves a real file when one exists and falls through to these
+   * rules when it does not, so the catch-all is what lets /fan-journey reach
+   * the router after a reload.
+   *
+   * On its own that catch-all also answers a missing script or image with the
+   * HTML shell and a 200, which is worse than a 404: the browser reports a
+   * syntax error in a file that looks like it loaded, and nothing points at
+   * the actual problem. Netlify's rules cannot match on file extension, so
+   * the asset directories are excluded by name, first — order decides.
+   */
+  writeFileSync(
+    resolve(output, '_redirects'),
+    ['/assets/*          /assets/:splat          404', '/lovable-uploads/* /lovable-uploads/:splat 404', '/*                 /index.html             200', ''].join('\n'),
+  );
 }
 
 /*
