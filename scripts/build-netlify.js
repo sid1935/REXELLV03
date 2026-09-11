@@ -39,7 +39,7 @@ const SURFACES = {
 const CLIENT_ROUTED = new Set(['site']);
 
 /** Shared files every surface gets, copied in from @rexell/ui. */
-const SHARED_ASSETS = ['ui.css', 'logo.svg', 'logo-lockup.svg', 'logo-lockup.png'];
+const SHARED_ASSETS = ['ui.css', 'logo.svg', 'logo-lockup.svg', 'logo-lockup.png', 'icon.png', 'icon-touch.png'];
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const output = resolve(root, 'dist');

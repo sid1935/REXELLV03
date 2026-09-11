@@ -113,7 +113,7 @@ export function staticServer({ root, ui, port, apiOrigin, links = {}, connect = 
 
     // The shared assets come from @rexell/ui; everything else from the app.
     const shared =
-      ['/ui.css', '/logo.svg', '/logo-lockup.svg', '/logo-lockup.png'].includes(safe) ||
+      ['/ui.css', '/logo.svg', '/logo-lockup.svg', '/logo-lockup.png', '/icon.png', '/icon-touch.png'].includes(safe) ||
       // The event posters, which every surface addresses the same way.
       safe.startsWith('/events/');
     const base = shared

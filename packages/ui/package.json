@@ -9,13 +9,17 @@
     "./logo.svg": "./logo.svg",
     "./static-server": "./static-server.js",
     "./logo-lockup.svg": "./logo-lockup.svg",
-    "./logo-lockup.png": "./logo-lockup.png"
+    "./logo-lockup.png": "./logo-lockup.png",
+    "./icon.png": "./icon.png",
+    "./icon-touch.png": "./icon-touch.png"
   },
   "files": [
     "ui.css",
     "logo.svg",
     "logo-lockup.svg",
     "logo-lockup.png",
-    "static-server.js"
+    "static-server.js",
+    "icon.png",
+    "icon-touch.png"
   ]
 }
