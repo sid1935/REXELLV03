@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 450" role="img" aria-label="Guns N&apos; Roses">
+  <title>Guns N&apos; Roses — Khanapara Ground, Guwahati</title>
+  <defs>
+    <linearGradient id="g" x1="0" y1="450" x2="800" y2="0" gradientUnits="userSpaceOnUse"
+                    gradientTransform="rotate(0 400 225)">
+      <stop offset="0" stop-color="hsl(186 92% 58%)"/>
+      <stop offset="1" stop-color="hsl(216 76% 50%)"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.29" cy="0.33" r="0.85">
+      <stop offset="0" stop-color="hsl(186 100% 74%)" stop-opacity="0.55"/>
+      <stop offset="1" stop-color="hsl(186 100% 74%)" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="shade" x1="0" y1="0" x2="0" y2="450" gradientUnits="userSpaceOnUse">
+      <stop offset="0.35" stop-color="#020526" stop-opacity="0"/>
+      <stop offset="1" stop-color="#020526" stop-opacity="0.72"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="800" height="450" fill="url(#g)"/>
+  <rect width="800" height="450" fill="url(#glow)"/>
+  <g fill="none" stroke="#ffffff">
+    <polygon points="819.1,402.5 819.1,483.5 749.0,524.0 678.9,483.5 678.9,402.5 749.0,362.0" stroke-opacity="0.092" stroke-width="2.7"/>
+    <polygon points="656.4,170.5 656.4,309.5 536.0,379.0 415.6,309.5 415.6,170.5 536.0,101.0" stroke-opacity="0.101" stroke-width="3.4"/>
+    <polygon points="132.0,277.0 132.0,389.0 35.0,445.0 -62.0,389.0 -62.0,277.0 35.0,221.0" stroke-opacity="0.138" stroke-width="3.2"/>
+    <polygon points="858.3,111.0 858.3,213.0 770.0,264.0 681.7,213.0 681.7,111.0 770.0,60.0" stroke-opacity="0.116" stroke-width="2.9"/>
+    <polygon points="295.6,47.5 295.6,110.5 241.0,142.0 186.4,110.5 186.4,47.5 241.0,16.0" stroke-opacity="0.141" stroke-width="2.4"/>
+    <polygon points="433.5,209.0 433.5,325.0 333.0,383.0 232.5,325.0 232.5,209.0 333.0,151.0" stroke-opacity="0.079" stroke-width="2.1"/>
+    <polygon points="586.8,136.0 586.8,182.0 547.0,205.0 507.2,182.0 507.2,136.0 547.0,113.0" stroke-opacity="0.100" stroke-width="2.6"/>
+    <polygon points="408.2,166.0 408.2,306.0 287.0,376.0 165.8,306.0 165.8,166.0 287.0,96.0" stroke-opacity="0.130" stroke-width="2.4"/>
+    <polygon points="589.8,78.0 589.8,132.0 543.0,159.0 496.2,132.0 496.2,78.0 543.0,51.0" stroke-opacity="0.053" stroke-width="2.9"/>
+  </g>
+  <!-- Darkened towards the bottom, because the card prints the event's name
+       and date directly beneath and the two should not compete. -->
+  <rect width="800" height="450" fill="url(#shade)"/>
+  <text x="40" y="412" fill="#ffffff" fill-opacity="0.92"
+        font-family="Archivo, 'Helvetica Neue', Arial, sans-serif"
+        font-size="30" font-weight="800" letter-spacing="6">GUWAHATI</text>
+</svg>

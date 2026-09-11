@@ -31,7 +31,8 @@
     "gen-secrets": "node scripts/gen-secrets.js",
     "build:netlify": "node scripts/build-netlify.js",
     "site": "node apps/site/serve.js",
-    "seed:events": "tsx scripts/seed-events.ts"
+    "seed:events": "tsx scripts/seed-events.ts",
+    "art:events": "tsx scripts/make-event-art.ts"
   },
   "engines": {
     "node": ">=22.5"

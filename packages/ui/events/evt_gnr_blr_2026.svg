@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 450" role="img" aria-label="Guns N&apos; Roses">
+  <title>Guns N&apos; Roses — NICE Grounds, Bengaluru</title>
+  <defs>
+    <linearGradient id="g" x1="0" y1="450" x2="800" y2="0" gradientUnits="userSpaceOnUse"
+                    gradientTransform="rotate(-18 400 225)">
+      <stop offset="0" stop-color="hsl(172 92% 58%)"/>
+      <stop offset="1" stop-color="hsl(202 76% 50%)"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.12" cy="0.10" r="0.85">
+      <stop offset="0" stop-color="hsl(172 100% 74%)" stop-opacity="0.55"/>
+      <stop offset="1" stop-color="hsl(172 100% 74%)" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="shade" x1="0" y1="0" x2="0" y2="450" gradientUnits="userSpaceOnUse">
+      <stop offset="0.35" stop-color="#020526" stop-opacity="0"/>
+      <stop offset="1" stop-color="#020526" stop-opacity="0.72"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="800" height="450" fill="url(#g)"/>
+  <rect width="800" height="450" fill="url(#glow)"/>
+  <g fill="none" stroke="#ffffff">
+    <polygon points="365.5,380.0 365.5,496.0 265.0,554.0 164.5,496.0 164.5,380.0 265.0,322.0" stroke-opacity="0.122" stroke-width="1.9"/>
+    <polygon points="375.0,345.5 375.0,420.5 310.0,458.0 245.0,420.5 245.0,345.5 310.0,308.0" stroke-opacity="0.095" stroke-width="3.0"/>
+    <polygon points="477.5,153.0 477.5,269.0 377.0,327.0 276.5,269.0 276.5,153.0 377.0,95.0" stroke-opacity="0.080" stroke-width="3.2"/>
+    <polygon points="177.2,-44.0 177.2,96.0 56.0,166.0 -65.2,96.0 -65.2,-44.0 56.0,-114.0" stroke-opacity="0.126" stroke-width="2.9"/>
+    <polygon points="337.9,134.0 337.9,232.0 253.0,281.0 168.1,232.0 168.1,134.0 253.0,85.0" stroke-opacity="0.075" stroke-width="2.9"/>
+    <polygon points="369.1,241.5 369.1,322.5 299.0,363.0 228.9,322.5 228.9,241.5 299.0,201.0" stroke-opacity="0.065" stroke-width="3.2"/>
+    <polygon points="153.3,142.0 153.3,192.0 110.0,217.0 66.7,192.0 66.7,142.0 110.0,117.0" stroke-opacity="0.103" stroke-width="2.5"/>
+    <polygon points="487.6,10.0 487.6,140.0 375.0,205.0 262.4,140.0 262.4,10.0 375.0,-55.0" stroke-opacity="0.061" stroke-width="3.3"/>
+    <polygon points="155.3,-18.5 155.3,98.5 54.0,157.0 -47.3,98.5 -47.3,-18.5 54.0,-77.0" stroke-opacity="0.112" stroke-width="3.4"/>
+  </g>
+  <!-- Darkened towards the bottom, because the card prints the event's name
+       and date directly beneath and the two should not compete. -->
+  <rect width="800" height="450" fill="url(#shade)"/>
+  <text x="40" y="412" fill="#ffffff" fill-opacity="0.92"
+        font-family="Archivo, 'Helvetica Neue', Arial, sans-serif"
+        font-size="30" font-weight="800" letter-spacing="6">BENGALURU</text>
+</svg>

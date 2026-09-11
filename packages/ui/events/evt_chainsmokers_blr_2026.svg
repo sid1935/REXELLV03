@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 450" role="img" aria-label="Sunburn Arena ft. The Chainsmokers">
+  <title>Sunburn Arena ft. The Chainsmokers — Embassy International Riding School, Bengaluru</title>
+  <defs>
+    <linearGradient id="g" x1="0" y1="450" x2="800" y2="0" gradientUnits="userSpaceOnUse"
+                    gradientTransform="rotate(-16 400 225)">
+      <stop offset="0" stop-color="hsl(241 92% 58%)"/>
+      <stop offset="1" stop-color="hsl(271 76% 50%)"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.27" cy="0.25" r="0.85">
+      <stop offset="0" stop-color="hsl(241 100% 74%)" stop-opacity="0.55"/>
+      <stop offset="1" stop-color="hsl(241 100% 74%)" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="shade" x1="0" y1="0" x2="0" y2="450" gradientUnits="userSpaceOnUse">
+      <stop offset="0.35" stop-color="#020526" stop-opacity="0"/>
+      <stop offset="1" stop-color="#020526" stop-opacity="0.72"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="800" height="450" fill="url(#g)"/>
+  <rect width="800" height="450" fill="url(#glow)"/>
+  <g fill="none" stroke="#ffffff">
+    <polygon points="799.4,293.0 799.4,417.0 692.0,479.0 584.6,417.0 584.6,293.0 692.0,231.0" stroke-opacity="0.060" stroke-width="2.8"/>
+    <polygon points="764.9,180.0 764.9,248.0 706.0,282.0 647.1,248.0 647.1,180.0 706.0,146.0" stroke-opacity="0.125" stroke-width="1.6"/>
+    <polygon points="203.5,347.0 203.5,403.0 155.0,431.0 106.5,403.0 106.5,347.0 155.0,319.0" stroke-opacity="0.097" stroke-width="1.6"/>
+    <polygon points="694.6,93.0 694.6,193.0 608.0,243.0 521.4,193.0 521.4,93.0 608.0,43.0" stroke-opacity="0.099" stroke-width="1.8"/>
+    <polygon points="104.6,109.5 104.6,164.5 57.0,192.0 9.4,164.5 9.4,109.5 57.0,82.0" stroke-opacity="0.076" stroke-width="2.3"/>
+    <polygon points="411.0,134.0 411.0,268.0 295.0,335.0 179.0,268.0 179.0,134.0 295.0,67.0" stroke-opacity="0.098" stroke-width="2.1"/>
+    <polygon points="299.2,-59.0 299.2,81.0 178.0,151.0 56.8,81.0 56.8,-59.0 178.0,-129.0" stroke-opacity="0.111" stroke-width="2.6"/>
+    <polygon points="715.3,253.5 715.3,378.5 607.0,441.0 498.7,378.5 498.7,253.5 607.0,191.0" stroke-opacity="0.089" stroke-width="2.4"/>
+    <polygon points="284.9,329.0 284.9,419.0 207.0,464.0 129.1,419.0 129.1,329.0 207.0,284.0" stroke-opacity="0.134" stroke-width="2.3"/>
+  </g>
+  <!-- Darkened towards the bottom, because the card prints the event's name
+       and date directly beneath and the two should not compete. -->
+  <rect width="800" height="450" fill="url(#shade)"/>
+  <text x="40" y="412" fill="#ffffff" fill-opacity="0.92"
+        font-family="Archivo, 'Helvetica Neue', Arial, sans-serif"
+        font-size="30" font-weight="800" letter-spacing="6">BENGALURU</text>
+</svg>

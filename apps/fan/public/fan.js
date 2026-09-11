@@ -470,8 +470,27 @@ async function renderDiscover() {
 
 const BAND_TAG = { available: '', limited: 'tag-warn', last_few: 'tag-warn', sold_out: 'tag-bad' };
 
+/**
+ * The poster for an event.
+ *
+ * One file per event id under /events. The generated artwork is a stand-in for
+ * a licensed photograph and the path is the interface between them: drop a
+ * real image in at the same name and this picks it up unchanged.
+ *
+ * onerror hides the image rather than leaving a broken frame, and the gradient
+ * strip underneath it survives as the fallback — a card with a hole in it is
+ * worse than a card that never promised a picture.
+ */
+function poster(e) {
+  return `<div class="event-poster">
+    <img src="/events/${encodeURIComponent(e.id)}.svg" alt="" loading="lazy"
+         onerror="this.style.display='none'">
+  </div>`;
+}
+
 function discoverCard(e) {
   return `<button class="event-card" data-event="${esc(e.id)}" ${e.availability === 'sold_out' ? 'disabled' : ''}>
+    ${poster(e)}
     <div class="event-strip"></div>
     <div class="body">
       <h3>${esc(e.name)}</h3>
@@ -496,7 +515,8 @@ async function openEvent(eventId) {
   state.events = [event, ...state.events.filter((x) => x.id !== eventId)];
 
   sheet(`
-    <div class="eyebrow">${esc(event.organizer ?? '')}</div>
+    ${poster(event)}
+    <div class="eyebrow" style="margin-top:14px">${esc(event.organizer ?? '')}</div>
     <h2 style="margin:8px 0 4px">${esc(event.name)}</h2>
     <div class="hint" style="margin-bottom:16px">${when(event.doorsOpenAt)}</div>
 

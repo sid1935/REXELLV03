@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 450" role="img" aria-label="Lollapalooza India 2027">
+  <title>Lollapalooza India 2027 — Mahalaxmi Racecourse, Mumbai</title>
+  <defs>
+    <linearGradient id="g" x1="0" y1="450" x2="800" y2="0" gradientUnits="userSpaceOnUse"
+                    gradientTransform="rotate(5 400 225)">
+      <stop offset="0" stop-color="hsl(282 92% 58%)"/>
+      <stop offset="1" stop-color="hsl(300 76% 50%)"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.78" cy="0.44" r="0.85">
+      <stop offset="0" stop-color="hsl(282 100% 74%)" stop-opacity="0.55"/>
+      <stop offset="1" stop-color="hsl(282 100% 74%)" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="shade" x1="0" y1="0" x2="0" y2="450" gradientUnits="userSpaceOnUse">
+      <stop offset="0.35" stop-color="#020526" stop-opacity="0"/>
+      <stop offset="1" stop-color="#020526" stop-opacity="0.72"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="800" height="450" fill="url(#g)"/>
+  <rect width="800" height="450" fill="url(#glow)"/>
+  <g fill="none" stroke="#ffffff">
+    <polygon points="805.7,139.5 805.7,268.5 694.0,333.0 582.3,268.5 582.3,139.5 694.0,75.0" stroke-opacity="0.079" stroke-width="2.2"/>
+    <polygon points="163.1,360.5 163.1,471.5 67.0,527.0 -29.1,471.5 -29.1,360.5 67.0,305.0" stroke-opacity="0.142" stroke-width="2.4"/>
+    <polygon points="433.2,351.0 433.2,409.0 383.0,438.0 332.8,409.0 332.8,351.0 383.0,322.0" stroke-opacity="0.148" stroke-width="3.0"/>
+    <polygon points="759.3,390.0 759.3,492.0 671.0,543.0 582.7,492.0 582.7,390.0 671.0,339.0" stroke-opacity="0.055" stroke-width="3.3"/>
+    <polygon points="319.0,379.0 319.0,513.0 203.0,580.0 87.0,513.0 87.0,379.0 203.0,312.0" stroke-opacity="0.120" stroke-width="1.9"/>
+    <polygon points="548.2,51.5 548.2,102.5 504.0,128.0 459.8,102.5 459.8,51.5 504.0,26.0" stroke-opacity="0.141" stroke-width="2.0"/>
+    <polygon points="727.1,330.5 727.1,419.5 650.0,464.0 572.9,419.5 572.9,330.5 650.0,286.0" stroke-opacity="0.142" stroke-width="1.9"/>
+    <polygon points="316.3,104.0 316.3,206.0 228.0,257.0 139.7,206.0 139.7,104.0 228.0,53.0" stroke-opacity="0.101" stroke-width="2.3"/>
+    <polygon points="225.2,344.0 225.2,484.0 104.0,554.0 -17.2,484.0 -17.2,344.0 104.0,274.0" stroke-opacity="0.106" stroke-width="1.9"/>
+  </g>
+  <!-- Darkened towards the bottom, because the card prints the event's name
+       and date directly beneath and the two should not compete. -->
+  <rect width="800" height="450" fill="url(#shade)"/>
+  <text x="40" y="412" fill="#ffffff" fill-opacity="0.92"
+        font-family="Archivo, 'Helvetica Neue', Arial, sans-serif"
+        font-size="30" font-weight="800" letter-spacing="6">MUMBAI</text>
+</svg>

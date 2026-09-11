@@ -87,6 +87,10 @@ cpSync(resolve(root, SURFACES[surface]), output, { recursive: true });
 for (const asset of SHARED_ASSETS) {
   cpSync(resolve(root, 'packages/ui', asset), resolve(output, asset));
 }
+// The event posters. A directory rather than a list, because it grows with
+// the catalogue and a build that silently omitted one would show a card with
+// a hole in it.
+cpSync(resolve(root, 'packages/ui/events'), resolve(output, 'events'), { recursive: true });
 
 /*
  * Where the sibling surfaces live.
@@ -153,6 +157,7 @@ if (CLIENT_ROUTED.has(surface)) {
       // 200 — the page appears to load, and is the wrong one.
       '/join              /join.html              200',
       '/assets/*          /assets/:splat          404',
+      '/events/*          /events/:splat          404',
       '/team/*            /team/:splat            404',
       // A mounted app has its own routing and is not part of this site's.
       // Without these, a missing file under one comes back as the marketing

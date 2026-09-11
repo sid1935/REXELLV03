@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 450" role="img" aria-label="Gorillaz — The Mountain India Tour">
+  <title>Gorillaz — The Mountain India Tour — Bengaluru LIVE, Bengaluru</title>
+  <defs>
+    <linearGradient id="g" x1="0" y1="450" x2="800" y2="0" gradientUnits="userSpaceOnUse"
+                    gradientTransform="rotate(8 400 225)">
+      <stop offset="0" stop-color="hsl(255 92% 58%)"/>
+      <stop offset="1" stop-color="hsl(285 76% 50%)"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.44" cy="0.48" r="0.85">
+      <stop offset="0" stop-color="hsl(255 100% 74%)" stop-opacity="0.55"/>
+      <stop offset="1" stop-color="hsl(255 100% 74%)" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="shade" x1="0" y1="0" x2="0" y2="450" gradientUnits="userSpaceOnUse">
+      <stop offset="0.35" stop-color="#020526" stop-opacity="0"/>
+      <stop offset="1" stop-color="#020526" stop-opacity="0.72"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="800" height="450" fill="url(#g)"/>
+  <rect width="800" height="450" fill="url(#glow)"/>
+  <g fill="none" stroke="#ffffff">
+    <polygon points="103.1,283.0 103.1,379.0 20.0,427.0 -63.1,379.0 -63.1,283.0 20.0,235.0" stroke-opacity="0.075" stroke-width="2.4"/>
+    <polygon points="142.9,240.0 142.9,338.0 58.0,387.0 -26.9,338.0 -26.9,240.0 58.0,191.0" stroke-opacity="0.130" stroke-width="1.7"/>
+    <polygon points="822.4,64.0 822.4,128.0 767.0,160.0 711.6,128.0 711.6,64.0 767.0,32.0" stroke-opacity="0.112" stroke-width="2.7"/>
+    <polygon points="493.6,374.0 493.6,444.0 433.0,479.0 372.4,444.0 372.4,374.0 433.0,339.0" stroke-opacity="0.126" stroke-width="2.6"/>
+    <polygon points="304.2,-38.0 304.2,102.0 183.0,172.0 61.8,102.0 61.8,-38.0 183.0,-108.0" stroke-opacity="0.084" stroke-width="1.8"/>
+    <polygon points="53.1,42.5 53.1,101.5 2.0,131.0 -49.1,101.5 -49.1,42.5 2.0,13.0" stroke-opacity="0.137" stroke-width="3.3"/>
+    <polygon points="523.7,186.5 523.7,263.5 457.0,302.0 390.3,263.5 390.3,186.5 457.0,148.0" stroke-opacity="0.083" stroke-width="2.2"/>
+    <polygon points="774.7,304.0 774.7,418.0 676.0,475.0 577.3,418.0 577.3,304.0 676.0,247.0" stroke-opacity="0.148" stroke-width="3.0"/>
+    <polygon points="787.0,-13.5 787.0,83.5 703.0,132.0 619.0,83.5 619.0,-13.5 703.0,-62.0" stroke-opacity="0.093" stroke-width="1.6"/>
+  </g>
+  <!-- Darkened towards the bottom, because the card prints the event's name
+       and date directly beneath and the two should not compete. -->
+  <rect width="800" height="450" fill="url(#shade)"/>
+  <text x="40" y="412" fill="#ffffff" fill-opacity="0.92"
+        font-family="Archivo, 'Helvetica Neue', Arial, sans-serif"
+        font-size="30" font-weight="800" letter-spacing="6">BENGALURU</text>
+</svg>
