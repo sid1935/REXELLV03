@@ -1,6 +1,7 @@
 import { randomBytes } from 'node:crypto';
 import { buildApp } from './app.js';
 import { FakeChain } from './chain/client.js';
+import { EvmChain } from './chain/evm-chain.js';
 import { httpVaultClient } from './vault-client.js';
 import { ConfigError, describe, loadConfig } from './config.js';
 
@@ -33,15 +34,28 @@ try {
 /**
  * The chain.
  *
- * A simulator. There is exactly one implementation of `ChainClient` that runs —
- * `FakeChain` — and no adapter that speaks to an L2 has been written yet. The
- * Solidity in `packages/contracts` is real and tested, but nothing here deploys
- * or calls it. The simulator keeps the mint outbox, settlement reconciliation
- * and the `/v1/chain/*` surface alive, all of which are dead without one; it
- * does not make anything on this deployment on-chain, and it is reported as
- * `simulated` everywhere rather than as `ok`.
+ * Two implementations now, and which one is running is a configuration fact
+ * rather than a build-time one. `EvmChain` talks to a node over JSON-RPC and
+ * mints real ERC-721s through the contracts in `packages/contracts`; `FakeChain`
+ * is a simulator that keeps the mint outbox, settlement reconciliation and the
+ * `/v1/chain/*` surface alive on a deployment with no node behind it.
+ *
+ * The simulator is still the default, and still reported as `simulated`
+ * everywhere rather than as `ok`. An operator reading a dashboard should never
+ * have to know which implementation answered — but they should always be able
+ * to find out whether anything reached a block.
  */
-const chain = new FakeChain();
+const chain =
+  config.chain.kind === 'evm'
+    ? new EvmChain({
+        rpcUrl: config.chain.rpcUrl,
+        chainId: config.chain.chainId,
+        privateKey: config.chain.privateKey as `0x${string}`,
+        accessRegistry: config.chain.accessRegistry as `0x${string}`,
+        eventFactory: config.chain.eventFactory as `0x${string}`,
+        identitySeed: config.chain.identitySeed,
+      })
+    : new FakeChain();
 
 const app = buildApp({
   location: config.dbPath,

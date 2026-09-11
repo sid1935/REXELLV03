@@ -21,3 +21,7 @@ vault.sqlite*
 # Calibration fixtures: other people's faces, downloaded for one measurement
 # and never committed. Rebuild them with "npm run face:calibrate".
 .calibration/
+
+# Deployment addresses ARE committed: they are how the API finds the contracts,
+# and a deploy nobody recorded is a deploy nobody can point anything at.
+!packages/contracts/deployments/

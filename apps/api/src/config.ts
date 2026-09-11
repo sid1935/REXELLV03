@@ -26,7 +26,17 @@ export interface ApiConfig {
   trustProxy: boolean;
   signup: { mode: 'open' } | { mode: 'invite'; token: string };
   onsale: { drainPerSecond: number; secret: Buffer; lottery: boolean };
-  chain: { kind: 'simulated' };
+  chain:
+    | { kind: 'simulated' }
+    | {
+        kind: 'evm';
+        rpcUrl: string;
+        chainId: number;
+        privateKey: string;
+        accessRegistry: string;
+        eventFactory: string;
+        identitySeed: string;
+      };
   chainDrainMs: number;
   rateLimit: {
     overall: { ratePerSecond: number; burst: number };
@@ -42,6 +52,41 @@ export class ConfigError extends Error {
 }
 
 const bool = (raw: string | undefined): boolean => raw === 'true' || raw === '1';
+
+/**
+ * A real chain, or an honest simulator. Never something in between.
+ *
+ * `CHAIN_KIND=evm` is a request, not a switch: if anything it needs is absent
+ * the configuration fails rather than quietly falling back, because a
+ * deployment that asked for a chain and silently got a simulator is a
+ * deployment whose ledger is fiction.
+ */
+function chainConfig(source: NodeJS.ProcessEnv, problems: string[]): ApiConfig['chain'] {
+  if (source['CHAIN_KIND'] !== 'evm') return { kind: 'simulated' };
+
+  const need = (name: string): string => {
+    const value = source[name];
+    if (!value) problems.push(`${name} is required when CHAIN_KIND=evm.`);
+    return value ?? '';
+  };
+
+  const rpcUrl = need('CHAIN_RPC_URL');
+  const privateKey = need('CHAIN_PRIVATE_KEY');
+  const accessRegistry = need('CHAIN_ACCESS_REGISTRY');
+  const eventFactory = need('CHAIN_EVENT_FACTORY');
+  // Derives every fan's address. Changing it re-points every identity at an
+  // address with no tickets, so it belongs with the vault keys: set once,
+  // backed up, never rotated casually.
+  const identitySeed = need('CHAIN_IDENTITY_SEED');
+  const chainId = number(source['CHAIN_ID'], 0, 'CHAIN_ID', problems);
+  if (chainId === 0) problems.push('CHAIN_ID is required when CHAIN_KIND=evm.');
+
+  if (privateKey && !/^0x[0-9a-fA-F]{64}$/.test(privateKey)) {
+    problems.push('CHAIN_PRIVATE_KEY must be 0x followed by 64 hex characters.');
+  }
+
+  return { kind: 'evm', rpcUrl, chainId, privateKey, accessRegistry, eventFactory, identitySeed };
+}
 
 function number(raw: string | undefined, fallback: number, name: string, problems: string[]): number {
   if (raw === undefined) return fallback;
@@ -147,10 +192,16 @@ export function loadConfig(source: NodeJS.ProcessEnv = process.env): ApiConfig {
       secret: onsaleSecret ?? Buffer.alloc(0),
       lottery: source['ONSALE_LOTTERY'] !== 'false',
     },
-    // One kind, for now. `FakeChain` is a simulator and is labelled as one
-    // everywhere it is reported, because an operator reading "chain: ok" on a
-    // dashboard should not have to know which implementation answered.
-    chain: { kind: 'simulated' },
+    /*
+     * Simulated unless every piece of a real chain is present.
+     *
+     * All or nothing on purpose. A half-configured chain — an RPC URL and no
+     * key, a key and no contract addresses — is the state that produces a
+     * dashboard reading "chain: ok" while nothing has ever been written to a
+     * block. Missing anything means simulated, and the operator is told which
+     * pieces were missing rather than left to guess.
+     */
+    chain: chainConfig(source, problems),
     chainDrainMs: number(source['CHAIN_DRAIN_MS'], 5_000, 'CHAIN_DRAIN_MS', problems),
     /*
      * Throttling is always wired, so the code path is exercised, but the

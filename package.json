@@ -40,7 +40,9 @@
     "art:favicon": "node scripts/make-favicon.mjs",
     "face:calibrate": "node scripts/face-calibrate.mjs",
     "seed:gate": "tsx scripts/seed-gate-demo.ts",
-    "issue:key": "tsx scripts/issue-key.ts"
+    "issue:key": "tsx scripts/issue-key.ts",
+    "chain:node": "npm --workspace @rexell/contracts exec -- hardhat node",
+    "chain:deploy": "npm --workspace @rexell/contracts exec -- hardhat run scripts/deploy.ts --network localhost"
   },
   "engines": {
     "node": ">=22.5"
