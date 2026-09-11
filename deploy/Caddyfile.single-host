@@ -37,6 +37,30 @@
 	@nocache path *.html /
 	header @nocache Cache-Control "no-cache"
 
+	# ── content security policy ──────────────────────────────────────────
+	#
+	# This belongs here because `publish-www.sh` deletes the `_headers` file
+	# the build writes — that file is an instruction to a static host which is
+	# not running here. The deletion was right and the replacement was
+	# missing, so for a while this deployment served no policy at all, on a
+	# site whose fan app asks for a camera. It is not a header to be sorry
+	# about later.
+	#
+	# Two policies, because the marketing site is an imported bundle whose
+	# waitlist form posts to its own Supabase project. The three product
+	# surfaces talk to nothing but this origin, and should not inherit a
+	# permission they have no use for.
+	#
+	# `worker-src 'self'` is what lets the gate scanner register its service
+	# worker. Without it the directive falls through to `default-src 'none'`,
+	# registration fails, and the lane that was supposed to survive a restart
+	# at a venue with no signal comes up blank.
+	@surfaces path /app/* /console/* /gate/*
+	header @surfaces Content-Security-Policy "default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob:; media-src 'self' blob:; worker-src 'self'; manifest-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'"
+
+	@marketing not path /app/* /console/* /gate/*
+	header @marketing Content-Security-Policy "default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob:; media-src 'self' blob:; worker-src 'self'; manifest-src 'self'; connect-src 'self' https://ofcchocnplwpfalqlvnv.supabase.co; frame-ancestors 'none'; base-uri 'none'; form-action 'none'"
+
 	# ── the API ──────────────────────────────────────────────────────────
 	handle /v1/* {
 		reverse_proxy 127.0.0.1:8080
@@ -60,7 +84,7 @@
 		@spa {
 			not file {path} {path}.html {path}/index.html
 			not path /app/* /console/* /gate/*
-			not path *.js *.css *.png *.jpg *.jpeg *.gif *.webp *.avif *.svg *.ico *.json *.webmanifest *.txt *.map *.woff *.woff2
+			not path *.js *.css *.png *.jpg *.jpeg *.gif *.webp *.avif *.svg *.ico *.json *.webmanifest *.txt *.map *.woff *.woff2 *.bin
 		}
 		rewrite @spa /index.html
 

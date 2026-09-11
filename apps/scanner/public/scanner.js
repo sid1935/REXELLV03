@@ -6,21 +6,24 @@
  * policy ladder — deliberately kept side by side with it so a change to one is
  * visibly a change to the other.
  *
- * Three things about this file are honest limitations rather than shortcuts to
- * be tidied later:
+ * The embedder is real, and is the same one the fan app enrolled with:
+ * `/face-capture.js`, shared from @rexell/ui precisely so that the probe taken
+ * here and the template taken there cannot drift into different vector spaces.
  *
- *  1. THE EMBEDDER IS A PLACEHOLDER. `embed()` hashes pixels into a vector. It
- *     recognises nothing. It exists so the plumbing — capture, decide, queue,
- *     sync, sign, upload — can be exercised end to end before a recognition SDK
- *     is licensed. Swapping it is one function, marked below.
- *  2. THERE IS NO LIVENESS HERE. A printed photo would pass. Presentation-attack
- *     detection comes with the commercial SDK.
- *  3. This must not be used at a real gate until 1 and 2 are replaced.
+ * One honest limitation remains, and it is not a shortcut to be tidied later:
+ * THERE IS NO LIVENESS HERE. A printed photograph held up to the lens will
+ * match the person in it and be admitted. Presentation-attack detection is a
+ * separate model, and until it is in place this must not be used at a real
+ * gate — not because the recogniser is weak, but because it is now strong
+ * enough to be worth fooling.
  */
+import { faceVector, readyFaceMatcher, FaceCaptureError } from '/face-capture.js';
 
 const $ = (id) => document.getElementById(id);
 const VECTOR_DIMS = 128;
-const THRESHOLDS = { match: 0.78, review: 0.62 };
+// Measured, not guessed. Kept in step with PROTOTYPE_THRESHOLDS in
+// packages/biometrics — the lane and the server must agree on what a match is.
+const THRESHOLDS = { match: 0.6, review: 0.5 };
 const SYNC_INTERVAL_MS = 5_000;
 
 const state = {
@@ -53,27 +56,6 @@ function similarity(a, b) {
   let dot = 0;
   for (let i = 0; i < VECTOR_DIMS; i += 1) dot += a[i] * b[i];
   return Math.max(-1, Math.min(1, dot));
-}
-
-/**
- * ⚠ REPLACE ME.
- *
- * A real implementation runs a licensed face-recognition model over the frame
- * and returns its embedding. This one folds downsampled luminance into a vector:
- * deterministic, fast, and completely incapable of recognising a person. It is
- * here so everything around it can be tested.
- */
-function embed(imageData) {
-  const acc = new Float32Array(VECTOR_DIMS);
-  const { data, width, height } = imageData;
-  for (let y = 0; y < height; y += 2) {
-    for (let x = 0; x < width; x += 2) {
-      const i = (y * width + x) * 4;
-      const lum = (data[i] * 0.299 + data[i + 1] * 0.587 + data[i + 2] * 0.114) / 255;
-      acc[(x * 31 + y * 17) % VECTOR_DIMS] += lum;
-    }
-  }
-  return normalise(acc);
 }
 
 // ─── the decision, mirroring packages/gate/src/engine.ts ─────────────────────
@@ -274,10 +256,23 @@ function showVerdict(d, elapsedMs) {
 
 // ─── scanning ────────────────────────────────────────────────────────────────
 
-const canvas = document.createElement('canvas');
-canvas.width = 160;
-canvas.height = 160;
-const ctx = canvas.getContext('2d', { willReadFrequently: true });
+/**
+ * Something went wrong reading the frame, shown on the verdict panel.
+ *
+ * Deliberately NOT a verdict: it does not touch the counters, it does not
+ * append an attestation, and it does not go in the log. A camera that saw
+ * nobody has not refused anybody, and a lane whose deny count climbs every
+ * time somebody stands too far back is a lane nobody will trust.
+ */
+function showNote(message) {
+  const v = $('verdict');
+  v.className = 'verdict show fallback';
+  $('vTitle').textContent = 'AGAIN';
+  $('vMessage').textContent = message;
+  $('vDetail').textContent = 'not recorded';
+  clearTimeout(verdictTimer);
+  verdictTimer = setTimeout(() => v.classList.remove('show'), 3500);
+}
 
 function record(d, score, elapsedMs) {
   state.stats[d.outcome] += 1;
@@ -304,18 +299,42 @@ function record(d, score, elapsedMs) {
   render();
 }
 
-function scanFrame() {
+async function scanFrame() {
   const video = $('cam');
-  const started = performance.now();
-  let probe;
-  if (video.videoWidth > 0) {
-    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-    probe = embed(ctx.getImageData(0, 0, canvas.width, canvas.height));
-  } else {
-    probe = normalise(Array.from({ length: VECTOR_DIMS }, () => Math.random() - 0.5));
+  const btn = $('scanBtn');
+  const label = btn.textContent;
+  btn.disabled = true;
+
+  // The clock starts after the frame is read, not before. Loading the model is
+  // a one-off on the first scan of a shift; including it in the first lane
+  // timing would make the whole lane look slow for the rest of the night.
+  try {
+    if (video.videoWidth > 0) {
+      await readyFaceMatcher((note) => {
+        btn.textContent = note;
+      });
+      btn.textContent = label;
+      const started = performance.now();
+      const { vector } = await faceVector(video);
+      const d = decide(vector, Date.now());
+      record(d, d.score ?? 0, performance.now() - started);
+    } else {
+      // No camera on this machine. A random vector is not a scan of anybody,
+      // and it exists only so the queue, signing and upload paths can be
+      // exercised — it will read as NO MATCH, which is the honest answer.
+      const started = performance.now();
+      const d = decide(normalise(Array.from({ length: VECTOR_DIMS }, () => Math.random() - 0.5)), Date.now());
+      record(d, d.score ?? 0, performance.now() - started);
+    }
+  } catch (e) {
+    // Nothing to compare against is not the same as a refusal, and must never
+    // be recorded as one. The lane gets an instruction; the attestation log
+    // gets nothing.
+    showNote(e instanceof FaceCaptureError ? e.message : `Scan failed: ${e.message}`);
+  } finally {
+    btn.textContent = label;
+    btn.disabled = false;
   }
-  const d = decide(probe, Date.now());
-  record(d, d.score ?? 0, performance.now() - started);
 }
 
 /** Present a known credential, so the flow can be walked without a model. */

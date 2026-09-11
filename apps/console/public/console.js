@@ -436,6 +436,18 @@ async function renderLive() {
                 ? '<div class="note note-warn" style="margin-top:16px"><strong>Fallback is above 1.5%.</strong> The resolution desk is becoming the queue. Check lighting and camera angle at the busiest lane first.</div>'
                 : ''
             }
+            <!--
+              The lane app, from the page that reports on it.
+
+              It existed before this link did, at its own address, which meant
+              the one screen an organizer needs on the night was the one screen
+              they had to be told about separately. The numbers above are what
+              this button produces; they belong next to each other.
+            -->
+            <div class="row" style="margin-top:18px;gap:10px;align-items:center">
+              <a class="btn btn-primary" href="/gate/?event=${encodeURIComponent(eventId)}" target="_blank" rel="noopener">Open the gate scanner</a>
+              <span class="hint">Opens the lane app on this device. It keeps deciding with the network off.</span>
+            </div>
           </div>
         </section>
       </div>`;

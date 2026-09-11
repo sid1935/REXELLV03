@@ -106,7 +106,16 @@ export interface RateLimitOptions {
  * carries 100 bits, so this is not what stops a brute force — it stops a
  * script pointing itself at the route and staying there.
  */
-const CREATE_ROUTES = new Set(['/v1/organizers', '/v1/events', '/v1/identities/recover']);
+const CREATE_ROUTES = new Set([
+  '/v1/organizers',
+  '/v1/events',
+  '/v1/identities/recover',
+  // Face sign-in. It takes no identity and asserts nothing, so it is the one
+  // door a script can stand in front of and keep pushing — and every push is a
+  // 1:N search across every enrolled template, which is also the most
+  // expensive thing an unauthenticated caller can ask this API to do.
+  '/v1/identities/identify',
+]);
 
 export function registerRateLimit(
   app: FastifyInstance,

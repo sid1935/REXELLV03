@@ -1,0 +1,24 @@
+<!doctype html><meta charset="utf-8"><title>fixture</title>
+<body style="background:#0b0d1a;color:#e7e9f5;font:13px ui-monospace,monospace;padding:20px">
+<pre id="o">working…</pre>
+<script type="module">
+import { faceVector } from '/face-capture.js';
+const o = document.getElementById('o');
+const load = (src) => new Promise((res, rej) => {
+  const i = new Image();
+  i.onload = () => { const c = document.createElement('canvas'); c.width = i.naturalWidth; c.height = i.naturalHeight;
+    c.getContext('2d').drawImage(i, 0, 0); res(c); };
+  i.onerror = rej; i.src = src;
+});
+const manifest = await (await fetch('/manifest.json')).json();
+const out = [], skipped = [];
+for (const it of manifest) {
+  try {
+    const { vector } = await faceVector(await load('/' + it.file));
+    out.push({ person: it.person, photo: it.file.replace('faces/','').replace('.jpg',''), title: it.title, vector: vector.map(x => Math.round(x*1e6)/1e6) });
+  } catch (e) { skipped.push(it.file + ' ' + (e.code || e.message)); }
+  o.textContent = `${out.length} done, ${skipped.length} skipped…`;
+}
+await fetch('/fixture', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(out) });
+o.textContent = `READY ${out.length} descriptors / ${new Set(out.map(x=>x.person)).size} people\nskipped: ${skipped.join(', ')}`;
+</script>

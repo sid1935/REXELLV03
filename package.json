@@ -37,7 +37,8 @@
     "art:photos": "tsx scripts/fetch-event-photos.ts",
     "art:crop": "node scripts/crop-event-photos.mjs",
     "remove:event": "tsx scripts/remove-event.ts",
-    "art:favicon": "node scripts/make-favicon.mjs"
+    "art:favicon": "node scripts/make-favicon.mjs",
+    "face:calibrate": "node scripts/face-calibrate.mjs"
   },
   "engines": {
     "node": ">=22.5"

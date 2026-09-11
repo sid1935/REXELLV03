@@ -142,10 +142,12 @@ means migrating live ticket data. Getting them right now costs a few days.
 - ✅ A resale revokes the seller's credential at every lane within 30 seconds online
 
 **Also outstanding from the Ships list**
-- The PWA's `embed()` is a placeholder that hashes pixels and recognises nobody,
-  and there is no liveness in the browser at all. Both are marked in the source.
-  The scanner is a working operator console and an untrustworthy matcher, and it
-  must not be pointed at a real queue until a licensed SDK replaces that function.
+- ✅ The browser matcher is real: one network in `packages/ui/face-capture.js`,
+  shared by the fan app and the scanner, with thresholds measured by
+  `npm run face:calibrate` and regression-tested against real descriptors.
+- There is still no liveness anywhere in the browser, and a printed photograph
+  passes. The scanner must not be pointed at a real queue until that exists —
+  and the stronger the recogniser gets, the more worthwhile it is to fool.
 
 ---
 
@@ -223,7 +225,7 @@ rather than more code:
 | Open | Why | Blocks |
 |---|---|---|
 | Gate p95 on a mid-range Android | No device in the loop. Our decision path is 8.3 ms p95 at 12,000 credentials with ~420 ms left for camera and embedding — an argument, not a measurement. | M4 exit criterion |
-| A real face matcher with certified liveness | The prototype embedder recognises nobody and a printed photo passes. The architecture around it is built and tested. | Any real event |
+| Certified liveness detection | The matcher is real and measured; nothing detects a printed photograph held to the lens. Everything around it is built and tested. | Any real event |
 | Two independent contract audits | Never optional for code that moves money. | Mainnet |
 
 And one that is closed differently than asked: the inline scorer stops 94.6% of

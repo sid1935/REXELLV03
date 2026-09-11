@@ -24,6 +24,9 @@ const TYPES = {
   '.jpeg': 'image/jpeg',
   '.json': 'application/json; charset=utf-8',
   '.ico': 'image/x-icon',
+  // The face-recognition weights. Without a type they serve as a download.
+  '.bin': 'application/octet-stream',
+  '.txt': 'text/plain; charset=utf-8',
 };
 
 /**
@@ -57,6 +60,11 @@ function securityHeaders({ apiOrigin, https, connect: extra = [] }) {
       // data: for canvas output, blob: for the camera frame the fan app draws.
       "img-src 'self' data: blob:",
       "media-src 'self' blob:",
+      // The gate scanner registers a service worker so a lane that restarts at a
+      // venue boots from cache. Without this it falls back to child-src and then
+      // to default-src 'none', and registration fails with "an unknown error
+      // occurred when fetching the script" — which is how it went unnoticed.
+      "worker-src 'self'",
       `connect-src ${connect}`,
       "frame-ancestors 'none'",
       "base-uri 'none'",
@@ -115,7 +123,11 @@ export function staticServer({ root, ui, port, apiOrigin, links = {}, connect = 
     const shared =
       ['/ui.css', '/logo.svg', '/logo-lockup.svg', '/logo-lockup.png', '/icon.png', '/icon-touch.png'].includes(safe) ||
       // The event posters, which every surface addresses the same way.
-      safe.startsWith('/events/');
+      safe.startsWith('/events/') ||
+      // The face matcher: one copy of the library, the weights and the module,
+      // because the fan app and the gate must embed in the same vector space.
+      safe === '/face-capture.js' ||
+      safe.startsWith('/face/');
     const base = shared
       ? ui
       : mounted

@@ -375,3 +375,67 @@ describe('the API never sees a template', () => {
     }
   });
 });
+
+/**
+ * Signing in by being recognised.
+ *
+ * The route takes no identity at all — it searches every enrolled template and
+ * returns one account or none. These tests are mostly about what it must NOT
+ * say: a near miss and a total stranger have to be indistinguishable from the
+ * outside, because a caller who can tell them apart can walk uphill towards
+ * somebody else's face without ever seeing it.
+ */
+describe('face sign-in', () => {
+  it('finds the right account from the face alone', async () => {
+    const alice = await newIdentity();
+    const bob = await newIdentity();
+    await consentTo(alice);
+    await consentTo(bob);
+    await enrolThroughApi(alice, face(41));
+    await enrolThroughApi(bob, face(42));
+
+    // A second capture of Alice: a different vector, never an equal one.
+    const probe = [...capture(face(41), 0.2)];
+    const res = await post('/v1/identities/identify', { vector: probe });
+
+    expect(res.statusCode).toBe(200);
+    expect(res.json().identityId).toBe(alice);
+    expect(res.json().enrolled).toBe(true);
+    expect(res.json().score).toBeGreaterThan(0.5);
+  });
+
+  it('refuses a stranger, and says nothing about who they were close to', async () => {
+    const alice = await newIdentity();
+    await consentTo(alice);
+    await enrolThroughApi(alice, face(41));
+
+    const res = await post('/v1/identities/identify', { vector: [...face(999)] });
+
+    expect(res.statusCode).toBe(404);
+    expect(res.json().error.code).toBe('NO_MATCH');
+    // No identity, no score, no "close to" — the body must not leak the
+    // gallery's shape to somebody probing it.
+    expect(JSON.stringify(res.json())).not.toContain('idn_');
+    expect(res.json()).not.toHaveProperty('score');
+  });
+
+  it('gives an uncertain match the same answer as no match at all', async () => {
+    const alice = await newIdentity();
+    await consentTo(alice);
+    await enrolThroughApi(alice, face(41));
+
+    // Degraded enough to land below the match threshold. At a gate this would
+    // be the review band and a human; here there is no human, so it is a
+    // refusal — and one that reads exactly like a stranger's.
+    const res = await post('/v1/identities/identify', { vector: [...capture(face(41), 2.5)] });
+
+    expect(res.statusCode).toBe(404);
+    expect(res.json().error.code).toBe('NO_MATCH');
+    expect(JSON.stringify(res.json())).not.toContain(alice);
+  });
+
+  it('rejects a request with no vector', async () => {
+    const res = await post('/v1/identities/identify', {});
+    expect(res.statusCode).toBe(400);
+  });
+});

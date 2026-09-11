@@ -5,11 +5,14 @@
  * ticketing app puts a QR code on the ticket screen; this one puts the reason
  * there isn't one.
  *
- * ⚠ `embed()` is a placeholder that folds pixels into a vector and recognises
- * nobody, and there is no liveness detection here — a printed photo would pass.
- * Both are marked below. The flow around them is real; the matcher is not, and
- * a licensed SDK replaces exactly one function.
+ * The matcher is real: `/face-capture.js` runs a face-recognition network over
+ * the camera frame and returns the network's own 128-dimension descriptor, so
+ * the template enrolled here is the one the gate compares against. What is
+ * still missing is liveness — nothing here can tell a face from a photograph of
+ * a face, so a printed picture would enrol. That is the remaining blocker on a
+ * real door, and the sheet says so rather than hiding it.
  */
+import { faceVector, readyFaceMatcher, vectorPreview, FaceCaptureError } from '/face-capture.js';
 
 const $ = (id) => document.getElementById(id);
 /**
@@ -40,6 +43,10 @@ const state = {
   events: [],
   // Shown once, on the dashboard, immediately after enrolling.
   newRecoveryCode: '',
+  // The vector from this session's enrolment, shown once beside the recovery
+  // code and never persisted — it is the template, and it belongs in the vault
+  // rather than in localStorage.
+  enrolmentPreview: null,
   search: '',
 };
 
@@ -69,31 +76,6 @@ async function call(path, body, method) {
   return parsed;
 }
 
-// ─── the placeholder matcher ─────────────────────────────────────────────────
-
-const canvas = Object.assign(document.createElement('canvas'), { width: 160, height: 160 });
-const ctx = canvas.getContext('2d', { willReadFrequently: true });
-
-/**
- * ⚠ REPLACE ME. A real implementation runs a licensed face-recognition model
- * over the frame and returns its embedding. This folds downsampled luminance
- * into a vector: deterministic, fast, and incapable of recognising a person.
- */
-function embed(image) {
-  const acc = new Float32Array(DIMS);
-  const { data, width, height } = image;
-  for (let y = 0; y < height; y += 2) {
-    for (let x = 0; x < width; x += 2) {
-      const i = (y * width + x) * 4;
-      acc[(x * 31 + y * 17) % DIMS] += (data[i] * 0.299 + data[i + 1] * 0.587 + data[i + 2] * 0.114) / 255;
-    }
-  }
-  let sum = 0;
-  for (const v of acc) sum += v * v;
-  const mag = Math.sqrt(sum) || 1;
-  return Array.from(acc, (v) => v / mag);
-}
-
 // ─── navigation ──────────────────────────────────────────────────────────────
 
 const TITLES = { tickets: 'Your tickets', discover: 'Discover', sell: 'Resell', you: 'You' };
@@ -119,6 +101,12 @@ function sheet(html) {
   return el;
 }
 function closeSheet() {
+  // Every sheet that opens the camera is dismissible by tapping outside it, and
+  // clearing the host removes the <video> without stopping the track — the
+  // stream keeps running and the recording light stays on over a sheet that is
+  // no longer there. Stopping it here covers every exit, including the ones
+  // nobody remembered to write a handler for.
+  stopCamera();
   $('sheetHost').innerHTML = '';
 }
 
@@ -195,9 +183,10 @@ function enrolSheet() {
       <div class="step" id="s1"></div><div class="step" id="s2"></div><div class="step" id="s3"></div>
     </div>
 
+    <p class="hint" id="captureHint" hidden style="margin-top:12px;color:var(--warn,#f7b955)"></p>
     <button class="btn btn-primary btn-lg btn-block" id="captureBtn" disabled>Capture</button>
     <button class="btn btn-quiet btn-block" style="margin-top:8px" id="enrolCancel">Cancel</button>
-    <p class="hint" style="margin-top:14px"><strong>Prototype:</strong> this build ships a placeholder matcher with no liveness detection. It is not fit for a real gate.</p>
+    <p class="hint" style="margin-top:14px"><strong>Prototype:</strong> the matcher is real, liveness detection is not here yet — a printed photograph would pass. Not fit for a real gate until it is.</p>
   `);
 
   $('enrolCancel').addEventListener('click', () => {
@@ -210,6 +199,11 @@ function enrolSheet() {
     $('captureBtn').disabled = false;
     if (ok) $('vf').classList.add('is-live');
   });
+
+  // The network and its weights are about eight megabytes. Fetching them while
+  // somebody is reading the consent copy costs nothing; fetching them after
+  // they press Capture is a wait with a camera pointed at their face.
+  readyFaceMatcher().catch(() => {});
 
   $('captureBtn').addEventListener('click', async () => {
     const btn = $('captureBtn');
@@ -225,12 +219,24 @@ function enrolSheet() {
       $('s2').classList.add('done');
       await new Promise((r) => setTimeout(r, 700));
 
-      const vector = captureVector();
+      const capture = await captureVector((note) => {
+        $('challengeTag').textContent = note;
+      });
       const enrolment = await call(`/v1/identities/${id}/enrolment`, {
         scope: 'global',
-        vector,
+        vector: capture.vector,
         liveness: { challengeId: challenge.id, nonce: challenge.nonce, passiveScore: 0.96, actionCompleted: true },
       });
+
+      // What was actually stored, in the person's own hands. "A mathematical
+      // template, not a photograph" is a claim on every page of this app; this
+      // is the one place it can be checked rather than believed.
+      state.enrolmentPreview = {
+        preview: vectorPreview(capture.vector),
+        dims: capture.vector.length,
+        simulated: capture.simulated,
+        quality: capture.quality,
+      };
 
       $('s3').classList.add('done');
       state.enrolled = true;
@@ -252,7 +258,17 @@ function enrolSheet() {
       go('tickets');
       toast('Your ReXell ID is ready.');
     } catch (e) {
-      toast(e.message, true);
+      // A capture failure is something the person can fix — move closer, get
+      // the light off the back of your head — so it is shown as an instruction
+      // on the sheet rather than as a toast that slides away while they are
+      // still reading it.
+      if (e instanceof FaceCaptureError) {
+        $('challengeTag').textContent = 'try again';
+        $('captureHint').textContent = e.message;
+        $('captureHint').hidden = false;
+      } else {
+        toast(e.message, true);
+      }
       btn.disabled = false;
     }
   });
@@ -273,19 +289,27 @@ function stopCamera() {
   stream?.getTracks().forEach((t) => t.stop());
   stream = undefined;
 }
-function captureVector() {
+/**
+ * One capture, from the live camera where there is one.
+ *
+ * The no-camera branch is not a matcher and does not pretend to be: it derives
+ * a stable vector from the identity id so the rest of the journey — buy,
+ * resell, attend — can be walked on a machine with no webcam. It is marked in
+ * the return value, the sheet says which one ran, and the gate will match it
+ * only against itself. Without the marker this is exactly the sort of fallback
+ * that gets mistaken for a working recogniser.
+ */
+async function captureVector(onProgress) {
   const video = $('cam');
   if (video && video.videoWidth > 0) {
-    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-    return embed(ctx.getImageData(0, 0, canvas.width, canvas.height));
+    const { vector, quality } = await faceVector(video, onProgress);
+    return { vector, quality, simulated: false };
   }
-  // No camera: a stable pseudo-face derived from the identity, so the demo
-  // still runs on a laptop with the lid shut.
   let seed = 0;
   for (const ch of state.identityId) seed = (seed * 31 + ch.charCodeAt(0)) | 0;
   const v = Array.from({ length: DIMS }, (_, i) => Math.sin(i * 0.7 + seed) + Math.cos(i * 0.31 - seed));
   const mag = Math.hypot(...v);
-  return v.map((x) => x / mag);
+  return { vector: v.map((x) => x / mag), quality: { simulated: true }, simulated: true };
 }
 
 // ─── data ────────────────────────────────────────────────────────────────────
@@ -359,8 +383,32 @@ function recoveryBanner() {
           <span class="spacer"></span>
           <button class="btn btn-primary" id="recoveryDone">I have written it down</button>
         </div>
+        ${templateReceipt()}
       </div>
     </section>`;
+}
+
+/**
+ * What was actually stored, shown once, next to the recovery code.
+ *
+ * Every screen in this app says we keep a mathematical template and not a
+ * photograph. This is the one place that sentence can be checked instead of
+ * believed: it is the real vector, from the real capture, truncated only
+ * because 128 numbers at full precision is unreadable — and because the whole
+ * thing on a clipboard would be the template itself.
+ */
+function templateReceipt() {
+  const t = state.enrolmentPreview;
+  if (!t) return '';
+  return `
+    <div style="margin-top:16px;border-top:1px solid var(--rule);padding-top:14px">
+      <p class="hint" style="margin-bottom:8px">
+        ${t.simulated
+          ? 'No camera was available, so this is a stand-in vector derived from your ID — it will not match a face at the gate.'
+          : `This is what your face became: ${t.dims} numbers, and no image. Nothing here can be turned back into a picture of you.`}
+      </p>
+      <div class="num" style="font-size:11px;line-height:1.6;word-break:break-all;background:var(--sunk);border:1px solid var(--rule);border-radius:var(--r);padding:10px">${esc(t.preview)}</div>
+    </div>`;
 }
 
 function wireRecoveryBanner() {
@@ -981,20 +1029,79 @@ function loginSheet() {
            <div class="field"><span>Your ReXell ID</span><div class="keyout num" style="font-size:12px;word-break:break-all;background:var(--sunk);border:1px solid var(--rule);border-radius:var(--r);padding:11px">${esc(known)}</div></div>
            <button class="btn btn-primary btn-block" id="loginContinue" style="margin-top:16px">Continue</button>`
         : `<p class="lede" style="margin-bottom:14px">
-             Enter the recovery code you were given when you set up your ReXell
-             ID. There is no password — we never asked you for one.
+             Look at the camera. There is no password — we never asked you for
+             one — and nothing to type unless the camera cannot see you.
            </p>
-           <div class="field">
-             <span>Recovery code</span>
-             <input id="loginId" class="input num" placeholder="RXL-XXXXX-XXXXX-XXXXX-XXXXX"
-                    autocomplete="one-time-code" spellcheck="false" autocapitalize="characters"
-                    style="letter-spacing:0.04em">
+           <div class="viewfinder" id="vf" style="margin-bottom:12px">
+             <video id="cam" autoplay playsinline muted></video>
+             <div class="reticle"></div>
+             <span class="tag" id="loginTag">starting the camera</span>
            </div>
-           <button class="btn btn-primary btn-block" id="loginRestore" style="margin-top:14px">Sign in</button>
-           <p class="hint" style="text-align:center;margin-top:10px">Each code works once. Using it gives you a fresh one.</p>
-           <button class="btn btn-quiet btn-block" id="loginNew" style="margin-top:12px">I do not have a code — start again</button>`
+           <button class="btn btn-primary btn-lg btn-block" id="loginFace" disabled>Sign in with your face</button>
+           <p class="hint" id="loginHint" hidden style="margin-top:10px;color:var(--warn,#f7b955)"></p>
+
+           <details style="margin-top:18px">
+             <summary class="hint" style="cursor:pointer">Camera not working? Use your recovery code</summary>
+             <div class="field" style="margin-top:12px">
+               <span>Recovery code</span>
+               <input id="loginId" class="input num" placeholder="RXL-XXXXX-XXXXX-XXXXX-XXXXX"
+                      autocomplete="one-time-code" spellcheck="false" autocapitalize="characters"
+                      style="letter-spacing:0.04em">
+             </div>
+             <button class="btn btn-block" id="loginRestore" style="margin-top:12px">Sign in with a code</button>
+             <p class="hint" style="text-align:center;margin-top:10px">Each code works once. Using it gives you a fresh one.</p>
+           </details>
+           <button class="btn btn-quiet btn-block" id="loginNew" style="margin-top:12px">I do not have either — start again</button>`
     }
   `);
+
+  if (!known) {
+    startCamera().then((ok) => {
+      $('loginTag').textContent = ok ? 'look straight ahead' : 'no camera — use your recovery code';
+      $('loginFace').disabled = !ok;
+      if (ok) $('vf').classList.add('is-live');
+    });
+    readyFaceMatcher().catch(() => {});
+  }
+
+  /*
+   * Sign in by being recognised.
+   *
+   * No identity is sent — the server searches every enrolled template and
+   * either comes back with one account or with nothing. That is why this is
+   * not just a convenience: there is no field an attacker can put somebody
+   * else's identifier into, because there is no field.
+   */
+  $('loginFace')?.addEventListener('click', async (e) => {
+    const btn = e.currentTarget;
+    const label = btn.textContent;
+    btn.disabled = true;
+    $('loginHint').hidden = true;
+    try {
+      const { vector } = await faceVector($('cam'), (note) => {
+        btn.textContent = note;
+      });
+      btn.textContent = 'Checking…';
+      const result = await call('/v1/identities/identify', { vector, scope: 'global' });
+
+      state.identityId = result.identityId;
+      state.enrolled = Boolean(result.enrolled);
+      localStorage.setItem('rexell.fan.id', result.identityId);
+      localStorage.setItem('rexell.fan.enrolled', String(state.enrolled));
+      stopCamera();
+      closeSheet();
+      enterApp('tickets');
+      toast(`Signed in. Match ${result.score}.`);
+    } catch (err) {
+      $('loginHint').textContent =
+        err instanceof FaceCaptureError
+          ? err.message
+          : `${err.message} You can still sign in with a recovery code below.`;
+      $('loginHint').hidden = false;
+      btn.textContent = label;
+      btn.disabled = false;
+    }
+  });
 
   $('loginContinue')?.addEventListener('click', () => {
     closeSheet();

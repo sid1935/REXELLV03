@@ -10,6 +10,7 @@ import {
   signAttestation,
   verifyAttestation,
 } from '../src/index.js';
+import { PROTOTYPE_THRESHOLDS, similarity } from '@rexell/biometrics';
 import { DOORS, EVENT, EXPIRY, MASTER, SCANNER, capture, engine, entry, face, manifest, roundTrip } from './helpers.js';
 
 describe('the sealed manifest', () => {
@@ -190,8 +191,33 @@ describe('the exit criterion: a scanner with the network off decides correctly',
 
   it('routes an uncertain match to the resolution desk rather than guessing', () => {
     const g = engine(roundTrip(manifest(20)));
-    // jitter 0.75 → cosine ≈ 0.64, inside the review band.
-    const d = g.scan(capture(face(3), 0.75, 5), DOORS).decision;
+    /*
+     * Degrade a real ticket-holder's capture until it lands in the review band,
+     * rather than pinning a jitter that happens to hit today's thresholds.
+     *
+     * This used to be a magic 0.75, chosen when the band was 0.62–0.78. Once
+     * the thresholds were re-measured against a real matcher the same capture
+     * scored an outright match — and the test still passed, because it only
+     * ever asserted the outcome and never checked it had produced an uncertain
+     * scan in the first place. It was green and testing nothing.
+     */
+    const uncertain = (() => {
+      // Scored against the template directly, because `scan` has side effects —
+      // it marks the ticket admitted and queues an attestation, so searching
+      // with it would leave the engine full of scans nobody made.
+      const template = face(3);
+      for (let jitter = 0.2; jitter < 6; jitter += 0.05) {
+        const probe = capture(template, jitter, 5);
+        const score = similarity(probe, template);
+        if (score >= PROTOTYPE_THRESHOLDS.review && score < PROTOTYPE_THRESHOLDS.match) return probe;
+      }
+      throw new Error('no jitter produced a score inside the review band');
+    })();
+
+    const scan = g.scan(uncertain, DOORS);
+    const d = scan.decision;
+    expect(scan.attestation.matchScore).toBeGreaterThanOrEqual(PROTOTYPE_THRESHOLDS.review);
+    expect(scan.attestation.matchScore).toBeLessThan(PROTOTYPE_THRESHOLDS.match);
     expect(d.outcome).toBe('fallback');
     expect(d.code).toBe('LOW_CONFIDENCE');
   });

@@ -256,11 +256,23 @@ than weakened to cover it.
 
 ### ⚠ The scanner is not fit for a real gate yet
 
-`apps/scanner/public/scanner.js` has a placeholder `embed()` that hashes pixels
-and recognises nobody, and no liveness detection at all — a printed photo would
-pass. Both are marked in the source. The plumbing around them is real and tested;
-the matcher is not, and must be replaced by a licensed SDK with certified
-presentation-attack detection before anyone stands at a turnstile.
+The matcher is now real. `packages/ui/face-capture.js` runs a face-recognition
+network in the browser and is shared by the fan app and the scanner, so the
+template enrolled at signup and the probe taken at the lane land in one vector
+space. It is measured rather than asserted: `npm run face:calibrate` produced
+the thresholds, and `real-faces.test.ts` and `real-gate.test.ts` run the gate
+against real descriptors on every commit.
+
+**There is still no liveness detection, and that is what keeps this away from a
+turnstile.** Nothing in the browser can tell a face from a photograph of a face,
+so a printed picture will enrol and will be admitted. Presentation-attack
+detection is a separate model. The recogniser being good enough to be worth
+fooling is exactly why this matters more than it did when it recognised nobody.
+
+The thresholds are also measured on 17 photographs of five people, which cannot
+say anything about a 12,000-credential gallery — the highest impostor score over
+twelve thousand candidates is not the highest over four. See
+`packages/biometrics/src/thresholds.ts`.
 
 ## Onsale defence
 

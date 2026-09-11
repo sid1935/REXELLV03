@@ -39,7 +39,7 @@ const SURFACES = {
 const CLIENT_ROUTED = new Set(['site']);
 
 /** Shared files every surface gets, copied in from @rexell/ui. */
-const SHARED_ASSETS = ['ui.css', 'logo.svg', 'logo-lockup.svg', 'logo-lockup.png', 'icon.png', 'icon-touch.png'];
+const SHARED_ASSETS = ['ui.css', 'logo.svg', 'logo-lockup.svg', 'logo-lockup.png', 'icon.png', 'icon-touch.png', 'face-capture.js'];
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const output = resolve(root, 'dist');
@@ -91,6 +91,10 @@ for (const asset of SHARED_ASSETS) {
 // the catalogue and a build that silently omitted one would show a card with
 // a hole in it.
 cpSync(resolve(root, 'packages/ui/events'), resolve(output, 'events'), { recursive: true });
+// The face-recognition library and its weights, about 8 MB of them. A directory
+// for the same reason as the posters: the weights are named by the model and a
+// build that omitted one would fail at the camera rather than here.
+cpSync(resolve(root, 'packages/ui/face'), resolve(output, 'face'), { recursive: true });
 
 /*
  * Where the sibling surfaces live.
@@ -158,6 +162,7 @@ if (CLIENT_ROUTED.has(surface)) {
       '/join              /join.html              200',
       '/assets/*          /assets/:splat          404',
       '/events/*          /events/:splat          404',
+      '/face/*           /face/:splat            404',
       '/journey/*         /journey/:splat         404',
       '/team/*            /team/:splat            404',
       // A mounted app has its own routing and is not part of this site's.
@@ -193,6 +198,11 @@ const csp = [
   // data: for canvas output, blob: for the camera frame the fan app draws.
   "img-src 'self' data: blob:",
   "media-src 'self' blob:",
+  // The gate scanner registers a service worker so a lane that restarts at a
+  // venue boots from cache. Without this it falls back to child-src and then
+  // to default-src 'none', and registration fails with "an unknown error
+  // occurred when fetching the script" — which is how it went unnoticed.
+  "worker-src 'self'",
   // The marketing site is an imported bundle whose waitlist form posts to its
   // own Supabase project. Everything else talks only to our API.
   `connect-src 'self' ${origin}${surface === 'site' ? ' https://ofcchocnplwpfalqlvnv.supabase.co' : ''}`,

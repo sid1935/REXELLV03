@@ -17,3 +17,7 @@ packages/contracts/types/
 .demo.sqlite*
 .tmp-*
 vault.sqlite*
+
+# Calibration fixtures: other people's faces, downloaded for one measurement
+# and never committed. Rebuild them with "npm run face:calibrate".
+.calibration/

@@ -183,6 +183,66 @@ export function identityRoutes(app: FastifyInstance, { repo, now, vault }: Deps)
    * code has already been used". Both are the same sentence, because telling
    * somebody their guess was once a real code is telling them something.
    */
+  /**
+   * Sign in with a face. One to many, across every enrolled template.
+   *
+   * This is the route the whole product is named after: there is nothing to
+   * present, nothing to type and nothing to lose. It is also the most dangerous
+   * route in the API, and three things hold it down.
+   *
+   * It returns an identity or it returns nothing — never a list, never a score
+   * for a near miss, never "close to idn_…". A caller who could submit probes
+   * and read back distances could hill-climb towards somebody else's template
+   * without ever seeing it, and would eventually arrive.
+   *
+   * It only ever returns a MATCH-band result. The review band exists so that an
+   * uncertain person at a gate meets a human; there is no human here, so an
+   * uncertain sign-in is a refusal.
+   *
+   * And it is in the stricter rate-limit bucket, because unlike enrolment it
+   * takes no identity and asserts nothing — it is the one door a script can
+   * stand in front of and keep pushing.
+   *
+   * ⚠ Not a second factor. Until liveness detection is in place a photograph of
+   * the owner's face signs in as the owner, which is exactly why the API keys
+   * and recovery codes still exist and why nothing here can move money.
+   */
+  app.post<{ Body: { vector?: number[]; scope?: string } }>('/v1/identities/identify', async (req, reply) => {
+    if (!Array.isArray(req.body?.vector)) throw badRequest('`vector` is required.');
+
+    let result;
+    try {
+      result = await requireVault().identify({ scope: req.body.scope ?? 'global', probe: req.body.vector });
+    } catch (e) {
+      throw asHttpError(e);
+    }
+
+    if (!result.matched || !result.identityId) {
+      // Deliberately the same answer whether nobody matched or somebody nearly
+      // did. "Almost" is the single most useful thing an attacker can be told.
+      throw new HttpError(
+        404,
+        'NO_MATCH',
+        'No account matched that face. Try again in better light, or use a recovery code.',
+      );
+    }
+
+    const row = repo.getIdentity(toIdentityId(result.identityId));
+    if (!row) {
+      // The vault holds a template for an identity this database has lost.
+      // Signing somebody in against it would be inventing an account.
+      throw new HttpError(404, 'NO_MATCH', 'No account matched that face.');
+    }
+
+    return reply.code(200).send({
+      identityId: result.identityId,
+      enrolled: Boolean(row.enrolled),
+      // The score is the caller's own, about themselves, and it is what makes
+      // the sign-in legible rather than magic.
+      score: Number(result.score.toFixed(4)),
+    });
+  });
+
   app.post<{ Body: { code?: string } }>('/v1/identities/recover', async (req, reply) => {
     const raw = req.body?.code;
     if (typeof raw !== 'string' || raw.trim() === '') throw badRequest('`code` is required.');

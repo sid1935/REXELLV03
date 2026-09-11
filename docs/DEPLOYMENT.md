@@ -402,9 +402,15 @@ tests, but no adapter connects the API to a deployed contract, and nothing
 deploys one. Settlement reconciliation, the mint outbox and `/v1/chain/*` all
 work against the simulator. It is reported as `simulated`, never as `ok`.
 
-**The face matcher recognises nobody.** Both the fan app and the scanner ship a
-placeholder that folds pixels into a vector, and there is no liveness detection
-— a printed photo passes. A licensed SDK replaces one function on each side.
+**There is no liveness detection.** The matcher itself is real — one network,
+shared by the fan app and the gate, with thresholds measured against its own
+output — but nothing can tell a face from a photograph of a face, so a printed
+picture enrols and is admitted. That is the blocker on a real door.
+
+**The thresholds are measured on five people.** Enough to show the two
+distributions separate; not enough to say anything about false accepts across an
+event-sized gallery. Re-measure on the real population and cameras before an
+event.
 
 **Gate latency is unmeasured on a phone.** The decision path is 8.3 ms against a
 12,000-credential gallery, which leaves about 420 ms for camera and embedding

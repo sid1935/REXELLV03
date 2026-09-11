@@ -1,0 +1,158 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>ReXell matcher calibration</title>
+<style>
+  body { background:#0b0d1a; color:#e7e9f5; font:14px/1.5 ui-monospace, Menlo, Consolas, monospace; margin:0; padding:24px; }
+  h1 { font-size:18px; margin:0 0 4px; }
+  p.note { color:#8b90ad; margin:0 0 20px; }
+  pre { background:#11142a; border:1px solid #222745; border-radius:10px; padding:16px; overflow-x:auto; }
+</style>
+<h1>Matcher calibration</h1>
+<p class="note">Scores every pair through the same module the fan app and the gate use.</p>
+<pre id="out">starting…</pre>
+<script type="module">
+import { faceVector, similarity, FaceCaptureError } from '/face-capture.js';
+
+const out = document.getElementById('out');
+const lines = [];
+const say = (s = '') => { lines.push(s); out.textContent = lines.join('\n'); };
+const f = (n) => n.toFixed(4);
+
+// An <img> that has loaded, drawn to a canvas. Not `img.decode()`: a browser
+// tab that is hidden or backgrounded can defer decoding indefinitely, and the
+// measurement then hangs with no error and no output.
+const load = (src) => new Promise((res, rej) => {
+  const i = new Image();
+  i.onload = () => {
+    const c = document.createElement('canvas');
+    c.width = i.naturalWidth; c.height = i.naturalHeight;
+    c.getContext('2d').drawImage(i, 0, 0);
+    res(c);
+  };
+  i.onerror = rej;
+  i.src = src;
+});
+
+const manifest = await (await fetch('/manifest.json')).json();
+
+const faces = [];
+for (const item of manifest) {
+  try {
+    const { vector, raw, quality } = await faceVector(await load('/' + item.file));
+    faces.push({ ...item, vector, raw });
+    say(`  ok    ${item.file.padEnd(22)} face ${String(quality.faceWidth).padStart(3)}px  detector ${quality.detectionScore}`);
+  } catch (e) {
+    // A photograph the detector cannot use is a fixture problem, not a matcher
+    // result, and must be dropped rather than scored as a failure.
+    say(`  SKIP  ${item.file.padEnd(22)} ${e instanceof FaceCaptureError ? e.code : e.message}`);
+  }
+}
+
+say();
+say(`  ${faces.length} usable of ${manifest.length}`);
+say();
+
+/** Split every pair into same-person and different-people, on a chosen field. */
+function distributions(field, sim) {
+  const genuine = [], impostor = [];
+  for (let i = 0; i < faces.length; i += 1) {
+    for (let j = i + 1; j < faces.length; j += 1) {
+      const s = sim(faces[i][field], faces[j][field]);
+      (faces[i].person === faces[j].person ? genuine : impostor).push({ s, a: faces[i].file, b: faces[j].file });
+    }
+  }
+  genuine.sort((x, y) => x.s - y.s);
+  impostor.sort((x, y) => y.s - x.s);
+  return { genuine, impostor };
+}
+
+const stat = (xs) => {
+  const v = xs.map((x) => x.s);
+  const mean = v.reduce((a, b) => a + b, 0) / v.length;
+  return { n: v.length, min: Math.min(...v), max: Math.max(...v), mean };
+};
+
+// Cosine on the raw network output, which is what a naive integration would
+// use. Shown only to justify the centring: it is the "before".
+const rawCos = (a, b) => {
+  let dot = 0, na = 0, nb = 0;
+  for (let i = 0; i < a.length; i += 1) { dot += a[i] * b[i]; na += a[i] * a[i]; nb += b[i] * b[i]; }
+  return dot / Math.sqrt(na * nb);
+};
+
+const before = distributions('raw', rawCos);
+const bg = stat(before.genuine), bi = stat(before.impostor);
+say('  RAW DESCRIPTORS, cosine — what you get without centring');
+say(`    genuine   n ${bg.n}  min ${f(bg.min)}  mean ${f(bg.mean)}  max ${f(bg.max)}`);
+say(`    impostor  n ${bi.n}  min ${f(bi.min)}  mean ${f(bi.mean)}  max ${f(bi.max)}`);
+say(`    gap ${f(bg.min - bi.max)}`);
+say();
+
+// What the product actually compares: centred by MEAN_DESCRIPTOR, normalised.
+// These are the numbers the thresholds must be set against.
+const now = distributions('vector', similarity);
+const ng = stat(now.genuine), ni = stat(now.impostor);
+say('  AS SHIPPED, centred and normalised — set the thresholds against these');
+say(`    genuine   n ${ng.n}  min ${f(ng.min)}  mean ${f(ng.mean)}  max ${f(ng.max)}`);
+say(`    impostor  n ${ni.n}  min ${f(ni.min)}  mean ${f(ni.mean)}  max ${f(ni.max)}`);
+say(`    gap ${f(ng.min - ni.max)}   ${ng.min > ni.max ? 'clean' : 'OVERLAP — no threshold separates these'}`);
+say();
+
+say('  worst five genuine pairs (these set the ceiling on match)');
+for (const p of now.genuine.slice(0, 5)) say(`    ${f(p.s)}  ${p.a}  ${p.b}`);
+say();
+say('  closest five impostor pairs (these set the floor on match)');
+for (const p of now.impostor.slice(0, 5)) say(`    ${f(p.s)}  ${p.a}  ${p.b}`);
+say();
+
+say('  threshold      FRR        FAR');
+for (let t = 0.3; t <= 0.9; t += 0.05) {
+  const frr = now.genuine.filter((p) => p.s < t).length / now.genuine.length;
+  const far = now.impostor.filter((p) => p.s >= t).length / now.impostor.length;
+  say(`    ${t.toFixed(2)}      ${(frr * 100).toFixed(1).padStart(5)}%    ${(far * 100).toFixed(1).padStart(5)}%${frr === 0 && far === 0 ? '   <- clean' : ''}`);
+}
+say();
+
+/*
+ * Does the centring survive a face the mean has never seen?
+ *
+ * The mean above was averaged over these very faces, so measuring on them
+ * flatters it. Recompute with one person held out, score only that person, and
+ * the numbers stop being about themselves.
+ */
+say('  HELD OUT — mean recomputed without the person being scored');
+const dims = faces[0].raw.length;
+for (const held of [...new Set(faces.map((x) => x.person))]) {
+  const train = faces.filter((x) => x.person !== held);
+  const m = new Array(dims).fill(0);
+  for (const x of train) for (let i = 0; i < dims; i += 1) m[i] += x.raw[i] / train.length;
+  const unit = (raw) => { const c = raw.map((x, i) => x - m[i]); const g = Math.hypot(...c); return c.map((x) => x / g); };
+
+  const mine = faces.filter((x) => x.person === held).map((x) => unit(x.raw));
+  const theirs = train.map((x) => unit(x.raw));
+  const gs = [], is = [];
+  for (let i = 0; i < mine.length; i += 1) {
+    for (let j = i + 1; j < mine.length; j += 1) gs.push(similarity(mine[i], mine[j]));
+    for (const o of theirs) is.push(similarity(mine[i], o));
+  }
+  if (!gs.length) { say(`    ${held.padEnd(8)} only one usable photograph, cannot pair`); continue; }
+  const lo = Math.min(...gs), hi = Math.max(...is);
+  say(`    ${held.padEnd(8)} genuine min ${f(lo)}   impostor max ${f(hi)}   gap ${f(lo - hi)}  ${lo > hi ? 'clean' : 'OVERLAP'}`);
+}
+say();
+
+/*
+ * A replacement MEAN_DESCRIPTOR, from the RAW descriptors.
+ *
+ * It must come from the raw output, never from `vector` — those have already
+ * had the current mean subtracted, and averaging them produces a second mean
+ * that is wrong by exactly the first one. Pasting that back in moves every
+ * score and silently invalidates the thresholds.
+ */
+const mean = new Array(dims).fill(0);
+for (const x of faces) for (let i = 0; i < dims; i += 1) mean[i] += x.raw[i] / faces.length;
+say('  MEAN_DESCRIPTOR for face-capture.js (only if you changed the fixture set):');
+say('  ' + JSON.stringify(mean.map((x) => Math.round(x * 1e6) / 1e6)));
+say();
+say('  done');
+</script>
