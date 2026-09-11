@@ -249,6 +249,13 @@
 
 <!-- Serves the API origin chosen by the process, so it is not guessable from a URL. -->
 <script src="/config.js"></script>
-<script type="module" src="/fan.js"></script>
+<!--
+  Relative, not absolute, so this page works from either place it is served:
+  at the root of the fan deployment, and at /app/ inside the marketing site,
+  where the whole point is that joining never leaves the domain. The other
+  three references stay absolute because ui.css, config.js and the logo sit at
+  the root of both deployments and are deliberately shared.
+-->
+<script type="module" src="fan.js"></script>
 </body>
 </html>

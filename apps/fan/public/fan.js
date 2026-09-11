@@ -872,6 +872,10 @@ if (state.enrolled && state.identityId) {
   consentSheet();
 } else if (intent === '#browse') {
   enterApp('discover');
+} else if (intent === '#signin') {
+  // Arrived from the join page having said they already have an ID.
+  enterApp('tickets');
+  loginSheet();
 } else {
   showLanding();
   // Rendered underneath, so dismissing the landing reveals a ready app rather

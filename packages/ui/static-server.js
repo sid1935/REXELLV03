@@ -74,7 +74,7 @@ function securityHeaders({ apiOrigin, https, connect: extra = [] }) {
  * at a server chosen by whoever wrote the link. The override survives for
  * localhost, where it is a development convenience and not a vector.
  */
-export function staticServer({ root, ui, port, apiOrigin, links = {}, connect = [], spa = false, https = false, host = '0.0.0.0', onReady }) {
+export function staticServer({ root, ui, port, apiOrigin, links = {}, connect = [], spa = false, mount = {}, https = false, host = '0.0.0.0', onReady }) {
   const headers = securityHeaders({ apiOrigin, https, connect });
   /*
    * `links` is where the other surfaces live, for the pages that need to send
@@ -98,9 +98,26 @@ export function staticServer({ root, ui, port, apiOrigin, links = {}, connect = 
       return void res.end(config);
     }
 
+    /*
+     * Another surface, served under a path of this one.
+     *
+     * The marketing site mounts the fan app at /app so that joining never
+     * changes the address bar. A visitor who presses "Join as Fan" and lands
+     * on a different domain has been handed off to somebody else's website,
+     * whatever the design says — so there is no hand-off.
+     */
+    const mounted = Object.entries(mount).find(([prefix]) => safe === prefix || safe.startsWith(prefix + '/'));
+
     // The shared assets come from @rexell/ui; everything else from the app.
-    const base = ['/ui.css', '/logo.svg', '/logo-full.png', '/logo-lockup.svg', '/logo-lockup.png'].includes(safe) ? ui : root;
-    const relative = safe === '/' ? 'index.html' : safe.replace(/^\/+/, '');
+    const base = ['/ui.css', '/logo.svg', '/logo-full.png', '/logo-lockup.svg', '/logo-lockup.png'].includes(safe)
+      ? ui
+      : mounted
+        ? mounted[1]
+        : root;
+
+    const withinMount = mounted ? safe.slice(mounted[0].length).replace(/^\/+/, '') : null;
+    const relative =
+      safe === '/' ? 'index.html' : mounted ? withinMount || 'index.html' : safe.replace(/^\/+/, '');
     const file = join(base, relative);
     // Resolved, then checked. A request must not be able to climb out of the
     // directory it is served from.
@@ -127,7 +144,27 @@ export function staticServer({ root, ui, port, apiOrigin, links = {}, connect = 
        * a 404 — answering those with HTML turns a broken asset into a parse
        * error somewhere else entirely.
        */
-      if (spa && extname(relative) === '') {
+      /*
+       * A plain page, addressed without its extension.
+       *
+       * Tried before the client-routing fallback, and that order is the whole
+       * point: /join is a real file, but a catch-all that runs first answers
+       * it with the site's shell and a 200, so the page looks like it loaded
+       * and is simply the wrong one.
+       */
+      if (extname(relative) === '') {
+        try {
+          const page = await readFile(join(base, `${relative || 'index'}.html`));
+          res.writeHead(200, { ...headers, 'content-type': TYPES['.html'], 'cache-control': 'no-cache' });
+          return void res.end(page);
+        } catch {
+          // Not a page either; carry on to the fallback below.
+        }
+      }
+
+      // A mounted app is not part of this surface's client routing, so a
+      // missing file under it is a 404 rather than this site's shell.
+      if (spa && !mounted && extname(relative) === '') {
         try {
           const shell = await readFile(join(root, 'index.html'));
           res.writeHead(200, { ...headers, 'content-type': TYPES['.html'], 'cache-control': 'no-cache' });

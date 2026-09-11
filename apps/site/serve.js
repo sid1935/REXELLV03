@@ -16,12 +16,17 @@ const API = process.env.REXELL_API ?? 'http://127.0.0.1:8080';
 const FAN = process.env.REXELL_FAN ?? 'http://127.0.0.1:8120';
 const CONSOLE_URL = process.env.REXELL_CONSOLE ?? 'http://127.0.0.1:8110';
 
+// The fan app, served under a path of this site rather than linked to at its
+// own origin. Joining should not change the address bar.
+const FAN_MOUNT = '/app';
+
 staticServer({
   root: fileURLToPath(new URL('./public', import.meta.url)),
   ui: fileURLToPath(new URL('../../packages/ui', import.meta.url)),
   port: PORT,
   apiOrigin: API,
-  links: { fan: FAN, console: CONSOLE_URL },
+  links: { fan: FAN_MOUNT, console: CONSOLE_URL },
+  mount: { [FAN_MOUNT]: fileURLToPath(new URL('../fan/public', import.meta.url)) },
   // The bundle's waitlist form posts to the Supabase project it was built
   // against. Blocking it would break sign-ups quietly.
   connect: ['https://ofcchocnplwpfalqlvnv.supabase.co'],
@@ -31,7 +36,7 @@ staticServer({
   host: process.env.SITE_HOST ?? '0.0.0.0',
   onReady: () => {
     console.log(`\n  ReXell site  http://127.0.0.1:${PORT}`);
-    console.log(`  Join as Fan       → ${FAN}/#start`);
+    console.log(`  Join as Fan       → /join → ${FAN_MOUNT}/#start  (same origin)`);
     console.log(`  Join as Organizer → ${CONSOLE_URL}/#join\n`);
   },
 });

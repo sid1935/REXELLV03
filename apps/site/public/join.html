@@ -1,0 +1,227 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#000000">
+<title>Join as a fan — ReXell</title>
+<meta name="description" content="Set up your ReXell ID. Your face becomes your ticket — nothing to screenshot, nothing to forward, nothing a scalper can sell twice.">
+<link rel="icon" href="/logo-full.png" type="image/png">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
+<style>
+/*
+ * The step between "Join as Fan" and the app.
+ *
+ * It exists because the alternative reads as a hand-off: press a button on a
+ * marketing site and land somewhere that looks like a different company's
+ * product, mid-flow, being asked for your face. This page sets out what is
+ * about to happen and why, in the site's own voice, and then continues into
+ * the app on the same domain.
+ *
+ * Written against the marketing bundle's design language rather than the
+ * product's design system: true black, Inter, the blue-to-violet gradient on
+ * the primary action, #9ca3af for secondary text. The app on the other side
+ * carries its own identity, and the two meet at the gradient.
+ */
+:root {
+  --ink: #ffffff;
+  --ink-2: #9ca3af;
+  --ink-3: #6b7280;
+  --line: rgba(255, 255, 255, 0.10);
+  --line-2: rgba(255, 255, 255, 0.18);
+  --card: rgba(255, 255, 255, 0.04);
+  --cyan: #00d2ff;
+  --grad: linear-gradient(100deg, #00d2ff, #2472ff 52%, #9d50bb);
+}
+* , *::before, *::after { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: #000;
+  color: var(--ink);
+  font: 400 16px/1.6 Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+}
+a { color: inherit; }
+
+/* A wash of the brand gradient behind the top of the page, the same device
+   the marketing hero uses, so this reads as the next screen rather than a
+   different site. */
+.glow {
+  position: fixed; inset: 0 0 auto 0; height: 70vh; pointer-events: none; z-index: 0;
+  background:
+    radial-gradient(60% 55% at 22% 0%, rgba(0, 210, 255, 0.14), transparent 70%),
+    radial-gradient(55% 50% at 82% 8%, rgba(157, 80, 187, 0.16), transparent 70%);
+}
+.wrap { position: relative; z-index: 1; width: 100%; max-width: 620px; margin: 0 auto; padding: 0 22px; }
+
+/* ── header ─────────────────────────────────────────────────────────────── */
+header { padding: 20px 0 0; }
+header .wrap { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.brand { display: inline-flex; align-items: center; gap: 10px; text-decoration: none; }
+.brand img { height: 34px; width: auto; display: block; }
+.back {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 14px; color: var(--ink-2); text-decoration: none;
+  padding: 8px 2px; border-radius: 6px;
+}
+.back:hover { color: var(--ink); }
+
+/* ── hero ───────────────────────────────────────────────────────────────── */
+main { flex: 1; padding: 34px 0 56px; }
+.eyebrow {
+  display: inline-block; font-size: 11.5px; font-weight: 600; letter-spacing: 0.16em;
+  text-transform: uppercase; color: var(--cyan); margin-bottom: 14px;
+}
+h1 {
+  margin: 0; font-size: clamp(32px, 8vw, 46px); line-height: 1.05;
+  font-weight: 800; letter-spacing: -0.03em; text-wrap: balance;
+}
+h1 span {
+  background: var(--grad); -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+.lede { margin: 18px 0 0; font-size: 17px; line-height: 1.6; color: var(--ink-2); max-width: 46ch; }
+
+/* ── steps ──────────────────────────────────────────────────────────────── */
+/* Numbered because this genuinely is a sequence, and because the honest
+   answer to "how long will this take" is the list itself. */
+ol.steps { list-style: none; margin: 34px 0 0; padding: 0; display: grid; gap: 12px; }
+ol.steps li {
+  display: grid; grid-template-columns: 34px 1fr; gap: 14px; align-items: start;
+  background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 16px 18px;
+}
+ol.steps .n {
+  width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center;
+  font-size: 14px; font-weight: 700; color: #fff; background: var(--grad);
+}
+ol.steps h2 { margin: 0 0 3px; font-size: 15.5px; font-weight: 600; letter-spacing: -0.01em; }
+ol.steps p { margin: 0; font-size: 14px; line-height: 1.55; color: var(--ink-2); }
+
+/* ── reassurance ────────────────────────────────────────────────────────── */
+.facts { margin: 22px 0 0; padding: 16px 18px; border: 1px solid var(--line); border-radius: 14px; }
+.facts h3 { margin: 0 0 10px; font-size: 12px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-3); }
+.facts ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 9px; }
+.facts li { display: grid; grid-template-columns: 18px 1fr; gap: 10px; font-size: 14px; line-height: 1.5; color: var(--ink-2); }
+.facts svg { margin-top: 3px; color: var(--cyan); }
+.facts b { color: var(--ink); font-weight: 600; }
+
+/* ── actions ────────────────────────────────────────────────────────────── */
+.actions { margin: 28px 0 0; display: grid; gap: 11px; }
+.btn {
+  display: flex; align-items: center; justify-content: center; gap: 9px;
+  width: 100%; padding: 17px 20px; border: 0; border-radius: 12px; cursor: pointer;
+  font: 600 16px/1 Inter, sans-serif; letter-spacing: -0.01em; text-decoration: none;
+  transition: filter 140ms ease, transform 140ms ease, border-color 140ms ease, background 140ms ease;
+}
+.btn-primary { background: var(--grad); color: #fff; font-weight: 700; }
+.btn-primary:hover { filter: brightness(1.09); }
+.btn-primary:active { transform: translateY(1px); }
+.btn-quiet { background: transparent; color: var(--ink); border: 1px solid var(--line-2); }
+.btn-quiet:hover { background: rgba(255, 255, 255, 0.05); border-color: rgba(255, 255, 255, 0.3); }
+.fineprint { margin: 16px 0 0; text-align: center; font-size: 13px; line-height: 1.55; color: var(--ink-3); }
+.fineprint b { color: var(--ink-2); font-weight: 600; }
+
+:focus-visible { outline: 2px solid var(--cyan); outline-offset: 3px; border-radius: 4px; }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+
+footer { border-top: 1px solid var(--line); padding: 22px 0; }
+footer .wrap { font-size: 13px; color: var(--ink-3); text-align: center; }
+</style>
+</head>
+<body>
+
+<div class="glow"></div>
+
+<header>
+  <div class="wrap">
+    <a class="brand" href="/"><img src="/logo-lockup.png" alt="ReXell Technologies"></a>
+    <a class="back" href="/">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M11 18l-6-6 6-6"/></svg>
+      Back
+    </a>
+  </div>
+</header>
+
+<main>
+  <div class="wrap">
+    <span class="eyebrow">Join as a fan</span>
+    <h1>Your face becomes <span>your ticket</span>.</h1>
+    <p class="lede">
+      Setting up takes about a minute and happens right here. No email, no
+      password, no phone number — those are the things that get leaked, and we
+      would rather not hold them.
+    </p>
+
+    <ol class="steps">
+      <li>
+        <span class="n">1</span>
+        <div>
+          <h2>Say what we may keep</h2>
+          <p>One permission, for one purpose, on its own screen. Not bundled with terms of service, and you can withdraw it at any time.</p>
+        </div>
+      </li>
+      <li>
+        <span class="n">2</span>
+        <div>
+          <h2>Look at the camera</h2>
+          <p>Ten seconds. The photos never leave your phone — what we store is a mathematical template, and it cannot be turned back into a picture of you.</p>
+        </div>
+      </li>
+      <li>
+        <span class="n">3</span>
+        <div>
+          <h2>Keep your recovery code</h2>
+          <p>Shown once. It is how you get back in from a new phone, and the only part worth writing down.</p>
+        </div>
+      </li>
+    </ol>
+
+    <div class="facts">
+      <h3>Before you start</h3>
+      <ul>
+        <li>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m4 12 5 5L20 6"/></svg>
+          <span><b>You can always attend without this.</b> Staffed entry is available at every gate, at no extra cost and no worse position in the queue.</span>
+        </li>
+        <li>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m4 12 5 5L20 6"/></svg>
+          <span><b>Nothing is charged here.</b> This sets up your ID. Tickets come later, at the price the organizer set.</span>
+        </li>
+        <li>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m4 12 5 5L20 6"/></svg>
+          <span><b>Withdrawing deletes it.</b> You get a signed receipt proving the template is gone — evidence rather than a promise.</span>
+        </li>
+      </ul>
+    </div>
+
+    <div class="actions">
+      <!--
+        Same origin. The href is written by join-page.js from the mounted app
+        path, so pressing this never changes the address bar — which is the
+        whole reason this page exists.
+      -->
+      <a class="btn btn-primary" id="start" href="/app/#start">
+        Set up my ReXell ID
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+      </a>
+      <a class="btn btn-quiet" id="browse" href="/app/#browse">Look at events first</a>
+    </div>
+
+    <p class="fineprint">
+      Already set up on another phone? <b><a id="signin" href="/app/#signin">Use your recovery code</a></b>.
+    </p>
+  </div>
+</main>
+
+<footer>
+  <div class="wrap">© 2026 ReXell Technologies. All rights reserved.</div>
+</footer>
+
+<script src="/config.js"></script>
+<script src="/join-page.js"></script>
+</body>
+</html>

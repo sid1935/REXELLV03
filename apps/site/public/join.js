@@ -28,7 +28,11 @@
    * journey they picked and the app opens on it.
    */
   var DESTINATIONS = {
-    fan: links.fan ? links.fan.replace(/\/+$/, '') + '/#start' : null,
+    // A page on this site, not the app directly. The fan flow opens with an
+    // explanation in the site's own voice and continues into the app from
+    // there, so what a visitor sees immediately after pressing the button is
+    // still plainly ReXell rather than a product nobody introduced them to.
+    fan: '/join',
     organizer: links.console ? links.console.replace(/\/+$/, '') + '/#join' : null,
   };
 
