@@ -4,6 +4,8 @@ Fraud-proof ticketing. A ticket is not a document you hold — it is a binding
 between an on-chain entitlement and your face, governed by resale rules the
 organizer writes themselves.
 
+- **How entry works:** `docs/face-to-gate.html` — a face to a number to an
+  open door, with the measured scores and thresholds
 - **Architecture:** `docs/architecture.html`
 - **Development plan:** `docs/ROADMAP.md`
 - **Business plan:** `docs/business-plan.html`
