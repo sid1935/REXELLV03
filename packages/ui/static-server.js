@@ -109,7 +109,7 @@ export function staticServer({ root, ui, port, apiOrigin, links = {}, connect = 
     const mounted = Object.entries(mount).find(([prefix]) => safe === prefix || safe.startsWith(prefix + '/'));
 
     // The shared assets come from @rexell/ui; everything else from the app.
-    const base = ['/ui.css', '/logo.svg', '/logo-full.png', '/logo-lockup.svg', '/logo-lockup.png'].includes(safe)
+    const base = ['/ui.css', '/logo.svg', '/logo-lockup.svg', '/logo-lockup.png'].includes(safe)
       ? ui
       : mounted
         ? mounted[1]

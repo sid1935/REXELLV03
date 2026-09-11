@@ -7,7 +7,6 @@
   "exports": {
     "./ui.css": "./ui.css",
     "./logo.svg": "./logo.svg",
-    "./logo-full.png": "./logo-full.png",
     "./static-server": "./static-server.js",
     "./logo-lockup.svg": "./logo-lockup.svg",
     "./logo-lockup.png": "./logo-lockup.png"
@@ -17,7 +16,6 @@
     "logo.svg",
     "logo-lockup.svg",
     "logo-lockup.png",
-    "logo-full.png",
     "static-server.js"
   ]
 }
