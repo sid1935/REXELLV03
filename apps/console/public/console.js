@@ -71,9 +71,9 @@ async function call(path, options = {}) {
 
 // ─── navigation ──────────────────────────────────────────────────────────────
 
-const VIEWS = ['events', 'create', 'live', 'settlement', 'account'];
-const CRUMBS = { events: 'Events', create: 'New event', live: 'Live', settlement: 'Settlement', account: 'Account' };
-const NEEDS_EVENT = new Set(['live', 'settlement']);
+const VIEWS = ['events', 'create', 'live', 'lanes', 'settlement', 'account'];
+const CRUMBS = { events: 'Events', create: 'New event', live: 'Live', lanes: 'Lanes', settlement: 'Settlement', account: 'Account' };
+const NEEDS_EVENT = new Set(['live', 'lanes', 'settlement']);
 
 function go(view) {
   for (const v of VIEWS) $(`view-${v}`).hidden = v !== view;
@@ -91,12 +91,19 @@ function go(view) {
     // pool to run out of at exactly the wrong moment.
     poller = setInterval(renderLive, 5_000);
   }
+  if (view === 'lanes') {
+    renderLanes();
+    // Slower than Live: a lane checking in is not news the way a fallback rate
+    // climbing is, and this page is mostly read once while setting up doors.
+    poller = setInterval(renderLanes, 15_000);
+  }
   if (view === 'settlement') renderSettlement();
   if (view === 'account') renderAccount();
 }
 document.querySelectorAll('#nav button').forEach((b) => b.addEventListener('click', () => go(b.dataset.view)));
 $('eventPicker').addEventListener('change', () => {
   if (!$('view-live').hidden) renderLive();
+  if (!$('view-lanes').hidden) renderLanes();
   if (!$('view-settlement').hidden) renderSettlement();
 });
 
@@ -407,6 +414,67 @@ function laneConfig(eventId, scannerId, lane, gateGroup) {
   );
 }
 
+/**
+ * The lanes, on a tab of their own.
+ *
+ * This started life as a panel at the bottom of Live, under the sales tables
+ * and the attendance tiles, which is a place nobody scrolls to while standing
+ * at a door trying to set one up. Somebody looking for "where do I open a
+ * lane" looks at the navigation.
+ */
+async function renderLanes() {
+  const eventId = $('eventPicker').value;
+  if (!eventId) {
+    $('lanesBody').innerHTML =
+      '<div class="card"><div class="empty"><h3>No event selected</h3><p>Lanes belong to an event — create one, then pick it above.</p></div></div>';
+    return;
+  }
+  try {
+    // Public: a scanner registers itself with no key.
+    const lanes = await call(`/v1/events/${eventId}/scanners`);
+    $('lanesBody').innerHTML = `<div class="grid">
+        <!--
+          The lanes, on the page that reports on them.
+
+          The gate app existed at its own address long before this panel did, so
+          the one screen an organizer needs on the night was the one screen they
+          had to be told about separately — and there was no way to see how many
+          lanes were open or when each last checked in. The numbers above are
+          what these devices produce; they belong next to each other.
+        -->
+        <section class="card" style="grid-column:1/-1">
+          <div class="card-head"><h2>Devices at the doors</h2><span class="spacer"></span>
+            <span class="tag">${lanes.scanners.length} registered</span>
+          </div>
+          <div class="pad">
+            ${laneTable(eventId, lanes.scanners)}
+
+            <div class="row" style="margin-top:16px;gap:10px;align-items:end;flex-wrap:wrap">
+              <label class="field" style="margin:0">
+                <span>New lane</span>
+                <input id="laneName" class="input" placeholder="A" style="max-width:120px">
+              </label>
+              <label class="field" style="margin:0">
+                <span>Entrance (optional)</span>
+                <input id="laneGate" class="input" placeholder="any" style="max-width:160px">
+              </label>
+              <button class="btn btn-primary" id="newLane">Open on this device</button>
+              <button class="btn" id="copyLane">Copy link for another device</button>
+            </div>
+            <p class="hint" style="margin:12px 0 0">
+              Opening a lane registers <em>this</em> device and pulls the sealed manifest for it.
+              For a phone at the door, copy the link and open it there instead.
+              An entrance name restricts the lane to tickets issued for that gate.
+            </p>
+          </div>
+        </section>
+      </div>`;
+    wireLanes(eventId);
+  } catch (e) {
+    $('lanesBody').innerHTML = `<div class="note note-bad">${esc(e.message)}</div>`;
+  }
+}
+
 /** One row per registered lane, with a link that re-provisions that same lane. */
 function laneTable(eventId, scanners) {
   if (scanners.length === 0) {
@@ -466,10 +534,6 @@ async function renderLive() {
 
   try {
     const a = await call(`/v1/events/${eventId}/analytics`);
-    // Lanes register themselves with no key, so this route is public and a
-    // failure here is a network problem rather than a permission one. The rest
-    // of the page is still worth showing without it.
-    const lanes = await call(`/v1/events/${eventId}/scanners`).catch(() => ({ scanners: [] }));
     const hot = a.attendance.fallbackRate > 0.015;
     const hasScans = a.attendance.scans > 0;
 
@@ -531,44 +595,7 @@ async function renderLive() {
           </div>
         </section>
 
-        <!--
-          The lanes, on the page that reports on them.
-
-          The gate app existed at its own address long before this panel did, so
-          the one screen an organizer needs on the night was the one screen they
-          had to be told about separately — and there was no way to see how many
-          lanes were open or when each last checked in. The numbers above are
-          what these devices produce; they belong next to each other.
-        -->
-        <section class="card" style="grid-column:1/-1">
-          <div class="card-head"><h2>Lanes</h2><span class="spacer"></span>
-            <span class="tag">${lanes.scanners.length} registered</span>
-          </div>
-          <div class="pad">
-            ${laneTable(eventId, lanes.scanners)}
-
-            <div class="row" style="margin-top:16px;gap:10px;align-items:end;flex-wrap:wrap">
-              <label class="field" style="margin:0">
-                <span>New lane</span>
-                <input id="laneName" class="input" placeholder="A" style="max-width:120px">
-              </label>
-              <label class="field" style="margin:0">
-                <span>Entrance (optional)</span>
-                <input id="laneGate" class="input" placeholder="any" style="max-width:160px">
-              </label>
-              <button class="btn btn-primary" id="newLane">Open on this device</button>
-              <button class="btn" id="copyLane">Copy link for another device</button>
-            </div>
-            <p class="hint" style="margin:12px 0 0">
-              Opening a lane registers <em>this</em> device and pulls the sealed manifest for it.
-              For a phone at the door, copy the link and open it there instead.
-              An entrance name restricts the lane to tickets issued for that gate.
-            </p>
-          </div>
-        </section>
       </div>`;
-
-    wireLanes(eventId);
   } catch (e) {
     $('liveBody').innerHTML = `<div class="note note-bad">${esc(e.message)}</div>`;
   }

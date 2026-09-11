@@ -58,6 +58,10 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l5-6 4 4 5-8 4 5"/></svg>
         Live
       </button>
+      <button data-view="lanes">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8V6a2 2 0 0 1 2-2h2M17 4h2a2 2 0 0 1 2 2v2M21 16v2a2 2 0 0 1-2 2h-2M7 20H5a2 2 0 0 1-2-2v-2"/><circle cx="12" cy="12" r="3"/></svg>
+        Lanes
+      </button>
       <button data-view="settlement">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18M17 7H9.5a2.5 2.5 0 0 0 0 5h5a2.5 2.5 0 0 1 0 5H6"/></svg>
         Settlement
@@ -162,6 +166,15 @@
         <p class="lede">Refreshing every five seconds. On the night, the number to watch is the fallback rate.</p>
       </div>
       <div id="liveBody"></div>
+    </main>
+
+    <!-- ── lanes ─────────────────────────────────────────────────────────── -->
+    <main class="page" id="view-lanes" hidden>
+      <div class="page-head">
+        <h1>Lanes</h1>
+        <p class="lede">The devices at the doors. Open one here, or send the link to the phone that will run it.</p>
+      </div>
+      <div id="lanesBody"></div>
     </main>
 
     <!-- ── settlement ────────────────────────────────────────────────────── -->
