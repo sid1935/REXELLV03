@@ -429,6 +429,13 @@ function persist() {
       'rexell.gate',
       JSON.stringify({
         config: state.config,
+        // Decisions made but not yet signed. Signing happens at sync time to
+        // keep an async hop off the 800 ms scan path, which means that between
+        // two syncs every decision this lane has made lives ONLY here. Leaving
+        // them out — as this did — meant a device that restarted mid-event lost
+        // every scan since its last upload, which is precisely the stretch an
+        // offline lane exists to survive.
+        unsigned: state.unsigned,
         manifest: { ...state.manifest, entries: state.manifest.entries.map((e) => ({ ...e, template: Array.from(e.template) })) },
         admitted: [...state.admitted],
         queued: state.queued,
@@ -450,6 +457,7 @@ function restore() {
     state.manifest = { ...s.manifest, entries: s.manifest.entries.map((e) => ({ ...e, template: Float32Array.from(e.template) })) };
     state.admitted = new Set(s.admitted);
     state.queued = s.queued ?? [];
+    state.unsigned = s.unsigned ?? [];
     state.stats = s.stats ?? state.stats;
     state.refused = s.refused ?? 0;
     return true;
