@@ -3,12 +3,12 @@
   <defs>
     <linearGradient id="g" x1="0" y1="450" x2="800" y2="0" gradientUnits="userSpaceOnUse"
                     gradientTransform="rotate(8 400 225)">
-      <stop offset="0" stop-color="hsl(255 92% 58%)"/>
-      <stop offset="1" stop-color="hsl(285 76% 50%)"/>
+      <stop offset="0" stop-color="hsl(265 92% 58%)"/>
+      <stop offset="1" stop-color="hsl(295 76% 50%)"/>
     </linearGradient>
     <radialGradient id="glow" cx="0.44" cy="0.48" r="0.85">
-      <stop offset="0" stop-color="hsl(255 100% 74%)" stop-opacity="0.55"/>
-      <stop offset="1" stop-color="hsl(255 100% 74%)" stop-opacity="0"/>
+      <stop offset="0" stop-color="hsl(265 100% 74%)" stop-opacity="0.55"/>
+      <stop offset="1" stop-color="hsl(265 100% 74%)" stop-opacity="0"/>
     </radialGradient>
     <linearGradient id="shade" x1="0" y1="0" x2="0" y2="450" gradientUnits="userSpaceOnUse">
       <stop offset="0.35" stop-color="#020526" stop-opacity="0"/>

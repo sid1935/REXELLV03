@@ -156,25 +156,4 @@ export const CATALOGUE: readonly EventSpec[] = [
       { key: 'vip', name: 'VIP — 2 Day', rupees: 24_000, allocation: 6_000, capPct: 110, organizerPct: 7, artistPct: 2 },
     ],
   },
-  {
-    /*
-     * Doors already open.
-     *
-     * Every other event here is months away, and a manifest key does not
-     * release until two hours before doors — so without one live event the
-     * gate cannot be tried at all, and "buy a ticket and walk in" stops at
-     * the buying. This is the one to scan against.
-     */
-    id: 'evt_tonight_blr',
-    name: 'ReXell Live — Gate Demo Night',
-    venue: 'Sree Kanteerava Stadium, Bengaluru',
-    on: null,
-    capacity: 8_000,
-    maxPerPerson: 4,
-    organizer: 'venues',
-    tiers: [
-      { key: 'ga', name: 'General Stand', rupees: 300, allocation: 6_500, capPct: 110, organizerPct: 6, artistPct: 0 },
-      { key: 'west', name: 'West Stand', rupees: 900, allocation: 1_200, capPct: null },
-    ],
-  },
 ];

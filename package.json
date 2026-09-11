@@ -35,7 +35,8 @@
     "art:events": "tsx scripts/make-event-art.ts",
     "backfill:venues": "tsx scripts/backfill-venues.ts",
     "art:photos": "tsx scripts/fetch-event-photos.ts",
-    "art:crop": "node scripts/crop-event-photos.mjs"
+    "art:crop": "node scripts/crop-event-photos.mjs",
+    "remove:event": "tsx scripts/remove-event.ts"
   },
   "engines": {
     "node": ">=22.5"

@@ -43,7 +43,6 @@ const PHOTOS: Record<string, string> = {
   evt_gorillaz_blr_2027: 'File:Gorillaz, Brixton Academy, London (34342295764).jpg',
   evt_foofighters_mum_2027: 'File:Foo Fighters Molson Amphitheatre 8-7-2015.jpg',
   evt_lolla_mum_2027: 'File:Lollapalooza 2015.JPG',
-  evt_tonight_blr: 'File:Sree Kanteerava Stadium.jpg',
   evt_fredagain_mum_2026: 'File:FredAgainCPBowl100825-28 (54714087200).jpg',
   evt_chainsmokers_blr_2026: 'File:The Chainsmokers VELD 2016.jpg',
   // The last two took a second pass. "Fred again musician" and "Chainsmokers
