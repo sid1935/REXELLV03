@@ -97,6 +97,22 @@ cpSync(resolve(root, 'packages/ui/events'), resolve(output, 'events'), { recursi
 cpSync(resolve(root, 'packages/ui/face'), resolve(output, 'face'), { recursive: true });
 
 /*
+ * Documents that are published, named one at a time.
+ *
+ * An allowlist rather than copying `docs/` wholesale, because that directory
+ * also holds the deployment runbook and the business plan. Neither belongs on a
+ * public URL, and a glob would put them there the moment somebody adds a file —
+ * silently, and with no obvious way to notice.
+ */
+const PUBLISHED_DOCS = ['face-to-gate.html'];
+if (surface === 'site') {
+  mkdirSync(resolve(output, 'docs'), { recursive: true });
+  for (const doc of PUBLISHED_DOCS) {
+    cpSync(resolve(root, 'docs', doc), resolve(output, 'docs', doc));
+  }
+}
+
+/*
  * Where the sibling surfaces live.
  *
  * Only the marketing site uses these today — they are what its two calls to
@@ -163,6 +179,7 @@ if (CLIENT_ROUTED.has(surface)) {
       '/assets/*          /assets/:splat          404',
       '/events/*          /events/:splat          404',
       '/face/*           /face/:splat            404',
+      '/docs/*           /docs/:splat            404',
       '/journey/*         /journey/:splat         404',
       '/team/*            /team/:splat            404',
       // A mounted app has its own routing and is not part of this site's.

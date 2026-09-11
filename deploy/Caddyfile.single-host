@@ -81,10 +81,16 @@
 		# a parse error somewhere unrelated. And a path under a mounted app
 		# belongs to that app's routing, not this one — without that, a typo
 		# under /console quietly serves the marketing page.
+		#
+		# `.html` is in that list too, which looks odd on a page router until you
+		# ask for a document that is not there: every path under /docs came back
+		# as the marketing page with a 200, so a typo in a link looked like a
+		# working link to the wrong thing. Real pages here are reached without
+		# their extension and resolved by try_files below.
 		@spa {
 			not file {path} {path}.html {path}/index.html
 			not path /app/* /console/* /gate/*
-			not path *.js *.css *.png *.jpg *.jpeg *.gif *.webp *.avif *.svg *.ico *.json *.webmanifest *.txt *.map *.woff *.woff2 *.bin
+			not path *.js *.css *.png *.jpg *.jpeg *.gif *.webp *.avif *.svg *.ico *.json *.webmanifest *.txt *.map *.woff *.woff2 *.bin *.html
 		}
 		rewrite @spa /index.html
 
