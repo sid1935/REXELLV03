@@ -39,7 +39,8 @@
     "remove:event": "tsx scripts/remove-event.ts",
     "art:favicon": "node scripts/make-favicon.mjs",
     "face:calibrate": "node scripts/face-calibrate.mjs",
-    "seed:gate": "tsx scripts/seed-gate-demo.ts"
+    "seed:gate": "tsx scripts/seed-gate-demo.ts",
+    "issue:key": "tsx scripts/issue-key.ts"
   },
   "engines": {
     "node": ">=22.5"
