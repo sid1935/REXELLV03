@@ -372,3 +372,71 @@ describe('the latency budget', () => {
     expect(g.scan(capture(face(1), 0.2, 1), DOORS).compared).toBe(200);
   });
 });
+
+/**
+ * The signature a browser actually produces.
+ *
+ * Every test above signs with `signAttestation`, which is Node's `createSign`
+ * and emits DER. Every real lane is a browser, and WebCrypto emits the raw
+ * r‖s concatenation instead — so the verifier read 64 bytes it could not parse
+ * and answered BAD_SIGNATURE to every attestation a real gate ever uploaded.
+ * Nothing caught it because nothing signed the way a lane signs.
+ *
+ * WebCrypto is not available to these tests in a form that produces P-256 the
+ * same way, so the encoding is converted by hand here: that is precisely the
+ * transformation the browser performs for free, and the point is that the
+ * verifier accepts it.
+ */
+describe('a signature from a browser, not from Node', () => {
+  /** DER (r, s) → the raw 64-byte concatenation WebCrypto emits. */
+  function derToP1363(der: Buffer): Buffer {
+    let i = 2;
+    if (der[1]! & 0x80) i += der[1]! & 0x7f;
+    const readInt = () => {
+      const len = der[i + 1]!;
+      let start = i + 2;
+      let n = len;
+      // DER pads with a leading zero to keep the value positive; P1363 does not.
+      while (n > 32 && der[start] === 0) { start += 1; n -= 1; }
+      const out = Buffer.alloc(32);
+      der.subarray(start, start + n).copy(out, 32 - n);
+      i = i + 2 + len;
+      return out;
+    };
+    const r = readInt();
+    const s = readInt();
+    return Buffer.concat([r, s]);
+  }
+
+  const record = {
+    ticketId: 'tkt_1', identityId: 'idn_1', eventId: EVENT, lane: 'lane_a',
+    decidedAt: DOORS, outcome: 'admit' as const, code: 'MATCHED' as const,
+    matchScore: 0.96, manifestSequence: 3, offline: true,
+  };
+
+  it('verifies when the signature is raw r‖s rather than DER', () => {
+    const keys = generateDeviceKey();
+    const der = signAttestation(record, SCANNER, keys.privateKeyPem);
+    const raw = { ...der, signature: derToP1363(Buffer.from(der.signature, 'base64')).toString('base64') };
+
+    expect(Buffer.from(raw.signature, 'base64')).toHaveLength(64);
+    expect(verifyAttestation(der, keys.publicKeyPem), 'DER still verifies').toBe(true);
+    expect(verifyAttestation(raw, keys.publicKeyPem), 'raw r‖s must verify too').toBe(true);
+  });
+
+  it('still refuses a raw signature from the wrong key', () => {
+    // Accepting two encodings must not mean accepting two keys.
+    const mine = generateDeviceKey();
+    const theirs = generateDeviceKey();
+    const der = signAttestation(record, SCANNER, mine.privateKeyPem);
+    const raw = { ...der, signature: derToP1363(Buffer.from(der.signature, 'base64')).toString('base64') };
+    expect(verifyAttestation(raw, theirs.publicKeyPem)).toBe(false);
+  });
+
+  it('still refuses a raw signature over an edited record', () => {
+    const keys = generateDeviceKey();
+    const der = signAttestation(record, SCANNER, keys.privateKeyPem);
+    const raw = { ...der, signature: derToP1363(Buffer.from(der.signature, 'base64')).toString('base64') };
+    expect(verifyAttestation({ ...raw, outcome: 'deny' }, keys.publicKeyPem)).toBe(false);
+  });
+});

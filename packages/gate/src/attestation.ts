@@ -1,4 +1,4 @@
-import { createPrivateKey, createPublicKey, createSign, createVerify, generateKeyPairSync } from 'node:crypto';
+import { createPrivateKey, createPublicKey, createSign, generateKeyPairSync, verify as nodeVerify } from 'node:crypto';
 import type { EntryCode, EntryOutcome } from '@rexell/domain';
 
 /**
@@ -109,6 +109,11 @@ export function canonicalAttestation(a: Attestation, scannerId: string): string 
  * ECDSA is async, so the scanner PWA signs at upload time rather than at scan
  * time. Both are equally non-repudiable — the device holds the only private key
  * either way — and deferring keeps an async round trip off the 800 ms path.
+ *
+ * What is NOT the same is the bytes. Node wraps (r, s) in DER; WebCrypto
+ * concatenates them raw.  accepts both, because for a long
+ * time it accepted only the first and therefore only ever verified signatures
+ * made by tests.
  */
 export type Signer = (message: string) => string;
 
@@ -120,15 +125,33 @@ export function signAttestation(a: Attestation, scannerId: string, privateKeyPem
   return { ...a, scannerId, signature };
 }
 
+/**
+ * Verify a device signature, in either of the two encodings ECDSA comes in.
+ *
+ * This is not a nicety. Node's `createSign` emits a DER-wrapped (r, s); the Web
+ * Crypto API emits the raw concatenation, IEEE P1363, and there is no option to
+ * make either produce the other. So a lane running in a browser — which is every
+ * real lane — signed 64 bytes that Node's default verifier could never read, and
+ * every attestation it uploaded was rejected as BAD_SIGNATURE.
+ *
+ * Nothing here is weakened by trying both. The bytes still have to verify under
+ * the public key that device registered; the only question is how those bytes
+ * are framed, and guessing wrong is indistinguishable from a forgery only
+ * because both simply fail.
+ */
 export function verifyAttestation(a: SignedAttestation, publicKeyPem: string): boolean {
-  try {
-    const verifier = createVerify('sha256');
-    verifier.update(canonicalAttestation(a, a.scannerId));
-    verifier.end();
-    return verifier.verify(createPublicKey(publicKeyPem), Buffer.from(a.signature, 'base64'));
-  } catch {
-    return false;
+  const message = Buffer.from(canonicalAttestation(a, a.scannerId), 'utf8');
+  const signature = Buffer.from(a.signature, 'base64');
+  for (const dsaEncoding of ['der', 'ieee-p1363'] as const) {
+    try {
+      const key = { key: createPublicKey(publicKeyPem), dsaEncoding };
+      if (nodeVerify('sha256', message, key, signature)) return true;
+    } catch {
+      // A malformed signature throws for one encoding and merely fails for the
+      // other. Neither is an error worth propagating: both mean "not verified".
+    }
   }
+  return false;
 }
 
 /**

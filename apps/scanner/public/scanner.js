@@ -44,6 +44,9 @@ const state = {
   serverSequence: 0,
   online: navigator.onLine,
   stats: { admit: 0, deny: 0, fallback: 0 },
+  // Attestations the server refused. Never zero quietly: a lane that cannot
+  // file its evidence has to say so on the screen the operator is watching.
+  refused: 0,
 };
 
 // ─── vectors ─────────────────────────────────────────────────────────────────
@@ -197,7 +200,31 @@ async function sync() {
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ attestations: batch }),
       });
-      if (r.ok) state.queued.splice(0, batch.length);
+
+      /*
+       * What the server actually stored, not merely that it answered.
+       *
+       * This used to be `if (r.ok) splice(...)`. The upload endpoint replies
+       * 202 with a per-record breakdown — it verifies each signature and names
+       * the ones it refused — so a batch in which every single attestation was
+       * rejected as BAD_SIGNATURE was a 202, and the lane cheerfully discarded
+       * the entire night's evidence. Silently. The whole purpose of signing
+       * these is that the night can be reconstructed afterwards, and the one
+       * failure mode that destroys that was the one being ignored.
+       */
+      if (r.ok) {
+        const body = await r.json().catch(() => ({}));
+        const rejected = body.rejected ?? [];
+        const kept = Number(body.inserted ?? 0) + Number(body.duplicates ?? 0);
+        state.queued.splice(0, Math.min(batch.length, kept + rejected.length));
+
+        if (rejected.length > 0) {
+          // Retrying will not help — a signature does not become valid — so it
+          // is counted and shown rather than looped on or thrown away quietly.
+          state.refused += rejected.length;
+          console.error(`${rejected.length} attestation(s) refused by the server`, rejected.slice(0, 3));
+        }
+      }
     } catch {
       /* retried next tick */
     }
@@ -246,7 +273,12 @@ function render() {
   $('sRate').textContent = total ? `${((state.stats.fallback / total) * 100).toFixed(1)}%` : '0%';
 
   const banner = $('banner');
-  if (behind > 0) {
+  if (state.refused > 0) {
+    // Ahead of the staleness warning: a lane that cannot file its decisions has
+    // a worse problem than a lane that is a few seconds behind.
+    banner.textContent = `${state.refused} decision${state.refused === 1 ? '' : 's'} were refused by the server and are not in the record. Call the supervisor.`;
+    banner.classList.add('show');
+  } else if (behind > 0) {
     banner.textContent = `This lane is ${behind} update${behind === 1 ? '' : 's'} behind. Resold tickets may still scan as valid.`;
     banner.classList.add('show');
   } else if (!state.manifest) {
@@ -401,6 +433,7 @@ function persist() {
         admitted: [...state.admitted],
         queued: state.queued,
         stats: state.stats,
+        refused: state.refused,
       }),
     );
   } catch {
@@ -418,6 +451,7 @@ function restore() {
     state.admitted = new Set(s.admitted);
     state.queued = s.queued ?? [];
     state.stats = s.stats ?? state.stats;
+    state.refused = s.refused ?? 0;
     return true;
   } catch {
     return false;
