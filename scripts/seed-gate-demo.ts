@@ -103,6 +103,32 @@ if (event.status !== 201) {
 console.log(`  event       ${id}`);
 console.log(`  doors       ${new Date(doors).toLocaleString()}  (open)`);
 console.log(`  key window  open now — it releases two hours before doors\n`);
-console.log('  Next: buy a ticket for an enrolled fan, then open a lane from');
-console.log(`  the organizer console's Live tab, or go straight to /gate/.\n`);
-console.log(`  To remove it:  npm run remove:event -- ${id}\n`);
+
+/*
+ * A lane, ready to open.
+ *
+ * The organizer console builds this same link on its Live tab, but reaching it
+ * needs an API key, and the only thing standing between somebody and testing
+ * the gate should be a camera. `PUBLIC_HOST` is where the browser will look;
+ * it defaults to the API origin, which is right for the single-host deployment
+ * and wrong for a laptop running four ports, hence the override.
+ */
+const host = process.env['PUBLIC_HOST'] ?? API;
+const lane = {
+  apiBase: host,
+  eventId: id,
+  scannerId: `scn_${randomBytes(3).toString('hex')}`,
+  lane: 'Lane A',
+  gateGroup: '',
+  allowReentry: false,
+  liveness: 'challenge',
+};
+const url = `${host}/gate/?config=${encodeURIComponent(Buffer.from(JSON.stringify(lane)).toString('base64'))}`;
+
+console.log('  Open a lane with this link — it registers the device, pulls the');
+console.log('  sealed manifest and asks for the key:\n');
+console.log(`  ${url}\n`);
+console.log('  ⚠ Buy the ticket FIRST. The manifest is sealed when the lane is');
+console.log('  provisioned, so a ticket bought afterwards is not in it — reload');
+console.log('  the link to pick it up.\n');
+console.log(`  To remove it all:  npm run remove:event -- ${id} --force\n`);
