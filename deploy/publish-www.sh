@@ -25,10 +25,39 @@ fi
 say() { printf '\n\033[36m==> %s\033[0m\n' "$1"; }
 
 say "Updating the checkout"
+before=$(sudo -u rexell git -C "$REPO" rev-parse HEAD)
 sudo -u rexell git -C "$REPO" pull --ff-only
 sudo -u rexell git -C "$REPO" log --oneline -1
 
-say "Building"
+cd "$REPO"
+
+# Dependencies, only when the lockfile actually moved.
+if ! sudo -u rexell git -C "$REPO" diff --quiet "$before" HEAD -- package-lock.json 2>/dev/null; then
+  say "Lockfile changed — installing"
+  sudo -u rexell npm ci --ignore-scripts
+fi
+
+# The API and the vault are compiled TypeScript, and this script used to skip
+# them entirely — it published the web root and stopped. The result was a front
+# end a day ahead of the API it was calling: recovery codes had shipped in the
+# browser while the running server was still on the build from before the
+# migration that stores them, and the only symptom was a field coming back
+# undefined. Everything served from this host is now built and restarted
+# together.
+say "Compiling the services"
+sudo -u rexell npm run build
+
+say "Restarting the services"
+# The vault first: the API answers enrolment with a 503 without it, and the
+# order that is merely untidy on a laptop is a visible error to somebody
+# mid-signup.
+systemctl restart rexell-vault
+sleep 2
+systemctl restart rexell-api
+sleep 3
+systemctl is-active rexell-vault rexell-api | tr '\n' ' '; echo
+
+say "Building the browser surfaces"
 # The site surface carries the other three mounted under paths, so one build
 # produces the whole browser-facing product.
 cd "$REPO"
