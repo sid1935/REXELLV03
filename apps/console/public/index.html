@@ -260,6 +260,12 @@
 <div class="toasts" id="toasts"></div>
 <!-- Serves the API origin chosen by the process, so it is not guessable from a URL. -->
 <script src="/config.js"></script>
-<script type="module" src="/console.js"></script>
+<!--
+  Relative, so this page works at the root of its own deployment and at
+  /console/ inside the site, where everything the product does lives on one
+  origin. ui.css, config.js and the logo stay absolute: they sit at the root
+  of both and are deliberately shared.
+-->
+<script type="module" src="console.js"></script>
 </body>
 </html>

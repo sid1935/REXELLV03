@@ -1,0 +1,72 @@
+# Everything on one hostname.
+#
+#   sudo cp deploy/Caddyfile.single-host /etc/caddy/Caddyfile
+#   sudo systemctl reload caddy
+#
+# The whole product from one name and one certificate: the API keeps /v1 and
+# /health, and every browser surface is a path under the same origin. That is
+# not only tidier to run — it is what stops joining as a fan looking like a
+# hand-off to somebody else's website.
+#
+# Caddy serves the built files straight off disk. There is no Node process for
+# any of the four surfaces, which on a 1 GB box is the difference between
+# comfortable and not.
+#
+#   /v1/*, /health   → the API
+#   /app/*           → the fan app
+#   /console/*       → the organizer console
+#   /gate/*          → the gate scanner
+#   everything else  → the marketing site
+
+{$PUBLIC_HOST} {
+	encode zstd gzip
+
+	header {
+		# Caddy terminates TLS here, so unlike the Node servers this is a fact
+		# rather than a guess.
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options nosniff
+		Referrer-Policy no-referrer
+		-Server
+	}
+
+	# A cached bundle after a policy change is a page running last week's
+	# rules, and a cached config.js points at the wrong API entirely.
+	@nostore path /config.js
+	header @nostore Cache-Control "no-store"
+	@nocache path *.html /
+	header @nocache Cache-Control "no-cache"
+
+	# ── the API ──────────────────────────────────────────────────────────
+	handle /v1/* {
+		reverse_proxy 127.0.0.1:8080
+	}
+	handle /health {
+		reverse_proxy 127.0.0.1:8080
+	}
+
+	# ── everything the browser loads ─────────────────────────────────────
+	handle {
+		root * {$WWW_ROOT}
+
+		# The marketing site is client-routed: /fan-journey and /waitlist exist
+		# only in the browser, so a reload on one has to reach the router.
+		#
+		# Two exclusions, and both matter. A path with a file extension is a
+		# missing asset, and answering it with HTML turns a broken script into
+		# a parse error somewhere unrelated. And a path under a mounted app
+		# belongs to that app's routing, not this one — without that, a typo
+		# under /console quietly serves the marketing page.
+		@spa {
+			not file {path} {path}.html {path}/index.html
+			not path /app/* /console/* /gate/*
+			not path *.js *.css *.png *.svg *.ico *.json *.webmanifest *.txt *.map
+		}
+		rewrite @spa /index.html
+
+		# /join resolves to join.html, /console/ to /console/index.html.
+		try_files {path} {path}.html {path}/index.html
+
+		file_server
+	}
+}

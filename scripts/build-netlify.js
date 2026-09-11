@@ -101,30 +101,31 @@ const links = {
 };
 
 /*
- * The fan app ships inside the site, at /app.
+ * The three apps ship inside the site, under paths.
  *
- * Not linked to at its own origin, because a visitor who presses "Join as
- * Fan" and watches the domain change has been handed to somebody else's
- * website — and this one is about to ask for their face. Same origin, so
- * there is nothing to hand off.
+ * Nothing links off to another origin, because a visitor who presses a button
+ * and watches the domain change has been handed to somebody else's website —
+ * and one of these is about to ask for their face. One origin, so there is
+ * nothing to hand off, one certificate, and one config.js telling all four
+ * surfaces where the API is.
  *
- * It costs almost nothing: the app is two files, and ui.css, config.js and
- * the logo already sit at this root and are shared rather than duplicated.
+ * It costs almost nothing: ui.css, config.js and the logos sit at this root
+ * and are shared rather than copied into each app.
  */
-if (surface === 'site') {
-  const app = resolve(output, 'app');
-  mkdirSync(app, { recursive: true });
-  cpSync(resolve(root, SURFACES.fan), app, { recursive: true });
-  links.fan = '/app';
-}
+const MOUNTS = { fan: 'app', console: 'console', scanner: 'gate' };
 
-if (surface === 'site' && !links.console) {
-  // The organizer button is the one that still points off-site, and built
-  // without anywhere to go it deploys looking perfect and does nothing.
-  console.error('\n[build] The site surface needs REXELL_CONSOLE.');
-  console.error('[build] It is the public origin of the organizer console,');
-  console.error('[build] e.g. https://organizers.example.com\n');
-  process.exit(78);
+if (surface === 'site') {
+  for (const [app, path] of Object.entries(MOUNTS)) {
+    const target = resolve(output, path);
+    mkdirSync(target, { recursive: true });
+    cpSync(resolve(root, SURFACES[app]), target, { recursive: true });
+  }
+  // Same-origin paths, so REXELL_FAN and REXELL_CONSOLE are no longer needed
+  // — and an env var that can point the buttons somewhere wrong is one fewer
+  // thing to get wrong.
+  links.fan = '/app';
+  links.console = '/console';
+  links.scanner = '/gate';
 }
 
 writeFileSync(
@@ -153,10 +154,10 @@ if (CLIENT_ROUTED.has(surface)) {
       '/join              /join.html              200',
       '/assets/*          /assets/:splat          404',
       '/team/*            /team/:splat            404',
-      // The mounted app has its own routing and is not part of this site's.
-      // Without this, a missing file under /app comes back as the marketing
+      // A mounted app has its own routing and is not part of this site's.
+      // Without these, a missing file under one comes back as the marketing
       // page with a 200.
-      '/app/*             /app/:splat             404',
+      ...Object.values(MOUNTS).map((path) => `/${path}/*`.padEnd(19) + `/${path}/:splat`.padEnd(24) + '404'),
       // The shared assets sit at the root rather than under /assets, so the
       // directory rules above do not cover them and a missing one would come
       // back as the HTML shell with a 200. That is not hypothetical: it is
