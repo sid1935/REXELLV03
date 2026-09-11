@@ -32,7 +32,8 @@
     "build:netlify": "node scripts/build-netlify.js",
     "site": "node apps/site/serve.js",
     "seed:events": "tsx scripts/seed-events.ts",
-    "art:events": "tsx scripts/make-event-art.ts"
+    "art:events": "tsx scripts/make-event-art.ts",
+    "backfill:venues": "tsx scripts/backfill-venues.ts"
   },
   "engines": {
     "node": ">=22.5"
