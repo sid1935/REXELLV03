@@ -363,6 +363,11 @@ export function commerceRoutes(app: FastifyInstance, { repo, now, devMode, risk 
             settlementId,
             eventId: event.id,
             ticketId: ticket.id,
+            // Both sides of the trade. The chain does not transfer a ticket, it
+            // runs a sale: the controller opens a listing for the seller and
+            // closes it for the buyer, and that is what applies the price cap
+            // and records the royalty split on chain rather than only here.
+            fromIdentityId: ticket.ownerIdentityId,
             toIdentityId: buyer.identityId,
             priceMinor: listing.price,
           },

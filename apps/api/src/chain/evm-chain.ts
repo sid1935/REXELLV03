@@ -39,7 +39,7 @@ import type { ChainClient, MintReceipt, MintRequest, ResaleRequest } from './cli
  * Only the functions this client calls.
  *
  * Hand-written rather than imported from `artifacts/`, which is build output and
- * gitignored — a fresh clone would have no ABI at all. `chain-abi.test.ts` in
+ * gitignored — a fresh clone would have no ABI at all. `abi-drift.test.ts` in
  * packages/contracts asserts every entry here still matches the compiled
  * contract, so the copy cannot drift in silence.
  */
@@ -50,6 +50,12 @@ export const REGISTRY_ABI = [
 
 export const FACTORY_ABI = [
   { type: 'function', name: 'ticketContractOf', stateMutability: 'view', inputs: [{ name: '', type: 'bytes32' }], outputs: [{ type: 'address' }] },
+] as const;
+
+export const CONTROLLER_ABI = [
+  { type: 'function', name: 'list', stateMutability: 'nonpayable', inputs: [{ name: 'ticketContract', type: 'address' }, { name: 'tokenId', type: 'uint256' }, { name: 'sellerIdentity', type: 'bytes32' }, { name: 'price', type: 'uint96' }], outputs: [{ name: 'listingId', type: 'uint256' }] },
+  { type: 'function', name: 'buy', stateMutability: 'nonpayable', inputs: [{ name: 'listingId', type: 'uint256' }, { name: 'buyerIdentity', type: 'bytes32' }, { name: 'expectedPrice', type: 'uint96' }], outputs: [{ name: 'saleId', type: 'bytes32' }] },
+  { type: 'event', name: 'Listed', inputs: [{ name: 'listingId', type: 'uint256', indexed: true }, { name: 'tokenId', type: 'uint256', indexed: true }, { name: 'sellerIdentity', type: 'bytes32', indexed: true }, { name: 'price', type: 'uint96', indexed: false }] },
 ] as const;
 
 export const TICKET_ABI = [
@@ -65,6 +71,8 @@ export interface EvmChainOptions {
   readonly privateKey: Hex;
   readonly accessRegistry: Address;
   readonly eventFactory: Address;
+  /** The only contract allowed to move a ticket, and the one that enforces the terms. */
+  readonly resaleController: Address;
   /** Derives the per-identity address. Never leaves this process. */
   readonly identitySeed: string;
   /** How long to wait for a receipt before giving up and retrying later. */
@@ -206,40 +214,63 @@ export class EvmChain implements ChainClient {
   }
 
   async recordResale(request: ResaleRequest): Promise<{ txHash: string }> {
+    if (!request.tokenId) {
+      // The caller knows whether the mint has confirmed; this only knows what
+      // it was told. Refusing loudly keeps the row pending for a retry rather
+      // than sending a transfer of token zero.
+      throw new ChainUnavailable(`resale for ${request.ticketId} has no token id — its mint has not confirmed`);
+    }
     const ticketContract = await this.#ticketContract(request.eventId);
     await this.#ensureBound(request.toIdentityId);
 
-    const tokenId = await this.#tokenIdFor(ticketContract, request.ticketId);
+    /*
+     * A sale, not a transfer.
+     *
+     * The first version of this called `controllerTransfer` directly and the
+     * contract refused it — correctly, and the refusal is the whole product.
+     * Only the ResaleController may move a ticket, because moving one through
+     * the controller is what applies the price ceiling, the resale window, the
+     * cooldown and the maximum-resale count, and what records the royalty split
+     * on chain. Transferring around it would reproduce the thing these
+     * contracts exist to prevent: a ticket changing hands on terms the organizer
+     * never agreed to.
+     *
+     * So the platform opens a listing in the seller's name and closes it for the
+     * buyer. Two transactions, and every rule is enforced by the chain between
+     * them rather than asserted by us.
+     */
+    const tokenId = BigInt(request.tokenId);
+    const price = BigInt(request.priceMinor);
+
+    const listHash = await this.#send({
+      address: this.#opts.resaleController,
+      abi: CONTROLLER_ABI,
+      functionName: 'list',
+      args: [ticketContract, tokenId, toBytes32(request.fromIdentityId), price],
+    });
+    const listed = await this.#confirm(listHash);
+    const listingId = this.#listedId(listed);
+    if (listingId === undefined) {
+      throw new ChainUnavailable(`listing for ${request.ticketId} emitted no Listed event`);
+    }
+
     const hash = await this.#send({
-      address: ticketContract,
-      abi: TICKET_ABI,
-      functionName: 'controllerTransfer',
-      args: [tokenId, toBytes32(request.toIdentityId)],
+      address: this.#opts.resaleController,
+      abi: CONTROLLER_ABI,
+      functionName: 'buy',
+      args: [listingId, toBytes32(request.toIdentityId), price],
     });
     await this.#confirm(hash);
     return { txHash: hash };
   }
 
-  /**
-   * Which token id belongs to a ticket.
-   *
-   * The application database records it when the mint confirms, and this client
-   * is given the ticket id rather than the token id. Rather than reach back into
-   * the repo — which would put a database behind the chain interface — the
-   * caller passes a numeric ticket reference through `ResaleRequest.ticketId`
-   * when it has one.
-   *
-   * ⚠ Today that mapping lives only in the application database, so a resale for
-   * a ticket whose mint has not confirmed cannot be recorded and is left
-   * pending. That is the correct order of events and worth knowing about: the
-   * chain ledger lags the sale, always, by design.
-   */
-  async #tokenIdFor(_ticketContract: Address, ticketId: string): Promise<bigint> {
-    const numeric = /^\d+$/.test(ticketId) ? BigInt(ticketId) : undefined;
-    if (numeric === undefined) {
-      throw new ChainUnavailable(`resale for ${ticketId} has no on-chain token id yet`);
+  /** The listing id out of the Listed log. */
+  #listedId(receipt: { logs: readonly { topics: readonly Hex[] }[] }): bigint | undefined {
+    const signature = keccak256(toHex('Listed(uint256,uint256,bytes32,uint96)'));
+    for (const log of receipt.logs) {
+      if (log.topics[0] === signature && log.topics[1]) return BigInt(log.topics[1]);
     }
-    return numeric;
+    return undefined;
   }
 
   async #send(call: {

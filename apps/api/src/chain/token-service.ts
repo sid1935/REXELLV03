@@ -88,11 +88,29 @@ export class TokenService {
         settlementId: string;
         eventId: string;
         ticketId: string;
+        fromIdentityId: string;
         toIdentityId: string;
         priceMinor: number;
       };
       try {
-        const { txHash } = await this.chain.recordResale(payload);
+        /*
+         * The token id, from the only place it exists.
+         *
+         * A resale cannot be recorded before the mint it transfers has landed —
+         * there is no token to move yet. That is the correct order of events and
+         * not a failure: the row stays pending and the next drain tries again,
+         * by which time the mint outbox has almost certainly caught up.
+         *
+         * Leaving it out entirely is what the first version of this did, and
+         * the chain client was left guessing from the ticket id. It guessed that
+         * a ticket id might be a number. They never are.
+         */
+        const tokenId = this.repo.outbox.tokenIdFor(payload.ticketId);
+        if (!tokenId) {
+          throw new Error(`ticket ${payload.ticketId} has no confirmed mint yet`);
+        }
+
+        const { txHash } = await this.chain.recordResale({ ...payload, tokenId });
         this.repo.outbox.markConfirmed(row.op_id, txHash, this.now());
         confirmed += 1;
       } catch (e) {

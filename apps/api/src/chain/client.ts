@@ -28,8 +28,24 @@ export interface ResaleRequest {
   readonly settlementId: string;
   readonly eventId: string;
   readonly ticketId: string;
+  /** Who is selling. The on-chain listing is opened in their name. */
+  readonly fromIdentityId: string;
   readonly toIdentityId: string;
   readonly priceMinor: number;
+  /**
+   * The ERC-721 the ticket became when its mint confirmed.
+   *
+   * Passed in rather than looked up, because the only place it exists is the
+   * application database and a chain client that reads the database is a chain
+   * client that cannot be tested without one. The caller has the repo; this
+   * interface should stay something you can implement against a node and
+   * nothing else.
+   *
+   * Absent until the mint confirms, and that is the normal case rather than an
+   * error: the ledger lags the sale, always. A resale whose mint has not landed
+   * stays pending and is retried, which is exactly what the outbox is for.
+   */
+  readonly tokenId?: string;
 }
 
 export interface ChainClient {

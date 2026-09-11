@@ -968,6 +968,20 @@ export class OutboxRepo {
     this.db.run('UPDATE tickets SET mint_state = ?, token_id = ? WHERE ticket_id = ?', state, tokenId, ticketId);
   }
 
+  /**
+   * The ERC-721 a ticket became, or nothing if its mint has not confirmed.
+   *
+   * Its own reader rather than a field on `Ticket`, because a ticket in the
+   * domain is an entitlement to enter and knows nothing about chains — and
+   * should keep knowing nothing, so that turning the chain off changes no type.
+   * The one caller is the resale drain, which cannot transfer a token that does
+   * not exist yet.
+   */
+  tokenIdFor(ticketId: string): string | undefined {
+    const row = this.db.get<{ token_id: string | null }>('SELECT token_id FROM tickets WHERE ticket_id = ?', ticketId);
+    return row?.token_id ?? undefined;
+  }
+
   setEventChainAddress(eventId: string, address: string): void {
     this.db.run('UPDATE events SET chain_address = ? WHERE event_id = ?', address, eventId);
   }

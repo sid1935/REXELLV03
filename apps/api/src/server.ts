@@ -53,6 +53,7 @@ const chain =
         privateKey: config.chain.privateKey as `0x${string}`,
         accessRegistry: config.chain.accessRegistry as `0x${string}`,
         eventFactory: config.chain.eventFactory as `0x${string}`,
+        resaleController: config.chain.resaleController as `0x${string}`,
         identitySeed: config.chain.identitySeed,
       })
     : new FakeChain();

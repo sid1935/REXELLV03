@@ -20,7 +20,7 @@ import { describe, it } from 'node:test';
 import { readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { FACTORY_ABI, REGISTRY_ABI, TICKET_ABI } from '../../../apps/api/src/chain/evm-chain.ts';
+import { CONTROLLER_ABI, FACTORY_ABI, REGISTRY_ABI, TICKET_ABI } from '../../../apps/api/src/chain/evm-chain.ts';
 
 const here = dirname(fileURLToPath(import.meta.url));
 
@@ -63,12 +63,13 @@ describe('the API ABI matches the contracts', () => {
   it('AccessRegistry', () => assertMatches('REGISTRY_ABI', REGISTRY_ABI, 'AccessRegistry'));
   it('EventFactory', () => assertMatches('FACTORY_ABI', FACTORY_ABI, 'EventFactory'));
   it('TicketNFT', () => assertMatches('TICKET_ABI', TICKET_ABI, 'TicketNFT'));
+  it('ResaleController', () => assertMatches('CONTROLLER_ABI', CONTROLLER_ABI, 'ResaleController'));
 
   it('covers every function the client calls', () => {
     // A guard against the opposite failure: somebody adds a call to the client
     // and forgets to declare it, so the ABI is correct and incomplete.
     const declared = new Set(
-      [...REGISTRY_ABI, ...FACTORY_ABI, ...TICKET_ABI]
+      [...REGISTRY_ABI, ...FACTORY_ABI, ...TICKET_ABI, ...CONTROLLER_ABI]
         .filter((e) => e.type === 'function')
         .map((e) => e.name),
     );

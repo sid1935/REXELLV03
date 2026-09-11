@@ -35,6 +35,7 @@ export interface ApiConfig {
         privateKey: string;
         accessRegistry: string;
         eventFactory: string;
+        resaleController: string;
         identitySeed: string;
       };
   chainDrainMs: number;
@@ -74,6 +75,7 @@ function chainConfig(source: NodeJS.ProcessEnv, problems: string[]): ApiConfig['
   const privateKey = need('CHAIN_PRIVATE_KEY');
   const accessRegistry = need('CHAIN_ACCESS_REGISTRY');
   const eventFactory = need('CHAIN_EVENT_FACTORY');
+  const resaleController = need('CHAIN_RESALE_CONTROLLER');
   // Derives every fan's address. Changing it re-points every identity at an
   // address with no tickets, so it belongs with the vault keys: set once,
   // backed up, never rotated casually.
@@ -85,7 +87,7 @@ function chainConfig(source: NodeJS.ProcessEnv, problems: string[]): ApiConfig['
     problems.push('CHAIN_PRIVATE_KEY must be 0x followed by 64 hex characters.');
   }
 
-  return { kind: 'evm', rpcUrl, chainId, privateKey, accessRegistry, eventFactory, identitySeed };
+  return { kind: 'evm', rpcUrl, chainId, privateKey, accessRegistry, eventFactory, resaleController, identitySeed };
 }
 
 function number(raw: string | undefined, fallback: number, name: string, problems: string[]): number {
