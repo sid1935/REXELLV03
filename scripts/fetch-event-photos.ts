@@ -44,13 +44,16 @@ const PHOTOS: Record<string, string> = {
   evt_foofighters_mum_2027: 'File:Foo Fighters Molson Amphitheatre 8-7-2015.jpg',
   evt_lolla_mum_2027: 'File:Lollapalooza 2015.JPG',
   evt_tonight_blr: 'File:Sree Kanteerava Stadium.jpg',
-  // Two events keep their generated poster.
+  evt_fredagain_mum_2026: 'File:FredAgainCPBowl100825-28 (54714087200).jpg',
+  evt_chainsmokers_blr_2026: 'File:The Chainsmokers VELD 2016.jpg',
+  // The last two took a second pass. "Fred again musician" and "Chainsmokers
+  // concert" both returned nothing usable — Commons files them under
+  // "FredAgainCPBowl" and "VELD 2016" — so the first attempt concluded no
+  // photograph existed when the search terms were simply wrong. Openverse,
+  // which indexes Commons among others, found both immediately.
   //
-  // Commons has no photograph of Fred again.. at all. It does have one of The
-  // Chainsmokers, but it is a forces' welfare photo-op in a warehouse beside a
-  // tank — accurate, and nothing like a concert, so on a ticket card it reads
-  // as the wrong picture. The nearest alternatives are other DJs entirely,
-  // which would be worse: a card is a claim about who is playing.
+  // Worth remembering before deciding a picture does not exist: an empty
+  // result is a statement about the query, not about the archive.
 };
 
 const API = 'https://commons.wikimedia.org/w/api.php';
