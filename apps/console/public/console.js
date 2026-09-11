@@ -370,6 +370,33 @@ $('createBtn').addEventListener('click', async () => {
 
 // ─── live ────────────────────────────────────────────────────────────────────
 
+/**
+ * Provisioning for one lane, as the scanner expects it.
+ *
+ * A real deployment pushes this through mobile device management. This is the
+ * same payload, handed over as a link, which is what makes "open a lane" one
+ * click from the page that reports on the lanes.
+ *
+ * The scanner id is minted here and is new every time the link is built, so two
+ * devices opened from this page are two lanes rather than one lane fighting
+ * itself over which of them already admitted somebody.
+ */
+function laneConfig(eventId) {
+  const suffix = Math.random().toString(36).slice(2, 8);
+  return btoa(
+    JSON.stringify({
+      apiBase: API,
+      eventId,
+      scannerId: `scn_${suffix}`,
+      lane: `Lane ${suffix.slice(0, 2).toUpperCase()}`,
+      // No gate group, so this lane admits any entrance. An event that splits
+      // its crowd by entrance sets this per device.
+      gateGroup: '',
+      allowReentry: false,
+    }),
+  );
+}
+
 async function renderLive() {
   const eventId = $('eventPicker').value;
   if (!eventId) {
@@ -445,8 +472,8 @@ async function renderLive() {
               this button produces; they belong next to each other.
             -->
             <div class="row" style="margin-top:18px;gap:10px;align-items:center">
-              <a class="btn btn-primary" href="/gate/?event=${encodeURIComponent(eventId)}" target="_blank" rel="noopener">Open the gate scanner</a>
-              <span class="hint">Opens the lane app on this device. It keeps deciding with the network off.</span>
+              <a class="btn btn-primary" href="/gate/?config=${encodeURIComponent(laneConfig(eventId))}" target="_blank" rel="noopener">Open a gate lane</a>
+              <span class="hint">Registers this device as a lane, pulls the sealed manifest, and keeps deciding with the network off.</span>
             </div>
           </div>
         </section>

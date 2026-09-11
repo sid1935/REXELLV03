@@ -1,6 +1,11 @@
 /**
  * ReXell gate scanner.
  *
+ * Provisioned from a link the organizer console builds: it registers this
+ * device as a lane, pulls the sealed manifest, and asks for the key that opens
+ * it — refused until two hours before doors, so a device taken a week early
+ * carries a blob and nothing else.
+ *
  * A browser port of `packages/gate`. The decision logic below is the same
  * algorithm as `GateEngine` — cosine 1:N against the opened manifest, then the
  * policy ladder — deliberately kept side by side with it so a change to one is
@@ -417,23 +422,121 @@ async function provision() {
     }),
   });
 
-  // The manifest arrives sealed and is opened with a key released separately.
-  // Here the dev server hands back an already-opened one; the sealed path is
-  // exercised by `apps/api/test/gate-e2e.test.ts`.
-  const r = await fetch(`${cfg.apiBase}/v1/events/${cfg.eventId}/manifest`);
-  const body = await r.json();
-  state.manifest = {
-    eventId: body.eventId,
-    sequence: body.sequence,
-    expiresAt: body.expiresAt,
-    entries: body.entries.map((e) => ({
-      ...e,
-      template: normalise(Array.from({ length: VECTOR_DIMS }, (_, i) => Math.sin(i * (e.ticketId.length + 1)))),
-    })),
-  };
+  await loadManifest(cfg);
   history.replaceState(null, '', location.pathname);
   persist();
   return true;
+}
+
+/**
+ * Fetch the sealed manifest and the key that opens it.
+ *
+ * Two calls on purpose, and the separation is the point: the blob can be pushed
+ * to a device days early over any channel, and it is inert until doors. The key
+ * is refused before a window that opens two hours before doors open, so a
+ * scanner that is stolen a week out carries nothing.
+ *
+ * This used to fetch the OPEN manifest — which carries a `templateRef` and no
+ * template, because templates do not leave the vault unsealed — and then invent
+ * a vector per entry from the length of its ticket id. Every real face therefore
+ * scored against nonsense and the lane could only ever answer NO MATCH. The UI,
+ * the ladder, the signing and the queue were all real; the one thing it could
+ * not do was recognise anybody.
+ */
+async function loadManifest(cfg) {
+  const sealedRes = await fetch(`${cfg.apiBase}/v1/events/${cfg.eventId}/manifest/sealed`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ scannerId: cfg.scannerId }),
+  });
+  if (!sealedRes.ok) throw new Error(`Could not get a manifest (${sealedRes.status}).`);
+  const issued = await sealedRes.json();
+  // The blob arrives wrapped in its own accounting: how many credentials went
+  // in, and how many ticket-holders had no template to include. The second
+  // number is the one an operator needs — those people are not in this lane's
+  // gallery and will be sent to the desk however well they behave.
+  const sealed = issued.sealed;
+  if (issued.missingTemplates > 0) {
+    console.warn(`${issued.missingTemplates} ticket-holder(s) have no template and cannot be matched at this lane.`);
+  }
+
+  const keyRes = await fetch(`${cfg.apiBase}/v1/events/${cfg.eventId}/manifest/key`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ scannerId: cfg.scannerId }),
+  });
+  if (!keyRes.ok) {
+    const body = await keyRes.json().catch(() => ({}));
+    if (body?.error?.code === 'TOO_EARLY') {
+      const at = issued.keyReleasesAt ? new Date(issued.keyReleasesAt).toLocaleString() : 'doors';
+      throw new Error(`The key for this lane is not released until ${at}.`);
+    }
+    throw new Error(`Could not get the manifest key (${keyRes.status}).`);
+  }
+  const { key } = await keyRes.json();
+
+  state.manifest = await openSealed(sealed, key);
+}
+
+const b64 = (s) => Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
+
+/**
+ * AES-256-GCM, the browser half of `openManifest` in packages/gate.
+ *
+ * Node hands back the tag separately; WebCrypto wants it appended to the
+ * ciphertext. The additional authenticated data is the manifest's own identity,
+ * so a blob re-labelled for a different lane or a later expiry fails to open
+ * rather than opening into the wrong event.
+ */
+async function openSealed(sealed, keyBase64) {
+  if (Date.now() >= sealed.expiresAt) throw new Error('This manifest has expired. The lane needs re-keying.');
+  if (sealed.scannerId && sealed.scannerId !== state.config.scannerId) {
+    throw new Error('This manifest was issued to a different lane.');
+  }
+
+  const key = await crypto.subtle.importKey('raw', b64(keyBase64), { name: 'AES-GCM' }, false, ['decrypt']);
+  const ciphertext = b64(sealed.ciphertext);
+  const tag = b64(sealed.tag);
+  const joined = new Uint8Array(ciphertext.length + tag.length);
+  joined.set(ciphertext);
+  joined.set(tag, ciphertext.length);
+
+  const aad = new TextEncoder().encode(
+    `${sealed.eventId}|${sealed.scannerId}|${sealed.sequence}|${sealed.expiresAt}`,
+  );
+
+  let plain;
+  try {
+    plain = await crypto.subtle.decrypt(
+      { name: 'AES-GCM', iv: b64(sealed.iv), additionalData: aad, tagLength: 128 },
+      key,
+      joined,
+    );
+  } catch {
+    // Not a decoding hiccup. Either the key is wrong or the envelope was
+    // edited, and both mean this blob is not the manifest it claims to be.
+    throw new Error('This manifest did not open. It is not for this lane, or it has been tampered with.');
+  }
+
+  const entries = JSON.parse(new TextDecoder().decode(plain));
+  return {
+    eventId: sealed.eventId,
+    sequence: sealed.sequence,
+    expiresAt: sealed.expiresAt,
+    entries: entries.map((e) => ({
+      ticketId: e.t,
+      identityId: e.i,
+      tierId: e.r,
+      seat: e.s ?? undefined,
+      gates: e.g,
+      admitFrom: e.f,
+      admitUntil: e.u,
+      revoked: e.v,
+      // Templates travel as base64 float bytes rather than JSON numbers: a
+      // 12,000-entry manifest of 128-float arrays is megabytes of decimal text.
+      template: new Float32Array(b64(e.b).buffer),
+    })),
+  };
 }
 
 // ─── boot ────────────────────────────────────────────────────────────────────
