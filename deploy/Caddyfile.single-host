@@ -90,7 +90,7 @@
 		@spa {
 			not file {path} {path}.html {path}/index.html
 			not path /app/* /console/* /gate/*
-			not path *.js *.css *.png *.jpg *.jpeg *.gif *.webp *.avif *.svg *.ico *.json *.webmanifest *.txt *.map *.woff *.woff2 *.bin *.html
+			not path *.js *.css *.png *.jpg *.jpeg *.gif *.webp *.avif *.svg *.ico *.json *.webmanifest *.txt *.map *.woff *.woff2 *.bin *.html *.md
 		}
 		rewrite @spa /index.html
 
