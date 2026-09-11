@@ -298,6 +298,17 @@ function render() {
   $('idTag').className = `tag ${state.enrolled ? 'tag-ok' : 'tag-warn'}`;
   $('idTag').textContent = state.enrolled ? 'ID ready' : 'ID incomplete';
 
+  // The rail's foot, which the console uses for who is signed in. Here the
+  // equivalent question is whether this device can open a gate.
+  const rail = $('railStatus');
+  if (rail) {
+    rail.textContent = !state.identityId
+      ? 'Not set up'
+      : state.enrolled
+        ? 'Ready for the gate'
+        : 'Face not set up yet';
+  }
+
   if (state.view === 'tickets') renderTickets();
   if (state.view === 'discover') renderDiscover();
   if (state.view === 'sell') renderSell();
@@ -687,12 +698,12 @@ async function renderYou() {
 function showLanding() {
   $('landing').hidden = false;
   // Nothing behind it should be reachable by keyboard while it covers the app.
-  document.querySelector('.phone').setAttribute('inert', '');
+  document.querySelector('.shell').setAttribute('inert', '');
 }
 
 function enterApp(view = 'tickets') {
   $('landing').hidden = true;
-  document.querySelector('.phone').removeAttribute('inert');
+  document.querySelector('.shell').removeAttribute('inert');
   go(view);
 }
 

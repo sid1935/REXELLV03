@@ -11,8 +11,6 @@
 <link rel="icon" href="/logo-full.png" type="image/png">
 <link rel="stylesheet" href="/ui.css">
 <style>
-  .fan-head { display: flex; align-items: center; gap: 10px; padding: 16px 18px 10px; }
-  .fan-head h1 { font-size: 22px; }
   .event-card {
     display: block; width: 100%; text-align: left; cursor: pointer;
     background: var(--surface); border: 1px solid var(--rule); border-radius: var(--r-lg);
@@ -153,6 +151,51 @@
     .landing-hero { max-width: 520px; margin: 0 auto; width: 100%; }
     .landing-top, .landing-foot { max-width: 520px; margin-inline: auto; width: 100%; }
   }
+
+  /*
+   * What the shared shell does not already cover.
+   *
+   * The rail, the topbar and the mobile collapse all come from ui.css, the
+   * same ones the organizer console uses. Only two things here are specific
+   * to this app: its lists want to be a grid when there is room, and its
+   * sheets should stop behaving like bottom sheets once there is no thumb.
+   */
+  .topbar h1 { font-size: 20px; }
+
+  @media (min-width: 861px) {
+    /*
+     * One file of cards becomes a grid.
+     *
+     * Scoped to the three list views rather than to `.stack`, which is a
+     * general-purpose column used inside the sheets too — turning that into a
+     * grid would rearrange the consent screen.
+     *
+     * auto-fill, not auto-fit: with a single ticket, auto-fit stretches it
+     * across the whole width and one ticket reads as a banner.
+     */
+    #view-tickets > .stack,
+    #view-discover > .stack,
+    #view-sell > .stack {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(330px, 1fr));
+      align-items: start;
+      gap: 18px;
+    }
+
+    /* A bottom sheet is a thumb affordance, and there is no thumb here. */
+    .sheet { align-items: center; }
+    .sheet-panel {
+      max-width: 520px;
+      border-radius: var(--r-lg);
+      padding: 24px 24px 26px;
+      max-height: 84dvh;
+      box-shadow: var(--lift-3);
+      animation: dialogIn var(--fast);
+    }
+    /* A grab handle invites a drag that a mouse cannot perform. */
+    .grabber { display: none; }
+    @keyframes dialogIn { from { opacity: 0; transform: translateY(6px) scale(0.99); } }
+  }
 </style>
 </head>
 <body>
@@ -208,24 +251,26 @@
   </div>
 </div>
 
-<div class="phone">
-  <header class="fan-head">
-    <span class="brand-lockup brand-lockup--dark"><span class="brand-mark"><img src="/logo-full.png" alt="ReXell"></span></span>
-    <span class="brand brand-lockup brand-lockup--light"><span class="brand-mark"></span><span class="brand-word">ReXell</span></span>
-    <h1 id="pageTitle">Your tickets</h1>
-    <span class="spacer"></span>
-    <span class="tag" id="idTag" hidden></span>
-  </header>
+<!--
+  The same shell the organizer console uses: a rail down the side, a topbar,
+  and a page. This app is opened on a laptop as often as on a phone, and the
+  design system already had a desktop layout — inventing a second one would
+  have been two things to keep in step.
 
-  <div class="phone-body">
-    <section id="view-tickets"></section>
-    <section id="view-discover" hidden></section>
-    <section id="view-sell" hidden></section>
-    <section id="view-you" hidden></section>
-  </div>
+  The rail collapses to a horizontal strip under 860px, which ui.css already
+  does for the console.
+-->
+<div class="shell">
+  <aside class="rail">
+    <a class="brand brand-lockup brand-lockup--dark" href="#">
+      <img class="brand-logo" src="/logo-full.png" alt="ReXell Technologies">
+    </a>
+    <a class="brand brand-lockup brand-lockup--light" href="#">
+      <span class="brand-mark"></span><span class="brand-word">ReXell</span>
+    </a>
 
-  <nav class="tabbar" id="tabs">
-    <button data-view="tickets" aria-current="true">
+    <nav class="rail-nav" id="tabs">
+      <button data-view="tickets" aria-current="true">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9V7a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v2a2 2 0 0 0 0 4v2a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-2a2 2 0 0 0 0-4Z"/><path d="M13 5v14" stroke-dasharray="2 3"/></svg>
       Tickets
     </button>
@@ -241,7 +286,28 @@
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>
       You
     </button>
-  </nav>
+    </nav>
+
+    <div class="rail-foot stack gap-sm">
+      <div class="eyebrow">Your ReXell ID</div>
+      <div class="hint" id="railStatus">Not set up</div>
+    </div>
+  </aside>
+
+  <div>
+    <header class="topbar">
+      <h1 id="pageTitle">Your tickets</h1>
+      <span class="spacer"></span>
+      <span class="tag" id="idTag" hidden></span>
+    </header>
+
+    <main class="page">
+      <section id="view-tickets"></section>
+      <section id="view-discover" hidden></section>
+      <section id="view-sell" hidden></section>
+      <section id="view-you" hidden></section>
+    </main>
+  </div>
 </div>
 
 <div class="toasts" id="toasts"></div>
