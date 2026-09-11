@@ -21,6 +21,7 @@ import { toFaceVector } from '@rexell/biometrics';
 import type { FaceVector } from '@rexell/biometrics';
 import faces from '../../biometrics/test/real-faces.json' with { type: 'json' };
 import type { GateEntry } from '../src/index.js';
+import { generateDeviceKey, verifyAttestation } from '../src/index.js';
 import { DOORS, EVENT, EXPIRY, SCANNER, engine, entry, roundTrip } from './helpers.js';
 
 interface Face {
@@ -136,5 +137,88 @@ describe('the gate, on real faces', () => {
     // numbers before.
     const second = photos[2] ?? photos[1]!;
     expect(g.scan(second.v as FaceVector, DOORS + 60_000).decision.code).toBe('ALREADY_ADMITTED');
+  });
+});
+
+/**
+ * Liveness at the lane.
+ *
+ * The lane reaches its own verdict — it picks the movement and judges the
+ * answer, because unlike the phone at signup the device belongs to the venue.
+ * What is tested here is what the engine does with that verdict, and the three
+ * things that matter are the order it is checked in, the outcome it produces,
+ * and that it cannot be edited out of the signed record afterwards.
+ */
+describe('liveness at the gate', () => {
+  const holder = ticketHolders[0]!;
+  const lane = () => engine(roundTrip(realManifest()));
+  const probe = () => photosOf(holder)[1]!.v as FaceVector;
+  const live = { kind: 'turn_left', passed: true, frames: 9 };
+  const dead = { kind: 'turn_left', passed: false, frames: 9 };
+
+  it('admits a ticket-holder who moved', () => {
+    const d = lane().scan(probe(), DOORS, live).decision;
+    expect(d.outcome).toBe('admit');
+    expect(d.code).toBe('MATCHED');
+  });
+
+  it('sends a matching face that did not move to the desk, and does not deny it', () => {
+    // A photograph of a ticket-holder. It is the right face, so the matcher is
+    // satisfied and only this check is not — and a denial here would refuse
+    // real people in bad light, so it is a referral.
+    const d = lane().scan(probe(), DOORS, dead).decision;
+    expect(d.outcome).toBe('fallback');
+    expect(d.code).toBe('LIVENESS_FAILED');
+  });
+
+  it('does not admit the ticket when liveness failed', () => {
+    // The admission set must not learn about somebody who never got in, or
+    // their real arrival a minute later reads as a second entry.
+    const g = lane();
+    g.scan(probe(), DOORS, dead);
+    expect(g.status(DOORS).admitted).toBe(0);
+    expect(g.scan(probe(), DOORS + 60_000, live).decision.outcome).toBe('admit');
+  });
+
+  it('tells a stranger nothing about liveness', () => {
+    // Ordering, and it is a disclosure question rather than a style one. A
+    // stranger who is told their liveness failed has been told the face WAS
+    // recognised, which is a fact about the ticket-holder.
+    // A manifest holding one ticket, so everybody else really is a stranger.
+    // Picking any other face out of the full five-person manifest does not
+    // test this: they have a ticket of their own, so matching and then failing
+    // liveness is the right answer for them.
+    const g = engine(
+      roundTrip({
+        ...realManifest(),
+        entries: [entry(0, { ticketId: `tkt_${holder}`, identityId: `idn_${holder}`, template: enrolled.get(holder)!.v as FaceVector })],
+      }),
+    );
+    const stranger = all.find((f) => f.person !== holder)!.v as FaceVector;
+    const d = g.scan(stranger, DOORS, dead).decision;
+    expect(d.code).toBe('NO_MATCH');
+  });
+
+  it('runs without a verdict at all, for a lane with the check turned off', () => {
+    const d = lane().scan(probe(), DOORS).decision;
+    expect(d.outcome).toBe('admit');
+  });
+
+  it('signs the verdict, so it cannot be edited afterwards', () => {
+    const keys = generateDeviceKey();
+    const g = engine(roundTrip(realManifest()), { privateKeyPem: keys.privateKeyPem });
+    const { attestation } = g.scan(probe(), DOORS, live);
+
+    expect(attestation.liveness).toEqual(live);
+    expect(verifyAttestation(attestation, keys.publicKeyPem)).toBe(true);
+
+    // The three edits somebody would actually make: turn a failure into a pass,
+    // and erase the fact that the lane ever checked.
+    expect(verifyAttestation({ ...attestation, liveness: dead }, keys.publicKeyPem)).toBe(false);
+    const { liveness: _dropped, ...stripped } = attestation;
+    expect(verifyAttestation(stripped, keys.publicKeyPem)).toBe(false);
+    expect(
+      verifyAttestation({ ...attestation, liveness: { ...live, frames: 99 } }, keys.publicKeyPem),
+    ).toBe(false);
   });
 });

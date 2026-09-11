@@ -34,6 +34,26 @@ export interface Attestation {
   readonly matchScore: number;
   readonly manifestSequence: number;
   readonly offline: boolean;
+  /**
+   * What the lane did about liveness, and what came of it.
+   *
+   * Part of the signed record rather than a local detail, because the question
+   * asked after a disputed admission is not only "did the face match" but "was
+   * anybody actually standing there". An attestation that cannot answer the
+   * second is missing the half that a photograph would have exploited.
+   *
+   * `kind` is the movement this lane asked for, `passed` whether it saw it, and
+   * `frames` how many looks it got. Absent means a lane running with the check
+   * turned off — which is a legitimate configuration for a supervised turnstile
+   * and must be distinguishable from a lane that checked and was satisfied.
+   */
+  readonly liveness?: AttestedLiveness;
+}
+
+export interface AttestedLiveness {
+  readonly kind: string;
+  readonly passed: boolean;
+  readonly frames: number;
 }
 
 export interface SignedAttestation extends Attestation {
@@ -59,7 +79,11 @@ export function generateDeviceKey(): DeviceKeyPair {
  */
 export function canonicalAttestation(a: Attestation, scannerId: string): string {
   return [
-    'rexell-attestation-v1',
+    // v2 adds the liveness line. The version is in the signed bytes precisely so
+    // that a v1 record cannot be reinterpreted as a v2 one with its liveness
+    // field quietly missing — which would turn "this lane never checked" into
+    // "this lane checked and said nothing", and those are different claims.
+    'rexell-attestation-v2',
     scannerId,
     a.eventId,
     a.lane,
@@ -71,6 +95,10 @@ export function canonicalAttestation(a: Attestation, scannerId: string): string 
     a.matchScore.toFixed(6),
     String(a.manifestSequence),
     a.offline ? '1' : '0',
+    // "none" is a statement, not a blank: this lane was configured without the
+    // check. It has to be signed like everything else, or an operator could
+    // strip the field and claim the lane had been checking all along.
+    a.liveness ? `${a.liveness.kind}:${a.liveness.passed ? 'pass' : 'fail'}:${a.liveness.frames}` : 'none',
   ].join('\n');
 }
 

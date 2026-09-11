@@ -393,6 +393,12 @@ function laneConfig(eventId) {
       // its crowd by entrance sets this per device.
       gateGroup: '',
       allowReentry: false,
+      // 'challenge' asks each person for a small movement, which is what stops
+      // a photograph. 'off' is for a lane behind a staffed turnstile, where a
+      // human is already doing that job — and the attestation records which,
+      // so 'this lane never checked' cannot be confused with 'this lane was
+      // satisfied'.
+      liveness: 'challenge',
     }),
   );
 }

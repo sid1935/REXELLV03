@@ -272,13 +272,28 @@ begin with, a video recorded in advance cannot know which movement will be
 asked, and the nonce is single-use so a genuine capture cannot be replayed onto
 a second account.
 
-**What it does not do is stop somebody who controls the client.** Every pose is
-measured in a browser we do not own, so a modified client can submit a
-fabricated trajectory alongside a real descriptor and pass. Closing that needs
-frames the server can inspect itself, or an attested client, and neither is
-here. This raises the cost of the easy attacks from "print a photograph" to
-"write code". It is not a certified presentation-attack detector and must not be
-described as one.
+**The gate checks too, and picks its own challenge.** At signup this code runs
+on the phone of the person being checked, so the verdict has to be reached on a
+server; at a lane it runs on the venue's own device, so the lane can choose the
+movement and judge the answer itself — which is what lets the check work with
+the network off. The verdict is part of the signed attestation, so "this lane
+never checked" and "this lane checked and was satisfied" cannot be confused
+after the fact. A face that matches but does not move goes to the resolution
+desk, never a refusal: from a camera, a photograph and a person in bad light are
+the same thing, and only a human can tell them apart.
+
+**It costs throughput, and the number is measured.** One pass of detection,
+landmarks and descriptor is a median 135 ms on WebGL, so a liveness capture is
+about a second — against 135 ms for a single look. Call it forty people a minute
+per lane. For a 12,000 capacity that is five lanes for an hour of ingress rather
+than one.
+
+**What none of it stops is somebody who controls the client, or a screen.** At
+signup every pose is measured in a browser we do not own, so a modified client
+can fabricate the trajectory. At a lane the device is ours, but neither check can
+tell a video played on a phone from a face, or a mask from a face. This is
+challenge-response. It is not a certified presentation-attack detector and must
+not be described as one.
 
 The thresholds are also measured on 17 photographs of five people, which cannot
 say anything about a 12,000-credential gallery — the highest impostor score over

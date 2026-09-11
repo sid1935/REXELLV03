@@ -402,12 +402,18 @@ tests, but no adapter connects the API to a deployed contract, and nothing
 deploys one. Settlement reconciliation, the mint outbox and `/v1/chain/*` all
 work against the simulator. It is reported as `simulated`, never as `ok`.
 
-**Liveness stops paper, not software.** Enrolment is a server-chosen
-challenge — turn, nod or blink — verified in the vault from the submitted frames
-rather than from a client-set boolean, so a photograph cannot enrol. But the
-poses are measured in an untrusted browser, so a modified client can fabricate
-them. Treat it as raising the cost of the easy attack, not as certified
-presentation-attack detection.
+**Liveness stops paper, not screens or software.** Enrolment is a server-chosen
+challenge verified in the vault from the submitted frames rather than a
+client-set boolean, and each gate lane runs its own challenge offline and signs
+the verdict into the attestation. Neither stops a video played on a phone screen,
+a mask, or — at signup — a modified client that fabricates the motion. Treat it
+as raising the cost of the easy attack, not as certified presentation-attack
+detection.
+
+**Budget five times the lanes you would need without it.** A liveness capture is
+about a second per person against 135 ms for a single look. A lane can be
+configured with `liveness: 'off'` where a staffed turnstile is already doing
+that job — the attestation records which, so the choice is auditable.
 
 **Never set VAULT_ALLOW_NO_LIVENESS.** It accepts enrolments from a client that
 never opened a camera, and exists for development on a machine with no webcam.

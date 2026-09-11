@@ -26,7 +26,12 @@ export type EntryCode =
   | 'TOO_EARLY'
   | 'TOO_LATE'
   | 'WRONG_GATE'
-  | 'MANIFEST_EXPIRED';
+  | 'MANIFEST_EXPIRED'
+  // The face matched, and the lane could not satisfy itself that it was a face
+  // rather than a picture of one. Always a fallback, never a denial: the desk
+  // exists to tell an attack apart from a camera that could not see, and a lane
+  // cannot.
+  | 'LIVENESS_FAILED';
 
 export interface EntryDecision {
   readonly outcome: EntryOutcome;

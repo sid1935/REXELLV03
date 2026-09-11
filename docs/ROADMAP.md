@@ -148,10 +148,14 @@ means migrating live ticket data. Getting them right now costs a few days.
 - ✅ Enrolment is a liveness challenge: the server picks a movement, the browser
   submits the capture, and the vault re-derives the verdict from the frames
   rather than trusting a boolean. A photograph cannot enrol.
-- The gate has no liveness at all — only enrolment does — so a photograph of a
-  ticket-holder still passes a lane. And enrolment's poses are measured in an
-  untrusted browser, so a modified client can fabricate them. Both are why this
-  is not yet certified presentation-attack detection.
+- ✅ The gate checks liveness too, offline, with a challenge the lane picks
+  itself and a verdict signed into the attestation.
+- Neither check stops a video played on a phone screen or a mask, and at signup
+  the poses come from an untrusted browser. That is why this is
+  challenge-response and not certified presentation-attack detection.
+- Liveness costs about a second per person against 135 ms without it, so a lane
+  does roughly forty people a minute. Measured, not modelled — but measured on a
+  laptop, not on the hardware a venue would actually use.
 
 ---
 
@@ -229,7 +233,7 @@ rather than more code:
 | Open | Why | Blocks |
 |---|---|---|
 | Gate p95 on a mid-range Android | No device in the loop. Our decision path is 8.3 ms p95 at 12,000 credentials with ~420 ms left for camera and embedding — an argument, not a measurement. | M4 exit criterion |
-| Liveness at the gate, and a certified detector | Enrolment has a challenge-response check that stops paper; the gate has none, and neither can stop a modified client. Everything around both is built and tested. | Any real event |
+| A certified presentation-attack detector | Both surfaces have challenge-response liveness and it stops paper. Neither stops a screen or a mask, and signup's poses come from an untrusted client. | Any real event |
 | Two independent contract audits | Never optional for code that moves money. | Mainnet |
 
 And one that is closed differently than asked: the inline scorer stops 94.6% of

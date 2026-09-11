@@ -15,14 +15,17 @@
  * `/face-capture.js`, shared from @rexell/ui precisely so that the probe taken
  * here and the template taken there cannot drift into different vector spaces.
  *
- * One honest limitation remains, and it is not a shortcut to be tidied later:
- * THERE IS NO LIVENESS HERE. A printed photograph held up to the lens will
- * match the person in it and be admitted. Presentation-attack detection is a
- * separate model, and until it is in place this must not be used at a real
- * gate — not because the recogniser is weak, but because it is now strong
- * enough to be worth fooling.
+ * Liveness is checked here too, and the lane picks the movement itself. At
+ * signup that verdict has to be reached on a server, because the browser belongs
+ * to the person being checked; here the browser belongs to the venue and the
+ * attacker is whoever is standing in front of it. That flip is what lets the
+ * check work with the network off.
+ *
+ * ⚠ It stops a photograph. It does not stop a video played on a phone held up to
+ * the lens, and it does not stop a mask. It is motion, not presentation-attack
+ * detection, and a venue that needs the latter still needs a certified sensor.
  */
-import { faceVector, readyFaceMatcher, FaceCaptureError } from '/face-capture.js';
+import { faceVector, captureAtGate, readyFaceMatcher, FaceCaptureError } from '/face-capture.js';
 
 const $ = (id) => document.getElementById(id);
 const VECTOR_DIMS = 128;
@@ -65,7 +68,7 @@ function similarity(a, b) {
 
 // ─── the decision, mirroring packages/gate/src/engine.ts ─────────────────────
 
-function decide(probe, now) {
+function decide(probe, now, liveness) {
   if (!state.manifest) {
     return { outcome: 'fallback', code: 'NO_MANIFEST', message: 'This lane has no manifest. Call the supervisor.' };
   }
@@ -93,6 +96,16 @@ function decide(probe, now) {
   }
 
   const base = { score: bestScore, entry: best };
+
+  // The face is right and the lane could not satisfy itself anybody was there.
+  // After the match, so a stranger hears "no match" rather than being told the
+  // face was recognised — that is a fact about somebody else. And a fallback,
+  // never a denial: from here a photograph and a person in bad light look the
+  // same, and only the desk can tell them apart.
+  if (liveness && !liveness.passed) {
+    return { outcome: 'fallback', code: 'LIVENESS_FAILED', message: 'Ask them to look at the camera and move their head.', ...base };
+  }
+
   if (best.revoked) return { outcome: 'deny', code: 'CREDENTIAL_REVOKED', message: 'Resold or cancelled. It belongs to somebody else now.', ...base };
   if (best.gates.length && !best.gates.includes(state.config.gateGroup)) {
     return { outcome: 'deny', code: 'WRONG_GATE', message: `Wrong entrance. Direct them to ${best.gates.join(' or ')}.`, ...base };
@@ -111,9 +124,13 @@ function decide(probe, now) {
 
 function canonical(a) {
   return [
-    'rexell-attestation-v1', a.scannerId, a.eventId, a.lane, a.ticketId, a.identityId,
+    // v2 adds the liveness line. Kept byte-for-byte in step with
+    // canonicalAttestation in packages/gate — a disagreement here is a
+    // signature the server cannot verify, on every scan of the night.
+    'rexell-attestation-v2', a.scannerId, a.eventId, a.lane, a.ticketId, a.identityId,
     String(a.decidedAt), a.outcome, a.code, a.matchScore.toFixed(6),
     String(a.manifestSequence), a.offline ? '1' : '0',
+    a.liveness ? a.liveness.kind + ':' + (a.liveness.passed ? 'pass' : 'fail') + ':' + a.liveness.frames : 'none',
   ].join('\n');
 }
 
@@ -279,7 +296,7 @@ function showNote(message) {
   verdictTimer = setTimeout(() => v.classList.remove('show'), 3500);
 }
 
-function record(d, score, elapsedMs) {
+function record(d, score, elapsedMs, liveness) {
   state.stats[d.outcome] += 1;
   if (d.outcome === 'admit' && d.entry) state.admitted.add(d.entry.ticketId);
 
@@ -295,6 +312,7 @@ function record(d, score, elapsedMs) {
     matchScore: score,
     manifestSequence: state.manifest?.sequence ?? 0,
     offline: !state.online,
+    ...(liveness ? { liveness: { kind: liveness.kind, passed: liveness.passed, frames: liveness.frames } } : {}),
     signature: '',
   };
   state.unsigned.push({ attestation, message: canonical(attestation) });
@@ -319,10 +337,27 @@ async function scanFrame() {
         btn.textContent = note;
       });
       btn.textContent = label;
+
+      /*
+       * The lane picks the movement, not the server.
+       *
+       * At signup the browser belongs to the person being checked and cannot be
+       * trusted with the verdict; here it belongs to the venue, and the attacker
+       * is whoever is standing in front of it. That flip is what lets this work
+       * with the network off — which it has to, because a lane that needs a
+       * server to decide is a lane that stops when the venue's wifi does.
+       */
       const started = performance.now();
-      const { vector } = await faceVector(video);
-      const d = decide(vector, Date.now());
-      record(d, d.score ?? 0, performance.now() - started);
+      const { vector, liveness } = state.config.liveness === 'off'
+        ? { ...(await faceVector(video)), liveness: undefined }
+        : await captureAtGate(video, (note) => {
+            $('vTitle').textContent = 'LOOK UP';
+            $('vMessage').textContent = note;
+            $('verdict').className = 'verdict show fallback';
+          });
+
+      const d = decide(vector, Date.now(), liveness);
+      record(d, d.score ?? 0, performance.now() - started, liveness);
     } else {
       // No camera on this machine. A random vector is not a scan of anybody,
       // and it exists only so the queue, signing and upload paths can be

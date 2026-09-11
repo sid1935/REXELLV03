@@ -4,7 +4,7 @@ import { identityId as toIdentityId, ticketId as toTicketId } from '@rexell/doma
 import type { Delta, EntryCode, EntryDecision, EntryOutcome } from '@rexell/domain';
 import type { GateEntry, GateManifest } from './manifest.js';
 import { AttestationQueue, canonicalAttestation, signAttestation } from './attestation.js';
-import type { Attestation } from './attestation.js';
+import type { AttestedLiveness, Attestation } from './attestation.js';
 import type { SignedAttestation } from './attestation.js';
 
 /**
@@ -92,7 +92,7 @@ export class GateEngine {
    * expensive step — comparing against every credential in the gallery — happens
    * only after the cheap disqualifiers.
    */
-  scan(probe: FaceVector, now: number): ScanResult {
+  scan(probe: FaceVector, now: number, liveness?: AttestedLiveness): ScanResult {
     const started = performance.now();
 
     let decision: EntryDecision;
@@ -118,7 +118,7 @@ export class GateEngine {
           best = entry;
         }
       }
-      decision = this.#decide(best, bestScore, now);
+      decision = this.#decide(best, bestScore, now, liveness);
     }
 
     const elapsedMs = performance.now() - started;
@@ -134,6 +134,7 @@ export class GateEngine {
       matchScore: bestScore,
       manifestSequence: this.#manifest.sequence,
       offline: !this.#online,
+      ...(liveness ? { liveness } : {}),
     };
 
     let attestation: SignedAttestation;
@@ -155,7 +156,7 @@ export class GateEngine {
     return { decision, attestation, elapsedMs, compared };
   }
 
-  #decide(best: GateEntry | undefined, score: number, now: number): EntryDecision {
+  #decide(best: GateEntry | undefined, score: number, now: number, liveness?: AttestedLiveness): EntryDecision {
     const t = this.thresholds;
 
     if (!best || score < t.review) {
@@ -180,6 +181,27 @@ export class GateEngine {
     // The manifest speaks in plain strings because it crosses a wire; the domain
     // speaks in branded ids. This is the boundary where that converts.
     const base = { ticketId: toTicketId(best.ticketId), identityId: toIdentityId(best.identityId) };
+
+    /*
+     * The face is right and the lane could not satisfy itself anybody was there.
+     *
+     * Checked after the match on purpose. Somebody who is not in the manifest
+     * should hear "no match" — telling a stranger that their liveness failed
+     * tells them the face was recognised, which is a fact about somebody else.
+     *
+     * And it is a fallback, never a denial, for the same reason the whole ladder
+     * is: from here a photograph and a person in bad light look identical, and
+     * only the desk can tell them apart. A lane that denies on this refuses
+     * ticket-holders in the rain.
+     */
+    if (liveness && !liveness.passed) {
+      return {
+        outcome: 'fallback',
+        code: 'LIVENESS_FAILED',
+        operatorMessage: 'Ask them to look at the camera and move their head, then send to the desk.',
+        ...base,
+      };
+    }
 
     if (best.revoked) {
       return {

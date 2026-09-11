@@ -14,10 +14,18 @@
  * whole claim, and `npm run face:calibrate` is how it was measured rather than
  * assumed.
  *
- * WARNING: the one thing still missing is liveness. Nothing here can tell a
- * face from a photograph of a face, so a printed picture held to the camera
- * will enrol and will pass the gate. Presentation-attack detection is a
- * separate model and is the remaining blocker on using this at a real door.
+ * Liveness lives here too, in two flavours, because the two surfaces have
+ * opposite trust models. `captureLiveness` is for signup, where this code runs
+ * on the phone of the person being checked and therefore cannot be trusted with
+ * the verdict — it gathers evidence for a server to judge. `captureAtGate` is
+ * for a lane, where the device belongs to the venue and the attacker is whoever
+ * is in front of it, so the lane picks its own challenge and reaches its own
+ * verdict, offline.
+ *
+ * WARNING: both stop a photograph held up to the lens. Neither stops a video
+ * played on a phone screen, a mask, or — at signup — a modified client that
+ * fabricates the motion. This is challenge-response, not presentation-attack
+ * detection, and a venue that needs the latter needs a certified sensor.
  *
  * Why it lives in @rexell/ui rather than in either app: the fan app's enrolment
  * and the gate's probe have to land in the SAME vector space. Two copies of an
@@ -363,6 +371,130 @@ function pickEnrolmentFrame(frames) {
 }
 
 const strip = (f) => ({ at: f.at, yaw: f.yaw, pitch: f.pitch, eyeOpen: f.eyeOpen, vector: f.vector });
+
+/**
+ * Liveness at a gate, which is a different problem from liveness at signup.
+ *
+ * The asymmetry is the whole design. At enrolment this code runs on the phone
+ * of the person being checked, so it cannot be trusted and the verdict has to be
+ * reached on a server from submitted evidence. At a gate it runs on the venue's
+ * own device — the attacker is the person in front of the lens, not the person
+ * running the browser — so the lane can pick its own challenge and judge its own
+ * answer. That is what makes this work with the network off, which it has to:
+ * a lane that needs a server to decide is a lane that stops when the venue's
+ * wifi does.
+ *
+ * Two more differences from enrolment, both of them about a queue:
+ *
+ * It returns the moment it is satisfied rather than sampling a fixed window, so
+ * a cooperative person costs a second rather than a fixed toll. And it accepts
+ * far less movement — a glance, not a deliberate turn — because a lane that
+ * makes four thousand people perform is a lane with a queue around the block.
+ * The number is `GATE_TURN`, and it is lower than enrolment's on purpose.
+ *
+ * What it costs, measured rather than hoped: one pass of detection, landmarks
+ * and descriptor is a median 135 ms on the WebGL backend, so the four frames
+ * this needs at minimum are about 550 ms, and a real person reacting to the
+ * prompt lands between one and one and a half seconds. A single-frame scan was
+ * 135 ms. So liveness is roughly a tenfold increase in the capture, against a
+ * decision that is 8 ms and unchanged — call it forty people a minute per lane
+ * instead of a few hundred. For a twelve thousand capacity that is five lanes
+ * for an hour of ingress rather than one, and an operator has to be told that
+ * before the night rather than discover it during.
+ *
+ * ⚠ Same limit as everywhere else: this stops a photograph, not a video on a
+ * phone screen held up to the lens, and not a mask. It is motion, not
+ * presentation-attack detection.
+ */
+const GATE_TURN = 0.18;
+const GATE_NOD = 0.3;
+
+/**
+ * Has the head moved, in the direction asked, relative to where it started?
+ *
+ * Relative, not absolute, and that was a bug worth catching. The first version
+ * asked for an absolute yaw past a threshold after a frame near dead centre.
+ * Measured across the calibration photographs, plenty of people face a camera
+ * from a resting angle of 0.2 or more — so that rule could never be satisfied
+ * by somebody whose neutral pose is slightly off-axis, no matter how far they
+ * turned. It would have failed real ticket-holders for the shape of their neck.
+ *
+ * Anchoring on the first frame asks the question that was meant all along: did
+ * this head turn, from wherever it happened to be.
+ */
+function gateSatisfied(kind, frames) {
+  const yaws = frames.map((f) => f.yaw);
+  const pitches = frames.map((f) => f.pitch);
+  const eyes = frames.map((f) => f.eyeOpen);
+  const from = yaws[0];
+  if (kind === 'turn_left') return Math.max(...yaws) - from >= GATE_TURN;
+  if (kind === 'turn_right') return from - Math.min(...yaws) >= GATE_TURN;
+  if (kind === 'nod') return Math.max(...pitches) - Math.min(...pitches) >= GATE_NOD;
+  if (kind === 'blink') return Math.min(...eyes) <= 0.16 && Math.max(...eyes) >= 0.24;
+  return false;
+}
+
+/** Unpredictable per scan, from the platform CSPRNG rather than Math.random. */
+export function pickGateChallenge() {
+  const kinds = ['turn_left', 'turn_right', 'nod'];
+  const [byte] = crypto.getRandomValues(new Uint8Array(1));
+  // Blink is deliberately not in this list. At arm's length under venue
+  // lighting the eye landmarks are the least reliable thing the model produces,
+  // and a check that fails honest people in the dark is worse than one fewer
+  // option to guess between.
+  return kinds[byte % kinds.length];
+}
+
+/**
+ * Watch until the person does something a photograph cannot.
+ *
+ * Returns `{ vector, liveness }` where `liveness.passed` says whether the
+ * movement was seen. A failure is NOT an error: the caller still gets the best
+ * vector it managed, because the lane needs to know both whether the face
+ * matches AND whether it was live, and conflating them turns "we could not tell"
+ * into "go away".
+ */
+export async function captureAtGate(source, onProgress = () => {}, options = {}) {
+  const { timeoutMs = 4000, maxFrames = 20 } = options;
+  const faceapi = await readyFaceMatcher(onProgress);
+  const detector = new faceapi.TinyFaceDetectorOptions({ inputSize: 416, scoreThreshold: MIN_DETECTION_SCORE });
+
+  const kind = pickGateChallenge();
+  onProgress(CHALLENGE_INSTRUCTIONS[kind]);
+
+  const started = Date.now();
+  const frames = [];
+  let best;
+
+  while (Date.now() - started < timeoutMs) {
+    const found = await faceapi.detectAllFaces(source, detector).withFaceLandmarks(true).withFaceDescriptors();
+    if (found.length !== 1) continue;
+    const only = found[0];
+    if (Math.min(only.detection.box.width, only.detection.box.height) < MIN_FACE_PX) continue;
+
+    const geometry = faceGeometry(only.landmarks);
+    frames.push(geometry);
+    if (frames.length > maxFrames) frames.shift();
+
+    // The most front-on frame is the one worth matching against, and it is
+    // usually not the one where they are mid-turn.
+    if (!best || Math.abs(geometry.yaw) < Math.abs(best.yaw)) {
+      best = { ...geometry, vector: unit(only.descriptor) };
+    }
+    if (frames.length >= 4 && gateSatisfied(kind, frames)) {
+      return {
+        vector: best.vector,
+        liveness: { kind, passed: true, frames: frames.length, ms: Date.now() - started },
+      };
+    }
+  }
+
+  if (!best) throw new FaceCaptureError('NO_FACE', 'No face in the frame.');
+  return {
+    vector: best.vector,
+    liveness: { kind, passed: false, frames: frames.length, ms: Date.now() - started },
+  };
+}
 
 /** Cosine similarity of two unit vectors: the dot product. Same maths as the server. */
 export function similarity(a, b) {
