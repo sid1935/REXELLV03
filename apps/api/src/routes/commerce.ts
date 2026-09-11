@@ -295,7 +295,22 @@ export function commerceRoutes(app: FastifyInstance, { repo, now, devMode, risk 
       const event = repo.getEvent(tier.eventId);
       if (!event) throw notFound('event', tier.eventId);
 
-      const buyer = purchaserContext(repo, req.body?.buyerIdentityId ?? '', event.id, risk);
+      /*
+       * Validated here rather than defaulted to ''.
+       *
+       * This used to read `req.body?.buyerIdentityId ?? ''`, hand the empty
+       * string to `identityId()`, and get back a raw "must not be empty" throw
+       * — which the error handler turns into a 500. So a client with a typo in
+       * a field name was told the server had broken, on the one route where
+       * money changes hands. The sibling route two hundred lines up validates
+       * properly; this one was simply missed.
+       */
+      if (!req.body?.buyerIdentityId) throw badRequest('`buyerIdentityId` is required.');
+      if (!Number.isInteger(req.body?.expectedPriceMinor)) {
+        throw badRequest('`expectedPriceMinor` is required, as an integer number of minor units.');
+      }
+
+      const buyer = purchaserContext(repo, req.body.buyerIdentityId, event.id, risk);
       const verdict = evaluateListingPurchase(
         listing,
         tier,

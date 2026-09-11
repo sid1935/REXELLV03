@@ -485,3 +485,32 @@ describe('the gate', () => {
     expect(recon).toMatchObject({ scans: 4, admitted: 2, denied: 1, fallback: 1, fallbackRate: 0.25 });
   });
 });
+
+/**
+ * Malformed requests on the money routes.
+ *
+ * Found by running the flow against the live deployment with one field name
+ * wrong: the resale purchase answered 500. It had defaulted the missing field
+ * to an empty string and handed that to the id branding function, whose throw
+ * is not an HttpError and so became INTERNAL. A client with a typo was told the
+ * server was broken, on the route where money moves.
+ */
+describe('a request with a field missing', () => {
+  it('is a 400 on the resale purchase, not a 500', async () => {
+    const seller = await newIdentity();
+    const ticketId = await buyTicket(seller);
+    const listing = await post('/v1/listings', { ticketId, identityId: seller, priceMinor: 242_000 });
+    expect(listing.statusCode).toBe(201);
+    const listingId = listing.json().listingId;
+
+    for (const [label, body] of [
+      ['no buyer at all', { expectedPriceMinor: 11_000 }],
+      ['an empty buyer', { buyerIdentityId: '', expectedPriceMinor: 11_000 }],
+      ['no price', { buyerIdentityId: seller }],
+      ['a price that is not a number', { buyerIdentityId: seller, expectedPriceMinor: 'eleven' }],
+    ] as const) {
+      const res = await post(`/v1/listings/${listingId}/buy`, body);
+      expect(res.statusCode, `${label} produced ${res.statusCode}`).toBe(400);
+    }
+  });
+});
