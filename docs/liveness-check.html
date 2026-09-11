@@ -1,0 +1,134 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Liveness diagnostics</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+  :root {
+    --void:#04061a; --panel:#0a0e28; --raised:#111635;
+    --line:rgba(255,255,255,0.09); --ink:#eef0fb; --muted:#969cc4; --dim:#646a96;
+    --cyan:#4fd6e8; --green:#3ddc84; --amber:#ffb84d; --red:#ff7a7a;
+    --mono:"IBM Plex Mono",ui-monospace,Consolas,monospace;
+  }
+  * { box-sizing:border-box; }
+  body {
+    background:var(--void); color:var(--ink);
+    font-family:"IBM Plex Sans",system-ui,sans-serif; line-height:1.6;
+    margin:0; padding:28px 20px 80px;
+  }
+  .wrap { max-width:860px; margin:0 auto; }
+  h1 { font-size:26px; margin:0 0 6px; letter-spacing:-0.01em; }
+  .sub { color:var(--muted); margin:0 0 26px; max-width:62ch; }
+
+  .grid { display:grid; grid-template-columns:minmax(280px,1fr) minmax(280px,1fr); gap:18px; align-items:start; }
+  @media (max-width:720px) { .grid { grid-template-columns:1fr; } }
+
+  .card { background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:18px; }
+  .card h2 { font-size:12px; font-family:var(--mono); letter-spacing:0.13em;
+             text-transform:uppercase; color:var(--dim); margin:0 0 14px; font-weight:500; }
+
+  video { width:100%; border-radius:10px; background:#000; display:block; transform:scaleX(-1); }
+
+  .status { margin-top:14px; padding:11px 13px; border-radius:9px; font-size:15px;
+            background:var(--raised); border:1px solid var(--line); }
+  .status.busy { color:var(--muted); }
+  .status.good { color:var(--green); border-color:rgba(61,220,132,0.45); background:rgba(61,220,132,0.09); }
+  .status.warn { color:var(--amber); border-color:rgba(255,184,77,0.35); }
+  .status.bad  { color:var(--red);   border-color:rgba(255,122,122,0.4); }
+
+  .row { display:grid; grid-template-columns:74px 1fr 62px; gap:10px; align-items:center; margin-bottom:11px; }
+  .row .k { font-family:var(--mono); font-size:11.5px; color:var(--dim); }
+  .row .v { font-family:var(--mono); font-size:12.5px; text-align:right; color:var(--ink); }
+  .track { height:7px; background:rgba(255,255,255,0.07); border-radius:4px; overflow:hidden; position:relative; }
+  .track i { display:block; height:100%; background:var(--cyan); border-radius:4px; }
+  .track.mid::after { content:""; position:absolute; left:50%; top:0; bottom:0; width:1px; background:rgba(255,255,255,0.22); }
+  .track i.big { background:var(--green); }
+
+  .chips { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:12px; }
+  .chip, .btn, select {
+    font:inherit; font-size:13.5px; color:var(--ink); background:var(--raised);
+    border:1px solid var(--line); border-radius:8px; padding:7px 12px; cursor:pointer;
+  }
+  .chip.on { border-color:var(--cyan); color:var(--cyan); }
+  .btn.primary { background:var(--cyan); color:#04121a; border-color:var(--cyan); font-weight:600; }
+  .actions { display:flex; gap:9px; margin-top:14px; flex-wrap:wrap; align-items:center; }
+
+  .needs { font-family:var(--mono); font-size:12px; color:var(--amber); margin:0 0 14px; }
+  .meta { font-family:var(--mono); font-size:11.5px; color:var(--dim); margin-top:12px; }
+  .note { margin-top:26px; color:var(--muted); font-size:14px; border-top:1px solid var(--line); padding-top:18px; }
+  .note strong { color:var(--ink); }
+  code { font-family:var(--mono); font-size:0.9em; background:rgba(255,255,255,0.06); padding:1px 5px; border-radius:4px; }
+</style>
+
+<div class="wrap">
+  <h1>Liveness diagnostics</h1>
+  <p class="sub">
+    The live numbers behind the check, using the same functions the fan app and
+    the gate use. If a movement is not being seen, the readings below say why.
+    Nothing is uploaded — the camera feed and every measurement stay on this page.
+  </p>
+
+  <div class="chips" id="kinds"></div>
+  <p class="needs">To pass: <span id="needs"></span></p>
+
+  <div class="grid">
+    <div class="card">
+      <h2>Camera</h2>
+      <video id="cam" playsinline muted autoplay></video>
+      <div class="status" id="status">Press Start.</div>
+      <div class="actions">
+        <button class="btn primary" id="startBtn">Start</button>
+        <button class="btn" id="resetBtn">Reset baseline</button>
+        <select id="surface" aria-label="Which thresholds">
+          <option value="enrol">Signup thresholds</option>
+          <option value="gate">Gate thresholds</option>
+        </select>
+      </div>
+      <div class="meta"><span id="fps">—</span> · face <span id="faceSize">—</span> · detector <span id="score">—</span></div>
+    </div>
+
+    <div class="card">
+      <h2>What it is measuring</h2>
+
+      <div class="row">
+        <span class="k">yaw</span>
+        <span class="track mid"><i id="yawBar"></i></span>
+        <span class="v" id="yaw">—</span>
+      </div>
+      <div class="row">
+        <span class="k">pitch</span>
+        <span class="track mid"><i id="pitchBar"></i></span>
+        <span class="v" id="pitch">—</span>
+      </div>
+      <div class="row">
+        <span class="k">eye open</span>
+        <span class="track"><i id="eyeBar"></i></span>
+        <span class="v" id="eye">—</span>
+      </div>
+
+      <h2 style="margin-top:22px">Your resting pose</h2>
+      <div class="row"><span class="k">yaw</span><span class="track"></span><span class="v" id="baseYaw">—</span></div>
+      <div class="row"><span class="k">pitch</span><span class="track"></span><span class="v" id="basePitch">—</span></div>
+      <div class="row"><span class="k">eye</span><span class="track"></span><span class="v" id="baseEye">—</span></div>
+
+      <h2 style="margin-top:22px">Progress through the movement</h2>
+      <div class="row">
+        <span class="k">now</span>
+        <span class="track"><i id="progBar" class="big"></i></span>
+        <span class="v" id="progPct">0%</span>
+      </div>
+      <div class="row"><span class="k">best</span><span class="track"></span><span class="v" id="bestPct">0%</span></div>
+    </div>
+  </div>
+
+  <p class="note">
+    <strong>If the movement never registers, look at two things.</strong> First
+    <code>ms/frame</code>: much above 400 and the camera is being sampled too
+    slowly to catch a turn, which usually means the model fell back to the CPU.
+    Second <code>yaw</code> — turn your head fully and watch how far it travels.
+    Everything is measured against <em>your</em> resting pose, so where it starts
+    does not matter; only how far it moves does. If a full turn moves it less
+    than the target above, the target is wrong for this camera and should be
+    lowered.
+  </p>
+</div>
+<script type="module" src="/docs/liveness-check.js"></script>

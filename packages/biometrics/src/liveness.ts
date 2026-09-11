@@ -59,7 +59,6 @@ export type LivenessFailure =
   | 'TOO_BRIEF'
   | 'FRAMES_REPEATED'
   | 'NOT_ONE_PERSON'
-  | 'NEVER_FACED_CAMERA'
   | 'MOVEMENT_NOT_OBSERVED';
 
 export type LivenessResult = { readonly ok: true } | { readonly ok: false; readonly reason: LivenessFailure };
@@ -144,11 +143,14 @@ export interface EvidenceLimits {
   readonly turn: number;
   /** How far it must travel through the nod, peak to trough. */
   readonly nod: number;
-  /** Below this the eye counts as shut; above it, open. */
-  readonly eyeShut: number;
-  readonly eyeOpen: number;
-  /** Any frame further from the camera than this does not count as facing it. */
-  readonly centre: number;
+  /**
+   * How far the eye must close, as a fraction of this person's own open eye.
+   *
+   * A fraction and not an absolute ratio: the landmark model's scale varies by
+   * face and by lighting, and an absolute floor is a number that works for the
+   * person it was measured on.
+   */
+  readonly blinkRatio: number;
   /**
    * How alike two frames of one capture must be.
    *
@@ -174,14 +176,12 @@ export interface EvidenceLimits {
 export const DEFAULT_EVIDENCE_LIMITS: EvidenceLimits = Object.freeze({
   minFrames: 8,
   minSpanMs: 1000,
-  // Measured on photographs of people with turned heads, which reach 0.83 and
-  // −0.84. A quarter of that is a movement nobody makes by accident and
-  // everybody can make on request.
-  turn: 0.25,
-  nod: 0.4,
-  eyeShut: 0.16,
-  eyeOpen: 0.24,
-  centre: 0.15,
+  // Relative to the resting pose, so these are how far the head must travel
+  // rather than where it must end up. Lower than the first version's absolute
+  // numbers because they now mean something a person can actually do.
+  turn: 0.2,
+  nod: 0.3,
+  blinkRatio: 0.6,
   samePerson: 0.5,
   duplicate: 0.999999,
 });
@@ -192,8 +192,8 @@ export const DEFAULT_EVIDENCE_LIMITS: EvidenceLimits = Object.freeze({
  * ⚠ What this can and cannot do, because the difference matters more than the
  * code does.
  *
- * It defeats a photograph: paper does not turn its head, and a photograph held
- * at an angle from the start fails the "faced the camera first" check. It
+ * It defeats a photograph: paper does not turn its head, so a print held up —
+ * square on or at an angle — has no movement to show. It
  * defeats a video recorded in advance, because the server picks the movement
  * after the recording would have been made and there are four to choose from.
  * It defeats replaying a previous successful capture, because the nonce is
@@ -234,30 +234,54 @@ export function judgeEvidence(
 
   // A movement is only a movement if it started from somewhere. Without this a
   // photograph held at a permanent angle satisfies "turn left" by existing.
-  const centredAt = ordered.findIndex((f) => Math.abs(f.yaw) <= limits.centre && Math.abs(f.pitch) <= limits.centre * 2);
-  if (centredAt < 0) return { ok: false, reason: 'NEVER_FACED_CAMERA' };
+  /*
+   * The resting pose, and everything measured against it.
+   *
+   * This used to demand an absolute pose: a frame within 0.15 of dead centre,
+   * and then a yaw past a fixed threshold. It did not work on real people. Across
+   * twenty photographs of five people facing a camera, resting yaw runs from
+   * -0.21 to +0.36 — most would never produce a centred frame at all, so the
+   * capture could never complete no matter how far they turned. The check was
+   * not strict, it was unreachable, and it failed people for where their camera
+   * sits and how they hold their neck.
+   *
+   * Relative costs nothing against the attack it was guarding. A photograph held
+   * at a constant angle has no range and still fails; a photograph that is
+   * physically rotated defeats both versions equally, and always did.
+   *
+   * The median of the first three frames, so one bad landmark fit at the moment
+   * the camera opens cannot define the baseline.
+   */
+  const median = (xs: number[]) => [...xs].sort((a, b) => a - b)[Math.floor(xs.length / 2)]!;
+  const head = ordered.slice(0, 3);
+  const base = {
+    yaw: median(head.map((f) => f.yaw)),
+    pitch: median(head.map((f) => f.pitch)),
+    eye: median(head.map((f) => f.eyeOpen)),
+  };
 
-  // And it has to happen after that, not before.
-  const after = ordered.slice(centredAt);
+  const yaws = ordered.map((f) => f.yaw);
+  const pitches = ordered.map((f) => f.pitch);
+
   const moved = (() => {
     switch (kind) {
       case 'turn_left':
-        return after.some((f) => f.yaw >= limits.turn);
+        return Math.max(...yaws) - base.yaw >= limits.turn;
       case 'turn_right':
-        return after.some((f) => f.yaw <= -limits.turn);
-      case 'nod': {
-        const pitches = after.map((f) => f.pitch);
+        return base.yaw - Math.min(...yaws) >= limits.turn;
+      case 'nod':
         return Math.max(...pitches) - Math.min(...pitches) >= limits.nod;
-      }
       case 'blink': {
-        // Shut and then open again. A single frame with the eyes down is a
-        // blur or a bad landmark fit; the recovery is what makes it a blink.
-        const shutAt = after.findIndex((f) => f.eyeOpen <= limits.eyeShut);
+        // Closed relative to this person's own open eye, then open again. The
+        // absolute version asked for an eye-aspect ratio below 0.16 from the
+        // TINY landmark model — the least accurate thing in the pipeline around
+        // the eyes, and whether it can produce 0.16 on a closed eye at all was
+        // never established. Against their own baseline the model's scale does
+        // not matter. The recovery is what makes it a blink rather than a bad
+        // frame.
+        const shutAt = ordered.findIndex((f) => f.eyeOpen <= base.eye * limits.blinkRatio);
         if (shutAt < 0) return false;
-        return (
-          after.slice(0, shutAt).some((f) => f.eyeOpen >= limits.eyeOpen) &&
-          after.slice(shutAt).some((f) => f.eyeOpen >= limits.eyeOpen)
-        );
+        return ordered.slice(shutAt).some((f) => f.eyeOpen >= base.eye * 0.85);
       }
       default:
         return false;

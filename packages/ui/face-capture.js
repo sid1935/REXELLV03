@@ -283,7 +283,6 @@ export async function captureLiveness(source, challenge, onProgress = () => {}, 
   const frames = [];
   const scores = [];
   const started = Date.now();
-  let sawCentre = false;
   let lastError;
 
   while (Date.now() - started < timeoutMs) {
@@ -307,19 +306,26 @@ export async function captureLiveness(source, challenge, onProgress = () => {}, 
 
     const geometry = faceGeometry(only.landmarks);
     frames.push({ at: Date.now() - started, ...geometry, vector: unit(only.descriptor) });
-    if (frames.length > maxFrames) frames.shift();
-
-    // The person has to be looking at the camera before the movement counts,
-    // so that a photograph held at an angle from the start is not a completed
-    // "turn".
-    if (Math.abs(geometry.yaw) < 0.12 && Math.abs(geometry.pitch) < 0.3) sawCentre = true;
-
-    onProgress(sawCentre ? instruction : 'Look straight at the camera');
+    // Never drop the opening frames: they are the resting pose every movement
+    // is measured against. Trimming from the front would slide the baseline
+    // along with the head and the movement would vanish as it happened.
+    if (frames.length > maxFrames) frames.splice(3, 1);
 
     const span = frames.length ? frames[frames.length - 1].at - frames[0].at : 0;
     scores.push(only.detection.score);
 
-    if (sawCentre && frames.length >= minFrames && span >= minSpanMs && satisfied(challenge.kind, frames)) {
+    // Say how it is going. Silence is what "it does not respond to anything"
+    // actually looks like from the far side of a camera.
+    const move = movementProgress(challenge.kind, frames, ENROL_LIMITS);
+    onProgress(
+      frames.length < 3
+        ? 'Hold still for a moment'
+        : move.progress > 0.15 && !move.done
+          ? `${instruction} — keep going`
+          : instruction,
+    );
+
+    if (frames.length >= minFrames && span >= minSpanMs && move.done) {
       return {
         vector: pickEnrolmentFrame(frames).vector,
         // The mean detector confidence across the capture. A weak signal and
@@ -346,16 +352,82 @@ export async function captureLiveness(source, challenge, onProgress = () => {}, 
  * the moment it is satisfied. It is a convenience, never the control: the
  * server does not trust this and re-derives it from the frames.
  */
-function satisfied(kind, frames) {
+/**
+ * How far through the requested movement this capture is, from 0 to 1.
+ *
+ * ⚠ Everything here is measured RELATIVE to where the person started, and that
+ * is the whole fix. The first version asked for an absolute pose — yaw past
+ * 0.28, after a frame within 0.12 of dead centre — and it did not work on real
+ * people. Measured across twenty photographs of five people facing a camera,
+ * resting yaw ranges from -0.21 to +0.36: most of them would never have
+ * produced a frame inside 0.12, so the prompt sat on "Look straight at the
+ * camera" forever and no amount of turning could finish it. The check was not
+ * strict, it was unreachable, and it failed people for where their camera sits
+ * and how they hold their neck.
+ *
+ * Blink is relative for the same reason and a sharper one. It used to need an
+ * eye-aspect ratio below 0.16 in absolute terms, from the TINY landmark model —
+ * the least accurate thing in the pipeline around the eyes. Open eyes measured
+ * 0.25 to 0.54 across those photographs; whether that model can produce 0.16 at
+ * all on a closed eye was never checked. Against the person's own open baseline
+ * it does not matter what the model's absolute scale is.
+ *
+ * Returned as progress rather than a boolean so the prompt can say "keep going"
+ * instead of going quiet, which is what "it does not respond to anything" feels
+ * like from the outside.
+ */
+export function movementProgress(kind, frames, limits = GATE_LIMITS) {
+  if (!frames || frames.length < 3) return { done: false, progress: 0 };
+
+  // The resting pose: the median of the first three frames, so one bad landmark
+  // fit at the moment the camera opens cannot define the baseline.
+  const median = (xs) => [...xs].sort((a, b) => a - b)[Math.floor(xs.length / 2)];
+  const head = frames.slice(0, 3);
+  const base = {
+    yaw: median(head.map((f) => f.yaw)),
+    pitch: median(head.map((f) => f.pitch)),
+    eye: median(head.map((f) => f.eyeOpen)),
+  };
+
   const yaws = frames.map((f) => f.yaw);
   const pitches = frames.map((f) => f.pitch);
   const eyes = frames.map((f) => f.eyeOpen);
-  if (kind === 'turn_left') return Math.max(...yaws) >= 0.28;
-  if (kind === 'turn_right') return Math.min(...yaws) <= -0.28;
-  if (kind === 'nod') return Math.max(...pitches) - Math.min(...pitches) >= 0.45;
-  if (kind === 'blink') return Math.min(...eyes) <= 0.16 && Math.max(...eyes) >= 0.24;
-  return false;
+  const ratio = (moved, need) => Math.max(0, Math.min(1, moved / need));
+
+  if (kind === 'turn_left') {
+    const p = ratio(Math.max(...yaws) - base.yaw, limits.turn);
+    return { done: p >= 1, progress: p, base };
+  }
+  if (kind === 'turn_right') {
+    const p = ratio(base.yaw - Math.min(...yaws), limits.turn);
+    return { done: p >= 1, progress: p, base };
+  }
+  if (kind === 'nod') {
+    const p = ratio(Math.max(...pitches) - Math.min(...pitches), limits.nod);
+    return { done: p >= 1, progress: p, base };
+  }
+  if (kind === 'blink') {
+    // Closed relative to this person's own open eye, and then open again. The
+    // recovery is what makes it a blink rather than a bad frame.
+    const shut = base.eye * limits.blinkRatio;
+    const shutAt = frames.findIndex((f) => f.eyeOpen <= shut);
+    const closed = ratio(base.eye - Math.min(...eyes), base.eye - shut);
+    if (shutAt < 0) return { done: false, progress: closed * 0.8, base };
+    const reopened = frames.slice(shutAt).some((f) => f.eyeOpen >= base.eye * 0.85);
+    return { done: reopened, progress: reopened ? 1 : 0.85, base };
+  }
+  return { done: false, progress: 0 };
 }
+
+/**
+ * How much movement counts, at each surface.
+ *
+ * The gate asks for less than signup does on purpose: a lane that makes four
+ * thousand people perform is a lane with a queue around the block, and signup
+ * happens once with somebody's full attention.
+ */
+export const GATE_LIMITS = Object.freeze({ turn: 0.16, nod: 0.24, blinkRatio: 0.62 });
+export const ENROL_LIMITS = Object.freeze({ turn: 0.2, nod: 0.3, blinkRatio: 0.6 });
 
 /**
  * Which frame becomes the template.
@@ -406,34 +478,6 @@ const strip = (f) => ({ at: f.at, yaw: f.yaw, pitch: f.pitch, eyeOpen: f.eyeOpen
  * phone screen held up to the lens, and not a mask. It is motion, not
  * presentation-attack detection.
  */
-const GATE_TURN = 0.18;
-const GATE_NOD = 0.3;
-
-/**
- * Has the head moved, in the direction asked, relative to where it started?
- *
- * Relative, not absolute, and that was a bug worth catching. The first version
- * asked for an absolute yaw past a threshold after a frame near dead centre.
- * Measured across the calibration photographs, plenty of people face a camera
- * from a resting angle of 0.2 or more — so that rule could never be satisfied
- * by somebody whose neutral pose is slightly off-axis, no matter how far they
- * turned. It would have failed real ticket-holders for the shape of their neck.
- *
- * Anchoring on the first frame asks the question that was meant all along: did
- * this head turn, from wherever it happened to be.
- */
-function gateSatisfied(kind, frames) {
-  const yaws = frames.map((f) => f.yaw);
-  const pitches = frames.map((f) => f.pitch);
-  const eyes = frames.map((f) => f.eyeOpen);
-  const from = yaws[0];
-  if (kind === 'turn_left') return Math.max(...yaws) - from >= GATE_TURN;
-  if (kind === 'turn_right') return from - Math.min(...yaws) >= GATE_TURN;
-  if (kind === 'nod') return Math.max(...pitches) - Math.min(...pitches) >= GATE_NOD;
-  if (kind === 'blink') return Math.min(...eyes) <= 0.16 && Math.max(...eyes) >= 0.24;
-  return false;
-}
-
 /** Unpredictable per scan, from the platform CSPRNG rather than Math.random. */
 export function pickGateChallenge() {
   const kinds = ['turn_left', 'turn_right', 'nod'];
@@ -481,7 +525,7 @@ export async function captureAtGate(source, onProgress = () => {}, options = {})
     if (!best || Math.abs(geometry.yaw) < Math.abs(best.yaw)) {
       best = { ...geometry, vector: unit(only.descriptor) };
     }
-    if (frames.length >= 4 && gateSatisfied(kind, frames)) {
+    if (frames.length >= 5 && move.done) {
       return {
         vector: best.vector,
         liveness: { kind, passed: true, frames: frames.length, ms: Date.now() - started },

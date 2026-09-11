@@ -113,16 +113,30 @@ describe('liveness evidence', () => {
     });
 
     it('is refused when it is held at an angle from the start', () => {
-      // The naive version of this check — "did the yaw ever exceed 0.25" —
-      // passes here, which is why the movement has to begin from a frame that
-      // faced the camera.
+      // Held at a constant angle, which is what a print in a stand looks like.
+      // Measuring from the resting pose catches this for the reason that
+      // matters: paper has no range, wherever it is pointed.
       const angled = sequence(Array.from({ length: 12 }, () => ({ yaw: 0.5 })));
-      expect(judgeEvidence('turn_left', angled)).toEqual({ ok: false, reason: 'NEVER_FACED_CAMERA' });
+      expect(judgeEvidence('turn_left', angled)).toEqual({ ok: false, reason: 'MOVEMENT_NOT_OBSERVED' });
     });
 
-    it('is refused when it is tilted through the movement but never squared up', () => {
-      const tilted = sequence(Array.from({ length: 12 }, (_, i) => ({ yaw: 0.3 + i * 0.02 })));
-      expect(judgeEvidence('turn_left', tilted)).toEqual({ ok: false, reason: 'NEVER_FACED_CAMERA' });
+    it('is refused when it drifts but never travels far enough', () => {
+      // A hand that is not quite steady is not a turn.
+      const drifting = sequence(Array.from({ length: 12 }, (_, i) => ({ yaw: 0.3 + i * 0.008 })));
+      expect(judgeEvidence('turn_left', drifting)).toEqual({ ok: false, reason: 'MOVEMENT_NOT_OBSERVED' });
+    });
+
+    it('IS accepted when the photograph is physically rotated far enough', () => {
+      /*
+       * Documented, not desirable. Rotating a flat print really does foreshorten
+       * the landmarks and really does read as a turn, and it defeated the
+       * previous absolute-pose version of this check too — an attacker only had
+       * to start square on, which is easier rather than harder. So this is the
+       * limit the product already states, pinned here so nobody mistakes the
+       * relative rule for a regression against an attack that was ever stopped.
+       */
+      const rotated = sequence(Array.from({ length: 12 }, (_, i) => ({ yaw: Math.max(0, (i - 3) / 8) * 0.5 })));
+      expect(judgeEvidence('turn_left', rotated)).toEqual({ ok: true });
     });
   });
 
@@ -173,9 +187,28 @@ describe('liveness evidence', () => {
     });
 
     it('is not satisfied by eyes that merely narrow', () => {
-      const squint = sequence(Array.from({ length: 12 }, (_, i) => ({ eyeOpen: i === 7 ? L.eyeShut + 0.02 : 0.3 })));
+      // Narrowed to just above the fraction of their own open eye that counts
+      // as shut. Squinting at a bright lane is not a blink.
+      const squint = sequence(Array.from({ length: 12 }, (_, i) => ({ eyeOpen: i === 7 ? 0.3 * L.blinkRatio + 0.02 : 0.3 })));
       expect(judgeEvidence('blink', squint)).toEqual({ ok: false, reason: 'MOVEMENT_NOT_OBSERVED' });
     });
+  });
+
+  it('accepts somebody whose resting pose is well off centre', () => {
+    /*
+     * The bug this whole rule was rewritten for. A camera above and to one side
+     * puts a perfectly cooperative person at a resting yaw of 0.3 or more, and
+     * the previous version needed a frame within 0.15 of dead centre before any
+     * movement counted at all. Nothing they did could finish the challenge: the
+     * prompt simply never changed. Every one of these is a real turn, performed
+     * from a resting pose that is nowhere near the middle.
+     */
+    for (const rest of [-0.35, -0.2, 0, 0.25, 0.4]) {
+      const turning = sequence(
+        Array.from({ length: 12 }, (_, i) => ({ yaw: rest + Math.max(0, (i - 3) / 8) * 0.45 })),
+      );
+      expect(judgeEvidence('turn_left', turning), `resting at ${rest}`).toEqual({ ok: true });
+    }
   });
 
   it('does not care what order the frames arrive in', () => {

@@ -104,7 +104,7 @@ cpSync(resolve(root, 'packages/ui/face'), resolve(output, 'face'), { recursive: 
  * public URL, and a glob would put them there the moment somebody adds a file —
  * silently, and with no obvious way to notice.
  */
-const PUBLISHED_DOCS = ['face-to-gate.html'];
+const PUBLISHED_DOCS = ['face-to-gate.html', 'liveness-check.html', 'liveness-check.js'];
 if (surface === 'site') {
   mkdirSync(resolve(output, 'docs'), { recursive: true });
   for (const doc of PUBLISHED_DOCS) {
