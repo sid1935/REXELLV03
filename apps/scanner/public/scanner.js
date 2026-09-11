@@ -259,7 +259,12 @@ function render() {
   const total = state.stats.admit + state.stats.deny + state.stats.fallback;
   const queued = state.queued.length + state.unsigned.length;
 
-  $('laneLabel').textContent = `LANE ${(state.config?.lane ?? '—').toUpperCase()}`;
+  // 'LANE LANE A': the header adds the word and the config already carries it.
+  // Tolerated here rather than fixed at the two places that build a config,
+  // because devices already provisioned are carrying the old spelling and the
+  // attestation is better off keeping a lane name a person would recognise.
+  const laneName = (state.config?.lane ?? '—').toUpperCase().replace(/^LANE\s+/, '');
+  $('laneLabel').textContent = `LANE ${laneName}`;
   $('netPill').textContent = state.online ? 'online' : 'offline';
   $('netPill').className = `pill ${state.online ? 'ok' : 'warn'}`;
   $('syncPill').textContent = behind > 0 ? `seq ${state.manifest?.sequence ?? 0} · ${behind} behind` : `seq ${state.manifest?.sequence ?? 0}`;

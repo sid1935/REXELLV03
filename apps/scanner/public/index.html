@@ -45,17 +45,49 @@
   .pill.bad{border-color:var(--deny);color:#FF9A70}
 
   main{flex:1;display:grid;grid-template-rows:1fr auto;min-height:0}
-  .stage{position:relative;overflow:hidden;background:#000;display:grid;place-items:center}
-  video{width:100%;height:100%;object-fit:cover;transform:scaleX(-1)}
-  .noCam{color:var(--ink-3);font-size:13px;text-align:center;padding:24px;line-height:1.6}
 
+  /*
+     The camera is a viewfinder, not a backdrop.
+     
+     It used to be the whole of a 1fr row, so on anything wider than a phone the
+     lane was a wall of video with the controls pushed to the bottom edge. A
+     bounded panel reads as something to stand in front of, which is what a
+     person walking up to a gate needs to work out in about a second.
+  */
+  .stage{position:relative;background:var(--sunk,#0B0F1A);display:grid;place-items:center;padding:20px;min-height:0}
+  .viewport{
+    container-type:inline-size;
+    position:relative;width:min(460px,100%);aspect-ratio:4/3;max-height:100%;
+    border-radius:18px;overflow:hidden;background:#000;
+    border:1px solid var(--rule);box-shadow:0 18px 50px rgba(0,0,0,.5);
+  }
+  /*
+     Portrait: a lane is usually a phone on a stand, and a landscape panel
+     floating in the middle of a tall screen wastes the space somebody is
+     actually standing in front of. Taller than wide, and filling the width.
+  */
+  @media (max-aspect-ratio: 4/5){
+    .viewport{width:100%;aspect-ratio:3/4}
+  }
+  video{width:100%;height:100%;object-fit:cover;transform:scaleX(-1);display:block}
+  .noCam{
+    position:absolute;inset:0;display:grid;place-content:center;
+    color:var(--ink-3);font-size:13px;text-align:center;padding:24px;line-height:1.6;
+  }
+
+  /*
+     The verdict fills the viewfinder rather than the window. Still the loudest
+     thing on the screen and still readable across a lane, but the counters
+     underneath stay visible while it is showing — an operator watching the
+     fallback rate climb should not have to wait for a colour to fade.
+  */
   .verdict{
     position:absolute;inset:0;display:none;flex-direction:column;
     align-items:center;justify-content:center;gap:10px;text-align:center;padding:24px;
   }
   .verdict.show{display:flex}
-  .verdict h1{font-size:clamp(30px,9vw,64px);margin:0;letter-spacing:-.02em;line-height:1}
-  .verdict p{margin:0;font-size:clamp(14px,3.6vw,19px);max-width:22ch;line-height:1.4}
+  .verdict h1{font-size:clamp(30px,8cqw,56px);margin:0;letter-spacing:-.02em;line-height:1}
+  .verdict p{margin:0;font-size:clamp(13px,3.4cqw,18px);max-width:22ch;line-height:1.4}
   .verdict small{font:500 11px/1 var(--mono);opacity:.75}
   .verdict.admit{background:rgba(31,157,91,.94)}
   .verdict.deny{background:rgba(216,72,15,.95)}
@@ -104,14 +136,16 @@
 
 <main>
   <div class="stage">
-    <video id="cam" playsinline muted autoplay></video>
-    <div class="noCam" id="noCam" hidden>
-      Camera unavailable.<br>Use <b>Simulate</b> to exercise the gate.
-    </div>
-    <div class="verdict" id="verdict">
-      <h1 id="vTitle">—</h1>
-      <p id="vMessage"></p>
-      <small id="vDetail"></small>
+    <div class="viewport">
+      <video id="cam" playsinline muted autoplay></video>
+      <div class="noCam" id="noCam" hidden>
+        Camera unavailable.<br>Use <b>Simulate</b> to exercise the gate.
+      </div>
+      <div class="verdict" id="verdict">
+        <h1 id="vTitle">—</h1>
+        <p id="vMessage"></p>
+        <small id="vDetail"></small>
+      </div>
     </div>
   </div>
 
