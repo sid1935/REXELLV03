@@ -55,6 +55,8 @@ export interface EventDef {
   readonly id: EventId;
   readonly organizerId: OrganizerId;
   readonly name: string;
+  /** Where it happens, as published. Optional: events predate the field. */
+  readonly venue?: string;
   readonly capacity: number;
   readonly salesOpenAt: EpochMs;
   readonly salesCloseAt: EpochMs;

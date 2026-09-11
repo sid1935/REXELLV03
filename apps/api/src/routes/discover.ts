@@ -36,7 +36,7 @@ export function discoverRoutes(app: FastifyInstance, { repo, now }: Deps): void 
    * resale may open. Closed ones do not — an event nobody can buy into is noise
    * that generates support tickets.
    */
-  app.get<{ Querystring: { limit?: string; offset?: string } }>('/v1/discover', async (req, reply) => {
+  app.get<{ Querystring: { limit?: string; offset?: string; q?: string } }>('/v1/discover', async (req, reply) => {
     const at = now();
     const limit = Math.min(MAX_PAGE, Math.max(1, Number(req.query.limit ?? 20)));
     const offset = Math.max(0, Number(req.query.offset ?? 0));
@@ -45,18 +45,23 @@ export function discoverRoutes(app: FastifyInstance, { repo, now }: Deps): void 
     // A hold that lapsed a moment ago must not make an event look sold out.
     repo.releaseExpiredHolds(at);
 
-    const rows = repo.catalogue.onSale(at, limit, offset);
+    // Searched in the database rather than by the caller, so a term still
+    // finds an event that sits past the first page.
+    const q = (req.query.q ?? '').slice(0, 80);
+    const rows = repo.catalogue.onSale(at, limit, offset, q);
     const total = repo.catalogue.countOnSale(at);
 
     return reply.header('cache-control', 'public, max-age=15').send({
       total,
       limit,
       offset,
+      ...(q.trim() ? { q: q.trim() } : {}),
       events: rows.map((r) => {
         const availability = availabilityOf({ allocation: r.allocation, sold: r.sold, held: r.held });
         return {
           id: r.event_id,
           name: r.name,
+          venue: r.venue,
           organizer: r.organizer_name,
           doorsOpenAt: r.doors_open_at,
           endsAt: r.ends_at,
@@ -136,6 +141,7 @@ export function discoverRoutes(app: FastifyInstance, { repo, now }: Deps): void 
     return reply.header('cache-control', 'public, max-age=10').send({
       id: event.id,
       name: event.name,
+      venue: row.venue ?? null,
       organizer: organizer?.name ?? null,
       capacity: event.capacity,
       salesOpenAt: event.salesOpenAt,

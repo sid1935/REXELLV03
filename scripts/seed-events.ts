@@ -56,6 +56,7 @@ function eventPayload(spec: EventSpec) {
   return {
     id: spec.id,
     name: spec.name,
+    venue: spec.venue,
     capacity: spec.capacity,
     salesOpenAt: now - DAY,
     salesCloseAt: salesClose,

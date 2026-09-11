@@ -91,6 +91,9 @@ CREATE TABLE IF NOT EXISTS events (
   event_id                  TEXT PRIMARY KEY,
   organizer_id              TEXT NOT NULL REFERENCES organizers(organizer_id),
   name                      TEXT NOT NULL,
+  -- Where it happens. Nullable: events predate this column, and it is the one
+  -- field a fan searches by that is not the artist's name.
+  venue                     TEXT,
   capacity                  INTEGER NOT NULL CHECK (capacity > 0),
   sales_open_at             INTEGER NOT NULL,
   sales_close_at            INTEGER NOT NULL,

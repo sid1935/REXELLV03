@@ -40,6 +40,7 @@ const state = {
   events: [],
   // Shown once, on the dashboard, immediately after enrolling.
   newRecoveryCode: '',
+  search: '',
 };
 
 const money = (p) => `₹${(p / 100).toLocaleString('en-IN', { maximumFractionDigits: 0 })}`;
@@ -441,28 +442,75 @@ function ticketCard(t) {
   </article>`;
 }
 
+/**
+ * Search, served by the API rather than filtered here.
+ *
+ * Filtering the loaded page would be simpler and instant, and it would also be
+ * wrong: the page caps at 100, so a term would quietly stop finding events the
+ * moment the catalogue outgrew that. The endpoint matches on the event name,
+ * the venue and the organizer.
+ */
+let searchTimer;
+
 async function renderDiscover() {
   const host = $('view-discover');
-  host.innerHTML = '<div class="card skel" style="height:120px"></div>';
+  const term = state.search;
+
+  // The field is rendered once and kept, so typing does not lose focus every
+  // time results come back.
+  if (!$('discoverSearch')) {
+    host.innerHTML = `
+      <label class="search" for="discoverSearch">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+        <input id="discoverSearch" type="search" autocomplete="off"
+               placeholder="Search events, venues and cities" value="${esc(term)}">
+      </label>
+      <div id="discoverResults"></div>`;
+    $('discoverSearch').addEventListener('input', (e) => {
+      state.search = e.target.value;
+      clearTimeout(searchTimer);
+      // Long enough that typing a word is one request rather than six, short
+      // enough that it still feels like it is keeping up.
+      searchTimer = setTimeout(renderDiscover, 220);
+    });
+  }
+
+  const results = $('discoverResults');
+  results.innerHTML = '<div class="card skel" style="height:120px"></div>';
 
   let listing;
   try {
-    listing = await call('/v1/discover?limit=30');
+    listing = await call(`/v1/discover?limit=30${term.trim() ? `&q=${encodeURIComponent(term.trim())}` : ''}`);
   } catch (e) {
-    host.innerHTML = `<div class="note note-bad">${esc(e.message)}</div>`;
+    results.innerHTML = `<div class="note note-bad">${esc(e.message)}</div>`;
     return;
   }
 
+  // A stale response from a slower earlier request must not overwrite a newer
+  // one: the user has typed since, and what is on screen should match the box.
+  if (state.search !== term) return;
+
   if (listing.events.length === 0) {
-    host.innerHTML = `<div class="card"><div class="empty">
-      <h3>Nothing on sale</h3><p>When an organizer opens a sale, it shows up here.</p>
-    </div></div>`;
+    results.innerHTML = term.trim()
+      ? `<div class="card"><div class="empty">
+          <h3>Nothing matches "${esc(term.trim())}"</h3>
+          <p>Try an artist, a venue or a city.</p>
+          <div style="margin-top:16px"><button class="btn btn-quiet" id="clearSearch">Clear search</button></div>
+        </div></div>`
+      : `<div class="card"><div class="empty">
+          <h3>Nothing on sale</h3><p>When an organizer opens a sale, it shows up here.</p>
+        </div></div>`;
+    $('clearSearch')?.addEventListener('click', () => {
+      state.search = '';
+      $('discoverSearch').value = '';
+      renderDiscover();
+    });
     return;
   }
 
   // The catalogue carries what a card needs; the tiers come from the event view
   // when somebody actually taps through.
-  host.innerHTML = `<div class="stack gap-lg">${listing.events.map(discoverCard).join('')}</div>`;
+  results.innerHTML = `<div class="stack gap-lg">${listing.events.map(discoverCard).join('')}</div>`;
   document.querySelectorAll('[data-event]').forEach((b) =>
     b.addEventListener('click', () => openEvent(b.dataset.event)),
   );
@@ -494,7 +542,7 @@ function discoverCard(e) {
     <div class="event-strip"></div>
     <div class="body">
       <h3>${esc(e.name)}</h3>
-      <div class="hint" style="margin-bottom:10px">${esc(e.organizer)} · ${when(e.doorsOpenAt)}</div>
+      <div class="hint" style="margin-bottom:10px">${e.venue ? `${esc(e.venue)} · ` : ''}${when(e.doorsOpenAt)}</div>
       <div class="row">
         <span class="price">from ${money(e.fromMinor)}</span>
         <span class="spacer"></span>

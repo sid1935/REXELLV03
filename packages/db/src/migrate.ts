@@ -113,6 +113,15 @@ export const MIGRATIONS: readonly Migration[] = [
       `);
     },
   },
+  {
+    version: 5,
+    name: 'where the event is',
+    up(db) {
+      // Nullable, because every event created before this one has no answer
+      // and inventing a venue for them would be worse than leaving it blank.
+      addColumn(db, 'events', 'venue', 'TEXT');
+    },
+  },
 ];
 
 export const CURRENT_VERSION = MIGRATIONS.reduce((n, m) => Math.max(n, m.version), 0);

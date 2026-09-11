@@ -20,6 +20,40 @@
   .event-card:hover { transform: translateY(-1px); box-shadow: var(--lift-2); }
   .event-card .body { padding: 15px 16px; }
   .event-card h3 { font-size: 15.5px; margin-bottom: 3px; }
+  /* The search field. A label wrapping the input, so the icon is part of the
+     hit area rather than decoration beside it. */
+  .search {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 18px;
+    padding: 0 14px;
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-radius: var(--r);
+    transition: border-color var(--fast), box-shadow var(--fast);
+  }
+  .search:focus-within {
+    border-color: var(--brand);
+    box-shadow: 0 0 0 3px var(--brand-wash);
+  }
+  .search svg { width: 17px; height: 17px; flex: none; color: var(--ink-3); }
+  .search input {
+    flex: 1;
+    min-width: 0;
+    border: 0;
+    background: none;
+    color: var(--ink);
+    font: 400 15px/1 var(--sans);
+    padding: 13px 0;
+    outline: none;
+  }
+  .search input::placeholder { color: var(--ink-3); }
+  /* Safari draws its own clear affordance on type=search and it does not match
+     anything else here. */
+  .search input::-webkit-search-decoration,
+  .search input::-webkit-search-cancel-button { -webkit-appearance: none; }
+
   .event-strip { height: 5px; background: var(--brand-gradient); }
 
   /*
@@ -199,7 +233,7 @@
      * across the whole width and one ticket reads as a banner.
      */
     #view-tickets > .stack,
-    #view-discover > .stack,
+    #discoverResults > .stack,
     #view-sell > .stack {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(330px, 1fr));

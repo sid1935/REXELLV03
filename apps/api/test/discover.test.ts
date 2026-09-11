@@ -306,3 +306,84 @@ describe('isDiscoverable', () => {
     expect(isDiscoverable({ salesOpenAt: 0, salesCloseAt: 999, endsAt: 50 }, 60)).toBe(false);
   });
 });
+
+describe('searching the catalogue', () => {
+  /**
+   * Searched in SQL rather than filtered after paging.
+   *
+   * Filtering a page is not searching a catalogue: the page caps at 100, so a
+   * client-side filter stops finding events the moment there are more than
+   * that, and does it silently.
+   */
+  beforeEach(async () => {
+    await post('/v1/events', {
+      event: eventPayload('evt_gnr', { name: "Guns N' Roses", venue: 'NICE Grounds, Bengaluru' }),
+      organizerName: 'Meridian Festivals',
+    });
+    await post('/v1/events', {
+      event: eventPayload('evt_anyma', { name: 'Anyma presents AEDEN', venue: 'Mahalaxmi Race Course, Mumbai' }),
+      organizerName: 'Southside Venues',
+    });
+  });
+
+  const names = async (q: string) => {
+    const res = await get(`/v1/discover?q=${encodeURIComponent(q)}`);
+    expect(res.statusCode).toBe(200);
+    return (res.json().events as Array<{ name: string }>).map((e) => e.name).sort();
+  };
+
+  it('matches the event name', async () => {
+    expect(await names('guns')).toEqual(["Guns N' Roses"]);
+  });
+
+  it('matches the venue, which is how somebody looks for a city', async () => {
+    expect(await names('mumbai')).toEqual(['Anyma presents AEDEN']);
+  });
+
+  it('matches the organizer', async () => {
+    expect(await names('meridian')).toEqual(["Guns N' Roses"]);
+  });
+
+  it('ignores case', async () => {
+    expect(await names('ANYMA')).toEqual(['Anyma presents AEDEN']);
+  });
+
+  it('matches across words in a venue', async () => {
+    expect(await names('race course')).toEqual(['Anyma presents AEDEN']);
+  });
+
+  it('returns nothing for a term that matches nothing', async () => {
+    expect(await names('zzzz')).toEqual([]);
+  });
+
+  it('treats a wildcard as a character, not a wildcard', async () => {
+    // Unescaped, `_` matches any single character and `%` matches everything,
+    // so a search for either would return the whole catalogue and look like it
+    // had worked.
+    expect(await names('_')).toEqual([]);
+    expect(await names('%')).toEqual([]);
+  });
+
+  it('is not confused by a quote', async () => {
+    const res = await get(`/v1/discover?q=${encodeURIComponent("o'brien")}`);
+    expect(res.statusCode).toBe(200);
+    expect(res.json().events).toEqual([]);
+  });
+
+  it('returns the whole catalogue when the term is blank', async () => {
+    expect((await names('')).length).toBe(2);
+    expect(((await get('/v1/discover')).json().events as unknown[]).length).toBe(2);
+  });
+
+  it('echoes the term back, so a client can tell which response it is', async () => {
+    expect((await get('/v1/discover?q=guns')).json().q).toBe('guns');
+    expect((await get('/v1/discover')).json().q).toBeUndefined();
+  });
+
+  it('still hides what the public must not see', async () => {
+    const event = (await get('/v1/discover?q=guns')).json().events[0];
+    for (const leaked of ['sold', 'held', 'allocation', 'commissionBps', 'organizerId', 'manifestSequence']) {
+      expect(event).not.toHaveProperty(leaked);
+    }
+  });
+});

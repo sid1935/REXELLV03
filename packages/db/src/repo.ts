@@ -35,6 +35,7 @@ interface EventRow {
   event_id: string;
   organizer_id: string;
   name: string;
+  venue: string | null;
   capacity: number;
   sales_open_at: number;
   sales_close_at: number;
@@ -136,6 +137,7 @@ function toEvent(e: EventRow, tiers: readonly TicketTier[]): EventDef {
     id: toEventId(e.event_id),
     organizerId: toOrganizerId(e.organizer_id),
     name: e.name,
+    ...(e.venue !== null ? { venue: e.venue } : {}),
     capacity: e.capacity,
     salesOpenAt: epochMs(e.sales_open_at),
     salesCloseAt: epochMs(e.sales_close_at),
@@ -312,12 +314,13 @@ export class Repo {
   createEvent(event: EventDef, now: EpochMs): void {
     this.db.tx(() => {
       this.db.run(
-        `INSERT INTO events (event_id, organizer_id, name, capacity, sales_open_at, sales_close_at,
+        `INSERT INTO events (event_id, organizer_id, name, venue, capacity, sales_open_at, sales_close_at,
            doors_open_at, ends_at, max_tickets_per_identity, minimum_age, allow_reentry, policy_hash, created_at)
-         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
         event.id,
         event.organizerId,
         event.name,
+        event.venue ?? null,
         event.capacity,
         event.salesOpenAt,
         event.salesCloseAt,
@@ -1166,6 +1169,7 @@ export class OrganizerRepo {
 export interface CatalogueRow {
   event_id: string;
   name: string;
+  venue: string | null;
   organizer_name: string;
   capacity: number;
   sales_open_at: number;
@@ -1192,9 +1196,50 @@ export interface CatalogueRow {
 export class CatalogueRepo {
   constructor(private readonly db: Db) {}
 
-  onSale(now: number, limit = 50, offset = 0): CatalogueRow[] {
+  /**
+   * What is on sale, optionally narrowed by a search term.
+   *
+   * The filter is applied in SQL rather than by the caller after paging,
+   * because filtering a page is not the same thing as searching a catalogue:
+   * with the page limit at 100, a client-side filter would silently stop
+   * finding events the moment there were more than that.
+   *
+   * LIKE with the term escaped, not FTS. Ten events do not need an index, and
+   * a real one should arrive with the load that justifies it.
+   */
+  onSale(now: number, limit = 50, offset = 0, search = ''): CatalogueRow[] {
+    const term = search.trim().toLowerCase();
+    if (term) {
+      // The wildcards are escaped, so a search for "100%" looks for that
+      // rather than matching everything.
+      const like = `%${term.replace(/[\\%_]/g, (c) => `\\${c}`)}%`;
+      return this.db.all<CatalogueRow>(
+        `SELECT e.event_id, e.name, e.venue, o.name AS organizer_name, e.capacity,
+                e.sales_open_at, e.sales_close_at, e.doors_open_at, e.ends_at,
+                MIN(t.face_value)                              AS min_face_value,
+                COALESCE(SUM(t.allocation), 0)                 AS allocation,
+                COALESCE(SUM(t.sold), 0)                       AS sold,
+                COALESCE(SUM(t.held), 0)                       AS held,
+                MAX(CASE WHEN t.resale_mode = 'capped' THEN 1 ELSE 0 END) AS any_capped
+         FROM events e
+         JOIN organizers o ON o.organizer_id = e.organizer_id
+         JOIN tiers t      ON t.event_id = e.event_id
+         WHERE e.sales_open_at <= ? AND e.sales_close_at > ? AND e.ends_at > ?
+           AND ( LOWER(e.name) LIKE ? ESCAPE '\\'
+              OR LOWER(COALESCE(e.venue, '')) LIKE ? ESCAPE '\\'
+              OR LOWER(o.name) LIKE ? ESCAPE '\\' )
+         GROUP BY e.event_id
+         ORDER BY e.doors_open_at
+         LIMIT ? OFFSET ?`,
+        now, now, now, like, like, like, limit, offset,
+      );
+    }
+    return this.onSaleAll(now, limit, offset);
+  }
+
+  private onSaleAll(now: number, limit: number, offset: number): CatalogueRow[] {
     return this.db.all<CatalogueRow>(
-      `SELECT e.event_id, e.name, o.name AS organizer_name, e.capacity,
+      `SELECT e.event_id, e.name, e.venue, o.name AS organizer_name, e.capacity,
               e.sales_open_at, e.sales_close_at, e.doors_open_at, e.ends_at,
               MIN(t.face_value)                              AS min_face_value,
               COALESCE(SUM(t.allocation), 0)                 AS allocation,
