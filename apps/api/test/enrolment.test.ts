@@ -4,7 +4,7 @@ import { epochMs } from '@rexell/domain';
 import type { EpochMs } from '@rexell/domain';
 import { buildVault } from '../../vault/src/app.js';
 import type { VaultApp } from '../../vault/src/app.js';
-import { capture, face } from '../../vault/test/helpers.js';
+import { capture, face, livenessFrames } from '../../vault/test/helpers.js';
 import { buildApp } from '../src/app.js';
 import type { App } from '../src/app.js';
 import { httpVaultClient } from '../src/vault-client.js';
@@ -68,7 +68,13 @@ async function enrolThroughApi(id: string, faceVector: ReturnType<typeof face>, 
   return post(`/v1/identities/${id}/enrolment`, {
     scope: 'global',
     vector: [...capture(faceVector, jitter)],
-    liveness: { challengeId: challenge.id, nonce: challenge.nonce, passiveScore: 0.96, actionCompleted: true },
+    liveness: {
+      challengeId: challenge.id,
+      nonce: challenge.nonce,
+      passiveScore: 0.96,
+      actionCompleted: true,
+      frames: livenessFrames(challenge.kind, faceVector),
+    },
   });
 }
 
@@ -437,5 +443,143 @@ describe('face sign-in', () => {
   it('rejects a request with no vector', async () => {
     const res = await post('/v1/identities/identify', {});
     expect(res.statusCode).toBe(400);
+  });
+});
+
+/**
+ * Liveness, through the whole stack.
+ *
+ * The evidence rules themselves are covered in `packages/biometrics`; this is
+ * about the seam. The challenge is issued by the vault through the API, the
+ * capture comes back through the API, and the verdict is reached in the vault
+ * — so a client that satisfies the browser but not the server has to fail
+ * here, not in a unit test of a function nobody calls in production.
+ */
+describe('liveness at enrolment', () => {
+  async function challengeFor(id: string) {
+    return (await post(`/v1/identities/${id}/enrolment/challenge`)).json();
+  }
+
+  it('refuses an enrolment with no capture behind it', async () => {
+    const id = await newIdentity();
+    await consentTo(id);
+    const challenge = await challengeFor(id);
+
+    // Exactly what the old client sent: a vector and two booleans.
+    const res = await post(`/v1/identities/${id}/enrolment`, {
+      scope: 'global',
+      vector: [...capture(face(31))],
+      liveness: { challengeId: challenge.id, nonce: challenge.nonce, passiveScore: 0.96, actionCompleted: true },
+    });
+
+    expect(res.statusCode).toBe(403);
+    expect(res.json().error.message).toMatch(/NO_EVIDENCE/);
+  });
+
+  it('refuses a photograph held up to the camera', async () => {
+    const id = await newIdentity();
+    await consentTo(id);
+    const challenge = await challengeFor(id);
+    const theirFace = face(32);
+
+    // Twelve frames of a real face that never moves, which is what a camera
+    // pointed at a print produces.
+    const still = livenessFrames(challenge.kind, theirFace).map((f) => ({
+      ...f,
+      yaw: 0,
+      pitch: 0,
+      eyeOpen: 0.3,
+    }));
+
+    const res = await post(`/v1/identities/${id}/enrolment`, {
+      scope: 'global',
+      vector: [...capture(theirFace)],
+      liveness: {
+        challengeId: challenge.id,
+        nonce: challenge.nonce,
+        passiveScore: 0.96,
+        actionCompleted: true,
+        frames: still,
+      },
+    });
+
+    expect(res.statusCode).toBe(403);
+    expect(res.json().error.message).toMatch(/MOVEMENT_NOT_OBSERVED/);
+  });
+
+  it('refuses a capture that performs the wrong movement', async () => {
+    const id = await newIdentity();
+    await consentTo(id);
+    const challenge = await challengeFor(id);
+    const theirFace = face(33);
+
+    // A recording made before the challenge was issued can only contain one
+    // movement, and there is a three-in-four chance it is not this one.
+    const other = (['turn_left', 'turn_right', 'nod', 'blink'] as const).find((k) => k !== challenge.kind)!;
+
+    const res = await post(`/v1/identities/${id}/enrolment`, {
+      scope: 'global',
+      vector: [...capture(theirFace)],
+      liveness: {
+        challengeId: challenge.id,
+        nonce: challenge.nonce,
+        passiveScore: 0.96,
+        actionCompleted: true,
+        frames: livenessFrames(other, theirFace),
+      },
+    });
+
+    expect(res.statusCode).toBe(403);
+    expect(res.json().error.message).toMatch(/MOVEMENT_NOT_OBSERVED/);
+  });
+
+  it('accepts somebody who actually performed it, and enrols them', async () => {
+    const id = await newIdentity();
+    await consentTo(id);
+    const challenge = await challengeFor(id);
+    const theirFace = face(34);
+
+    const res = await post(`/v1/identities/${id}/enrolment`, {
+      scope: 'global',
+      vector: [...capture(theirFace)],
+      liveness: {
+        challengeId: challenge.id,
+        nonce: challenge.nonce,
+        passiveScore: 0.96,
+        actionCompleted: true,
+        frames: livenessFrames(challenge.kind, theirFace),
+      },
+    });
+
+    expect(res.statusCode).toBe(201);
+    expect(res.json().enrolled).toBe(true);
+  });
+
+  it('does not let a successful capture be submitted twice', async () => {
+    const id = await newIdentity();
+    const second = await newIdentity();
+    await consentTo(id);
+    await consentTo(second);
+    const challenge = await challengeFor(id);
+    const theirFace = face(35);
+    const proof = {
+      challengeId: challenge.id,
+      nonce: challenge.nonce,
+      passiveScore: 0.96,
+      actionCompleted: true,
+      frames: livenessFrames(challenge.kind, theirFace),
+    };
+
+    expect((await post(`/v1/identities/${id}/enrolment`, { scope: 'global', vector: [...capture(theirFace)], liveness: proof })).statusCode).toBe(201);
+
+    // The same proof, replayed onto a different account. The nonce is spent,
+    // so the evidence — however genuine it was a second ago — buys nothing.
+    const replay = await post(`/v1/identities/${second}/enrolment`, {
+      scope: 'global',
+      vector: [...capture(theirFace)],
+      liveness: proof,
+    });
+    expect(replay.statusCode).toBe(403);
+    expect(replay.json().error.message).toMatch(/CHALLENGE_UNKNOWN/);
   });
 });

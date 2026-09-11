@@ -4,7 +4,7 @@ import { epochMs } from '@rexell/domain';
 import type { EpochMs } from '@rexell/domain';
 import { buildVault } from '../../vault/src/app.js';
 import type { VaultApp } from '../../vault/src/app.js';
-import { capture, face } from '../../vault/test/helpers.js';
+import { capture, face, livenessFrames } from '../../vault/test/helpers.js';
 import { buildApp } from '../src/app.js';
 import type { App } from '../src/app.js';
 import { httpVaultClient } from '../src/vault-client.js';
@@ -60,7 +60,13 @@ async function enrolledFan(seed = 3): Promise<{ id: string; code: string }> {
   const res = await post(`/v1/identities/${id}/enrolment`, {
     scope: 'global',
     vector: [...capture(face(seed), 0.2)],
-    liveness: { challengeId: challenge.id, nonce: challenge.nonce, passiveScore: 0.96, actionCompleted: true },
+    liveness: {
+      challengeId: challenge.id,
+      nonce: challenge.nonce,
+      passiveScore: 0.96,
+      actionCompleted: true,
+      frames: livenessFrames(challenge.kind, face(seed)),
+    },
   });
   return { id, code: res.json().recoveryCode as string };
 }

@@ -16,6 +16,7 @@ import type { ConsentPurpose, ConsentRecord, EpochMs } from '@rexell/domain';
 import type { Repo } from '@rexell/db';
 import { HttpError, badRequest, errorBody, notFound, statusFor } from '../errors.js';
 import { VaultRejected, VaultUnavailable } from '../vault-client.js';
+import type { LivenessProof } from '../vault-client.js';
 import type { VaultClient } from '../vault-client.js';
 
 /**
@@ -288,7 +289,7 @@ export function identityRoutes(app: FastifyInstance, { repo, now, vault }: Deps)
     Body: {
       scope?: string;
       vector: number[];
-      liveness: { challengeId: string; nonce: string; passiveScore: number; actionCompleted: boolean };
+      liveness: LivenessProof;
     };
   }>('/v1/identities/:id/enrolment', async (req, reply) => {
     const identity = toIdentityId(req.params.id);

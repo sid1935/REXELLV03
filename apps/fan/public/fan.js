@@ -7,12 +7,22 @@
  *
  * The matcher is real: `/face-capture.js` runs a face-recognition network over
  * the camera frame and returns the network's own 128-dimension descriptor, so
- * the template enrolled here is the one the gate compares against. What is
- * still missing is liveness — nothing here can tell a face from a photograph of
- * a face, so a printed picture would enrol. That is the remaining blocker on a
- * real door, and the sheet says so rather than hiding it.
+ * the template enrolled here is the one the gate compares against.
+ *
+ * Enrolment is a challenge rather than a snapshot. The server picks a movement
+ * the client cannot predict, this page records the person performing it, and
+ * the vault decides for itself whether it happened. A printed photograph cannot
+ * turn its head, so paper no longer enrols — which it did until recently, and
+ * was the loudest thing wrong with this file.
  */
-import { faceVector, readyFaceMatcher, vectorPreview, FaceCaptureError } from '/face-capture.js';
+import {
+  faceVector,
+  captureLiveness,
+  readyFaceMatcher,
+  vectorPreview,
+  CHALLENGE_INSTRUCTIONS,
+  FaceCaptureError,
+} from '/face-capture.js';
 
 const $ = (id) => document.getElementById(id);
 /**
@@ -186,7 +196,7 @@ function enrolSheet() {
     <p class="hint" id="captureHint" hidden style="margin-top:12px;color:var(--warn,#f7b955)"></p>
     <button class="btn btn-primary btn-lg btn-block" id="captureBtn" disabled>Capture</button>
     <button class="btn btn-quiet btn-block" style="margin-top:8px" id="enrolCancel">Cancel</button>
-    <p class="hint" style="margin-top:14px"><strong>Prototype:</strong> the matcher is real, liveness detection is not here yet — a printed photograph would pass. Not fit for a real gate until it is.</p>
+    <p class="hint" style="margin-top:14px"><strong>Prototype:</strong> we check you are really here by asking you to move, which stops a photograph. It is not a certified liveness system, and a determined attacker with their own software could still get past it.</p>
   `);
 
   $('enrolCancel').addEventListener('click', () => {
@@ -215,17 +225,29 @@ function enrolSheet() {
       // The server picks the nonce and the action, so a template captured
       // earlier cannot be replayed into a later enrolment.
       const challenge = await call(`/v1/identities/${id}/enrolment/challenge`, {});
-      $('challengeTag').textContent = String(challenge.kind).replace('_', ' ');
+      // The server chose the movement. Saying it in words is not decoration —
+      // it is the whole check, and somebody who does not understand what is
+      // being asked cannot perform it.
+      $('challengeTag').textContent = CHALLENGE_INSTRUCTIONS[challenge.kind] ?? String(challenge.kind).replace('_', ' ');
       $('s2').classList.add('done');
       await new Promise((r) => setTimeout(r, 700));
 
-      const capture = await captureVector((note) => {
+      const capture = await captureVector(challenge, (note) => {
         $('challengeTag').textContent = note;
       });
       const enrolment = await call(`/v1/identities/${id}/enrolment`, {
         scope: 'global',
         vector: capture.vector,
-        liveness: { challengeId: challenge.id, nonce: challenge.nonce, passiveScore: 0.96, actionCompleted: true },
+        liveness: {
+          challengeId: challenge.id,
+          nonce: challenge.nonce,
+          passiveScore: capture.passiveScore,
+          actionCompleted: !capture.simulated,
+          // The capture itself, for the vault to judge. The verdict is not
+          // ours to reach: a boolean computed on this page is a claim by
+          // whoever is running this page.
+          ...(capture.frames ? { frames: capture.frames } : {}),
+        },
       });
 
       // What was actually stored, in the person's own hands. "A mathematical
@@ -235,7 +257,10 @@ function enrolSheet() {
         preview: vectorPreview(capture.vector),
         dims: capture.vector.length,
         simulated: capture.simulated,
-        quality: capture.quality,
+        // How many frames the vault judged. Shown because "we checked you were
+        // really there" is another claim, and this is the number behind it.
+        frameCount: capture.frames?.length ?? 0,
+        challenge: challenge.kind,
       };
 
       $('s3').classList.add('done');
@@ -299,17 +324,28 @@ function stopCamera() {
  * only against itself. Without the marker this is exactly the sort of fallback
  * that gets mistaken for a working recogniser.
  */
-async function captureVector(onProgress) {
+async function captureVector(challenge, onProgress) {
   const video = $('cam');
   if (video && video.videoWidth > 0) {
-    const { vector, quality } = await faceVector(video, onProgress);
-    return { vector, quality, simulated: false };
+    const { vector, passiveScore, evidence } = await captureLiveness(video, challenge, onProgress);
+    return { vector, passiveScore, frames: evidence.frames, simulated: false };
   }
+
+  /*
+   * No camera, so no liveness, and the client says so rather than inventing it.
+   *
+   * `actionCompleted: false` and no frames is an honest report of what
+   * happened, and the vault refuses it — unless it was started with
+   * VAULT_ALLOW_NO_LIVENESS, which is refused outright in production. The
+   * alternative, fabricating a plausible sequence here, would be a lie told by
+   * our own client to our own server, and the one place it would never be
+   * caught is the one place it matters.
+   */
   let seed = 0;
   for (const ch of state.identityId) seed = (seed * 31 + ch.charCodeAt(0)) | 0;
   const v = Array.from({ length: DIMS }, (_, i) => Math.sin(i * 0.7 + seed) + Math.cos(i * 0.31 - seed));
   const mag = Math.hypot(...v);
-  return { vector: v.map((x) => x / mag), quality: { simulated: true }, simulated: true };
+  return { vector: v.map((x) => x / mag), passiveScore: 0, simulated: true };
 }
 
 // ─── data ────────────────────────────────────────────────────────────────────
@@ -397,6 +433,13 @@ function recoveryBanner() {
  * because 128 numbers at full precision is unreadable — and because the whole
  * thing on a clipboard would be the template itself.
  */
+const DID = {
+  turn_left: 'turning to your left',
+  turn_right: 'turning to your right',
+  nod: 'nodding',
+  blink: 'blinking',
+};
+
 function templateReceipt() {
   const t = state.enrolmentPreview;
   if (!t) return '';
@@ -407,6 +450,9 @@ function templateReceipt() {
           ? 'No camera was available, so this is a stand-in vector derived from your ID — it will not match a face at the gate.'
           : `This is what your face became: ${t.dims} numbers, and no image. Nothing here can be turned back into a picture of you.`}
       </p>
+      ${t.simulated
+        ? ''
+        : `<p class="hint" style="margin-bottom:8px">Checked across ${t.frameCount} frames of you ${DID[t.challenge] ?? 'moving'} — a photograph could not have done that.</p>`}
       <div class="num" style="font-size:11px;line-height:1.6;word-break:break-all;background:var(--sunk);border:1px solid var(--rule);border-radius:var(--r);padding:10px">${esc(t.preview)}</div>
     </div>`;
 }

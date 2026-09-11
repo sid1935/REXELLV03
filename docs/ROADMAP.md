@@ -145,9 +145,13 @@ means migrating live ticket data. Getting them right now costs a few days.
 - ✅ The browser matcher is real: one network in `packages/ui/face-capture.js`,
   shared by the fan app and the scanner, with thresholds measured by
   `npm run face:calibrate` and regression-tested against real descriptors.
-- There is still no liveness anywhere in the browser, and a printed photograph
-  passes. The scanner must not be pointed at a real queue until that exists —
-  and the stronger the recogniser gets, the more worthwhile it is to fool.
+- ✅ Enrolment is a liveness challenge: the server picks a movement, the browser
+  submits the capture, and the vault re-derives the verdict from the frames
+  rather than trusting a boolean. A photograph cannot enrol.
+- The gate has no liveness at all — only enrolment does — so a photograph of a
+  ticket-holder still passes a lane. And enrolment's poses are measured in an
+  untrusted browser, so a modified client can fabricate them. Both are why this
+  is not yet certified presentation-attack detection.
 
 ---
 
@@ -225,7 +229,7 @@ rather than more code:
 | Open | Why | Blocks |
 |---|---|---|
 | Gate p95 on a mid-range Android | No device in the loop. Our decision path is 8.3 ms p95 at 12,000 credentials with ~420 ms left for camera and embedding — an argument, not a measurement. | M4 exit criterion |
-| Certified liveness detection | The matcher is real and measured; nothing detects a printed photograph held to the lens. Everything around it is built and tested. | Any real event |
+| Liveness at the gate, and a certified detector | Enrolment has a challenge-response check that stops paper; the gate has none, and neither can stop a modified client. Everything around both is built and tested. | Any real event |
 | Two independent contract audits | Never optional for code that moves money. | Mainnet |
 
 And one that is closed differently than asked: the inline scorer stops 94.6% of

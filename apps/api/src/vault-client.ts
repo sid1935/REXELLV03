@@ -1,3 +1,4 @@
+import type { LivenessFrame } from '@rexell/biometrics';
 /**
  * Client for the biometric vault.
  *
@@ -24,6 +25,15 @@ export interface LivenessProof {
   readonly nonce: string;
   readonly passiveScore: number;
   readonly actionCompleted: boolean;
+  /**
+   * The sampled capture the vault re-derives the verdict from.
+   *
+   * The application plane passes it straight through without looking at it.
+   * Judging it needs the challenge, and the challenge lives in the vault —
+   * which is also the only process that should be handling frames of somebody's
+   * face.
+   */
+  readonly frames?: readonly LivenessFrame[];
 }
 
 export interface EnrolResult {

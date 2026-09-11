@@ -167,6 +167,203 @@ export async function faceVector(source, onProgress = () => {}) {
   };
 }
 
+// ─── liveness ────────────────────────────────────────────────────────────────
+
+/**
+ * What the person is asked to do, per challenge kind.
+ *
+ * The server picks which one, from bytes the client cannot predict. That is the
+ * entire mechanism: a printed photograph cannot turn, and a video recorded in
+ * advance cannot know which way it will be asked to.
+ */
+export const CHALLENGE_INSTRUCTIONS = {
+  turn_left: 'Turn your head slowly to your left',
+  turn_right: 'Turn your head slowly to your right',
+  nod: 'Nod — look down, then back up',
+  blink: 'Blink, slowly and deliberately',
+};
+
+/**
+ * Head pose and eye openness, from the 68 landmarks.
+ *
+ * Deliberately geometry rather than another network: it is inspectable, it
+ * costs nothing on top of the detection already being run, and a reviewer can
+ * check it against a photograph by eye.
+ *
+ * ⚠ SIGN CONVENTION, and it is the thing most likely to be got backwards.
+ * Everything here is measured in the raw image, which is NOT mirrored — the CSS
+ * transform that flips a selfie preview does not affect the pixels the detector
+ * reads. `yaw` is positive when the nose sits toward the right-hand side of the
+ * image. A person turning their head to their own right rotates their nose
+ * toward the image's left, so `turn_right` expects NEGATIVE yaw.
+ *
+ * If that is inverted, the failure is loud rather than silent: the browser
+ * refuses to submit until the challenge is satisfied, so a sign error means
+ * nobody can enrol. It cannot let somebody through.
+ */
+export function faceGeometry(landmarks) {
+  const jaw = landmarks.getJawOutline();
+  const nose = landmarks.getNose();
+  const leftEye = landmarks.getLeftEye();
+  const rightEye = landmarks.getRightEye();
+
+  const tip = nose[6] ?? nose[nose.length - 1];
+  const edgeL = jaw[0];
+  const edgeR = jaw[jaw.length - 1];
+
+  // Normalised by the face's own width, so moving closer to the camera does
+  // not read as turning.
+  const toLeft = tip.x - edgeL.x;
+  const toRight = edgeR.x - tip.x;
+  const width = toLeft + toRight;
+  const yaw = width > 0 ? clamp((toLeft - toRight) / width) : 0;
+
+  // Pitch from where the nose tip sits between the eye line and the chin.
+  // Looking down moves the tip up the face relative to both.
+  //
+  // The 0.40 is not arbitrary: measured across twenty photographs of five
+  // people facing a camera, the tip sits about four tenths of the way down.
+  // The first version used 0.45 and every frontal face read as -0.2, which
+  // would have made "look down" easier to satisfy than "look up" for no reason
+  // other than a mis-centred constant.
+  const eyeY = (mean(leftEye.map((p) => p.y)) + mean(rightEye.map((p) => p.y))) / 2;
+  const chinY = jaw[Math.floor(jaw.length / 2)].y;
+  const span = chinY - eyeY;
+  const pitch = span > 0 ? clamp(((tip.y - eyeY) / span - 0.4) * 4) : 0;
+
+  return { yaw: round(yaw), pitch: round(pitch), eyeOpen: round((ear(leftEye) + ear(rightEye)) / 2) };
+}
+
+/**
+ * Eye aspect ratio: how open an eye is, independent of how large it is on screen.
+ *
+ * The two vertical distances over the horizontal one. Around 0.3 open, near
+ * zero shut.
+ */
+function ear(eye) {
+  if (eye.length < 6) return 0;
+  const [p1, p2, p3, p4, p5, p6] = eye;
+  const wide = dist(p1, p4);
+  if (!(wide > 0)) return 0;
+  return (dist(p2, p6) + dist(p3, p5)) / (2 * wide);
+}
+
+const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
+const mean = (xs) => xs.reduce((a, b) => a + b, 0) / (xs.length || 1);
+const clamp = (n) => Math.max(-1, Math.min(1, n));
+
+/**
+ * Run a liveness challenge against the live camera.
+ *
+ * Samples the video for up to `timeoutMs`, measuring pose on every frame, and
+ * returns once the requested movement has actually been observed. What comes
+ * back is evidence — the whole sequence, each frame with its pose and its own
+ * descriptor — not a boolean. The server re-derives the verdict from it, because
+ * a boolean computed here is a claim by whoever is running this code, and the
+ * attacker we care about is running this code.
+ *
+ * The descriptors are the reason the sequence cannot simply be fabricated by
+ * splicing: the server checks every frame is the same person, and that no two
+ * frames are the same capture submitted twice.
+ */
+export async function captureLiveness(source, challenge, onProgress = () => {}, options = {}) {
+  const { timeoutMs = 12_000, maxFrames = 24, minFrames = 8, minSpanMs = 1200 } = options;
+  const faceapi = await readyFaceMatcher(onProgress);
+  const detector = new faceapi.TinyFaceDetectorOptions({ inputSize: 416, scoreThreshold: MIN_DETECTION_SCORE });
+
+  const instruction = CHALLENGE_INSTRUCTIONS[challenge.kind] ?? 'Look at the camera';
+  const frames = [];
+  const scores = [];
+  const started = Date.now();
+  let sawCentre = false;
+  let lastError;
+
+  while (Date.now() - started < timeoutMs) {
+    const found = await faceapi.detectAllFaces(source, detector).withFaceLandmarks(true).withFaceDescriptors();
+
+    if (found.length !== 1) {
+      // Reported but not recorded. A frame with nobody in it is not evidence of
+      // anything, and a frame with two people in it is evidence of the wrong
+      // thing.
+      lastError = found.length === 0 ? 'Keep your face in the frame' : 'One person at a time';
+      onProgress(lastError);
+      continue;
+    }
+
+    const only = found[0];
+    if (Math.min(only.detection.box.width, only.detection.box.height) < MIN_FACE_PX) {
+      lastError = 'Move closer';
+      onProgress(lastError);
+      continue;
+    }
+
+    const geometry = faceGeometry(only.landmarks);
+    frames.push({ at: Date.now() - started, ...geometry, vector: unit(only.descriptor) });
+    if (frames.length > maxFrames) frames.shift();
+
+    // The person has to be looking at the camera before the movement counts,
+    // so that a photograph held at an angle from the start is not a completed
+    // "turn".
+    if (Math.abs(geometry.yaw) < 0.12 && Math.abs(geometry.pitch) < 0.3) sawCentre = true;
+
+    onProgress(sawCentre ? instruction : 'Look straight at the camera');
+
+    const span = frames.length ? frames[frames.length - 1].at - frames[0].at : 0;
+    scores.push(only.detection.score);
+
+    if (sawCentre && frames.length >= minFrames && span >= minSpanMs && satisfied(challenge.kind, frames)) {
+      return {
+        vector: pickEnrolmentFrame(frames).vector,
+        // The mean detector confidence across the capture. A weak signal and
+        // labelled as one: it says the frames looked like faces, not that they
+        // looked like a live one. It is reported because the protocol carries
+        // it, and derived rather than invented because a hard-coded 0.96 is a
+        // number that tells nobody anything.
+        passiveScore: round(mean(scores)),
+        evidence: { kind: challenge.kind, frames: frames.map(strip) },
+      };
+    }
+  }
+
+  throw new FaceCaptureError(
+    'LIVENESS_TIMEOUT',
+    lastError ? `${lastError}, then ${instruction.toLowerCase()}.` : `${instruction}, and hold still between movements.`,
+  );
+}
+
+/**
+ * Has the requested movement been seen, locally?
+ *
+ * The same predicate the server applies, kept here so the browser stops asking
+ * the moment it is satisfied. It is a convenience, never the control: the
+ * server does not trust this and re-derives it from the frames.
+ */
+function satisfied(kind, frames) {
+  const yaws = frames.map((f) => f.yaw);
+  const pitches = frames.map((f) => f.pitch);
+  const eyes = frames.map((f) => f.eyeOpen);
+  if (kind === 'turn_left') return Math.max(...yaws) >= 0.28;
+  if (kind === 'turn_right') return Math.min(...yaws) <= -0.28;
+  if (kind === 'nod') return Math.max(...pitches) - Math.min(...pitches) >= 0.45;
+  if (kind === 'blink') return Math.min(...eyes) <= 0.16 && Math.max(...eyes) >= 0.24;
+  return false;
+}
+
+/**
+ * Which frame becomes the template.
+ *
+ * The most front-on one, not the last or the most extreme: a descriptor read
+ * from a turned head is a worse thing to be recognised by for the next twelve
+ * months.
+ */
+function pickEnrolmentFrame(frames) {
+  return frames.reduce((best, f) =>
+    Math.abs(f.yaw) + Math.abs(f.pitch) < Math.abs(best.yaw) + Math.abs(best.pitch) ? f : best,
+  );
+}
+
+const strip = (f) => ({ at: f.at, yaw: f.yaw, pitch: f.pitch, eyeOpen: f.eyeOpen, vector: f.vector });
+
 /** Cosine similarity of two unit vectors: the dot product. Same maths as the server. */
 export function similarity(a, b) {
   let dot = 0;

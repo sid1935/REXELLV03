@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { PROTOTYPE_THRESHOLDS, similarity } from '@rexell/biometrics';
 import { buildVault } from '../src/app.js';
 import type { VaultApp } from '../src/app.js';
-import { capture, enrol, face } from './helpers.js';
+import { capture, enrol, face, livenessFrames } from './helpers.js';
 
 let vault: VaultApp;
 let clock = 1_000_000;
@@ -107,7 +107,16 @@ describe('enrolment', () => {
       consentId: 'con_x',
       modelVersion: 'someone-elses-model-v2',
       vector: [...capture(face(1))],
-      liveness: { challengeId: challenge.id, nonce: challenge.nonce, passiveScore: 0.99, actionCompleted: true },
+      // Real evidence, because liveness is checked before the model version —
+      // deliberately, so an unproven capture is refused before any work is done
+      // on it. Without this the test would pass on the wrong 403.
+      liveness: {
+        challengeId: challenge.id,
+        nonce: challenge.nonce,
+        passiveScore: 0.99,
+        actionCompleted: true,
+        frames: livenessFrames(challenge.kind, face(1)),
+      },
     });
     expect(r.statusCode).toBe(409);
     expect(r.json().error.code).toBe('MODEL_VERSION_MISMATCH');

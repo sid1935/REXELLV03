@@ -263,11 +263,22 @@ space. It is measured rather than asserted: `npm run face:calibrate` produced
 the thresholds, and `real-faces.test.ts` and `real-gate.test.ts` run the gate
 against real descriptors on every commit.
 
-**There is still no liveness detection, and that is what keeps this away from a
-turnstile.** Nothing in the browser can tell a face from a photograph of a face,
-so a printed picture will enrol and will be admitted. Presentation-attack
-detection is a separate model. The recogniser being good enough to be worth
-fooling is exactly why this matters more than it did when it recognised nobody.
+**Liveness is a challenge, not a score.** The server picks a movement the client
+cannot predict — turn left, turn right, nod, blink — and the browser submits the
+whole capture: a dozen frames, each with its head pose and its own descriptor.
+The vault re-derives the verdict rather than believing a boolean. A photograph
+cannot turn its head, a photograph held at an angle never faced the camera to
+begin with, a video recorded in advance cannot know which movement will be
+asked, and the nonce is single-use so a genuine capture cannot be replayed onto
+a second account.
+
+**What it does not do is stop somebody who controls the client.** Every pose is
+measured in a browser we do not own, so a modified client can submit a
+fabricated trajectory alongside a real descriptor and pass. Closing that needs
+frames the server can inspect itself, or an attested client, and neither is
+here. This raises the cost of the easy attacks from "print a photograph" to
+"write code". It is not a certified presentation-attack detector and must not be
+described as one.
 
 The thresholds are also measured on 17 photographs of five people, which cannot
 say anything about a 12,000-credential gallery — the highest impostor score over

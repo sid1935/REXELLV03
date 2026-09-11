@@ -105,7 +105,19 @@ describe('thresholds', () => {
 describe('liveness challenges', () => {
   const NOW = 1_000_000;
   const challenge: Challenge = issueChallenge({ id: 'chl_1', nonce: 'abc123', kind: 'blink' }, NOW);
-  const good = { challengeId: 'chl_1', nonce: 'abc123', passiveScore: 0.95, actionCompleted: true };
+  // A blink, performed. The nonce and the TTL are what these tests are about,
+  // but the evidence has to be real or they would all fail on the wrong reason.
+  const frames = Array.from({ length: 12 }, (_, i) => ({
+    at: i * 180,
+    yaw: 0,
+    pitch: 0,
+    eyeOpen: i === 7 || i === 8 ? 0.05 : 0.3,
+    // One person, twelve separate looks: the same base vector nudged a
+    // different way each frame, which is what a camera produces and what the
+    // duplicate check requires the sequence not to lack.
+    vector: [...vec((k) => Math.sin(k * 0.7) + 0.08 * Math.sin(k * 3.1 + (i + 1) * 1.7))],
+  }));
+  const good = { challengeId: 'chl_1', nonce: 'abc123', passiveScore: 0.95, actionCompleted: true, frames };
 
   it('accepts a correct response', () => {
     expect(verifyChallenge(challenge, good, NOW + 1000)).toEqual({ ok: true });

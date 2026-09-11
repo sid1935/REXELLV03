@@ -25,6 +25,9 @@ const shared = {
   ...process.env,
   VAULT_TOKEN,
   VAULT_MASTER_KEY: process.env['VAULT_MASTER_KEY'] ?? b64(),
+  // A development machine may have no camera, and then there is no liveness
+  // capture to submit. The vault refuses this outright in production.
+  VAULT_ALLOW_NO_LIVENESS: process.env['VAULT_ALLOW_NO_LIVENESS'] ?? 'true',
   VAULT_RECEIPT_KEY: process.env['VAULT_RECEIPT_KEY'] ?? b64(),
   // Development posture, stated rather than defaulted. In production every one
   // of these is either required or refused — see apps/api/src/config.ts.

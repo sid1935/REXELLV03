@@ -52,11 +52,32 @@ if (production && !serviceToken) {
   process.exit(78);
 }
 
+/*
+ * Enrolling without proving somebody was there.
+ *
+ * Only useful on a machine with no camera, where the alternative is that the
+ * journey cannot be walked at all. Refused outright in production rather than
+ * merely defaulted off: this is the switch that turns the liveness check into
+ * decoration, and "it was set in the environment by mistake" must not be a
+ * thing that can happen on a deployment that sells tickets.
+ */
+const allowUnverifiedLiveness = process.env['VAULT_ALLOW_NO_LIVENESS'] === 'true';
+if (allowUnverifiedLiveness && production) {
+  console.error('\n[vault] VAULT_ALLOW_NO_LIVENESS is set, and this is a production build.');
+  console.error('[vault] That switch accepts enrolments from a client that never opened a camera.');
+  console.error('[vault] It exists for a laptop with the lid shut, and nowhere else.\n');
+  process.exit(78); // EX_CONFIG
+}
+if (allowUnverifiedLiveness) {
+  console.warn('[vault] Liveness evidence is NOT required. Anything can enrol. Development only.');
+}
+
 const { server } = buildVault({
   location: process.env['VAULT_DB'] ?? 'vault.sqlite',
   masterKey: masterKey ?? randomBytes(32),
   receiptKey: receiptKey ?? randomBytes(32),
   ...(serviceToken ? { serviceToken } : {}),
+  allowUnverifiedLiveness,
   logger: true,
 });
 

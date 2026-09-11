@@ -1,5 +1,5 @@
 import { VECTOR_DIMS, toFaceVector } from '@rexell/biometrics';
-import type { FaceVector } from '@rexell/biometrics';
+import type { ChallengeKind, FaceVector, LivenessFrame } from '@rexell/biometrics';
 import type { VaultApp } from '../src/app.js';
 
 /**
@@ -76,7 +76,34 @@ export async function enrol(
         nonce: challenge.nonce,
         passiveScore: 0.95,
         actionCompleted: true,
+        frames: livenessFrames(challenge.kind, faceVector),
       },
     },
+  });
+}
+
+/**
+ * A liveness capture that satisfies the challenge it was asked.
+ *
+ * Every test that enrols goes through this rather than round a bypass, so the
+ * evidence path is exercised by the whole suite instead of only by the tests
+ * written for it. The sequence is deliberately ordinary: square on for the
+ * first few frames, then the movement, over two seconds.
+ *
+ * Each frame is a fresh `capture()` of the same synthetic face, which is what
+ * makes it one person and twelve separate looks at them — the two things the
+ * server checks and the two things a fabricated sequence gets wrong.
+ */
+export function livenessFrames(kind: ChallengeKind, face: FaceVector, frames = 12): LivenessFrame[] {
+  return Array.from({ length: frames }, (_, i) => {
+    // Hold the centre for a moment, so the movement has somewhere to start.
+    const t = Math.max(0, (i - 3) / (frames - 4));
+    return {
+      at: i * 180,
+      yaw: kind === 'turn_left' ? t * 0.5 : kind === 'turn_right' ? -t * 0.5 : 0,
+      pitch: kind === 'nod' ? t * 0.6 : 0,
+      eyeOpen: kind === 'blink' && (i === 7 || i === 8) ? 0.05 : 0.3,
+      vector: [...capture(face, 0.05, i + 1)],
+    };
   });
 }

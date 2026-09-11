@@ -402,10 +402,16 @@ tests, but no adapter connects the API to a deployed contract, and nothing
 deploys one. Settlement reconciliation, the mint outbox and `/v1/chain/*` all
 work against the simulator. It is reported as `simulated`, never as `ok`.
 
-**There is no liveness detection.** The matcher itself is real — one network,
-shared by the fan app and the gate, with thresholds measured against its own
-output — but nothing can tell a face from a photograph of a face, so a printed
-picture enrols and is admitted. That is the blocker on a real door.
+**Liveness stops paper, not software.** Enrolment is a server-chosen
+challenge — turn, nod or blink — verified in the vault from the submitted frames
+rather than from a client-set boolean, so a photograph cannot enrol. But the
+poses are measured in an untrusted browser, so a modified client can fabricate
+them. Treat it as raising the cost of the easy attack, not as certified
+presentation-attack detection.
+
+**Never set VAULT_ALLOW_NO_LIVENESS.** It accepts enrolments from a client that
+never opened a camera, and exists for development on a machine with no webcam.
+The vault refuses to start if it is set alongside REXELL_ENV=production.
 
 **The thresholds are measured on five people.** Enough to show the two
 distributions separate; not enough to say anything about false accepts across an

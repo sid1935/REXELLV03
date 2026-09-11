@@ -5,7 +5,7 @@ import type { EpochMs } from '@rexell/domain';
 import { GateEngine, generateDeviceKey, openManifest } from '@rexell/gate';
 import { buildVault } from '../../vault/src/app.js';
 import type { VaultApp } from '../../vault/src/app.js';
-import { capture, face } from '../../vault/test/helpers.js';
+import { capture, face, livenessFrames } from '../../vault/test/helpers.js';
 import { buildApp } from '../src/app.js';
 import type { App } from '../src/app.js';
 import { httpVaultClient } from '../src/vault-client.js';
@@ -75,7 +75,13 @@ async function fan(seed: number) {
   await post(`/v1/identities/${identityId}/enrolment`, {
     scope: 'global',
     vector: [...capture(face(seed), 0.15)],
-    liveness: { challengeId: challenge.id, nonce: challenge.nonce, passiveScore: 0.97, actionCompleted: true },
+    liveness: {
+      challengeId: challenge.id,
+      nonce: challenge.nonce,
+      passiveScore: 0.97,
+      actionCompleted: true,
+      frames: livenessFrames(challenge.kind, face(seed)),
+    },
   });
 
   const order = await post('/v1/orders', { identityId, tierId: 'tier_ga', quantity: 1 });

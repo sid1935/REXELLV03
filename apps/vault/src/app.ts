@@ -9,6 +9,7 @@ import {
   toFaceVector,
   verifyChallenge,
 } from '@rexell/biometrics';
+import type { LivenessFrame } from '@rexell/biometrics';
 import { VaultStore } from './store.js';
 
 /**
@@ -37,6 +38,17 @@ export interface VaultOptions {
   logger?: boolean;
   /** Shared secret the API presents. Stands in for mTLS. */
   serviceToken?: string;
+  /**
+   * Accept an enrolment with no liveness evidence.
+   *
+   * For development on a machine with no camera, where the alternative is that
+   * the whole journey — buy, resell, attend — cannot be walked at all. It is
+   * OFF unless switched on, so a deployment that forgets about it fails closed,
+   * and the startup log says so out loud when it is on, because a vault that
+   * quietly accepts unproven captures is the one thing this service exists to
+   * not be.
+   */
+  allowUnverifiedLiveness?: boolean;
 }
 
 export interface VaultApp {
@@ -57,6 +69,7 @@ export function buildVault(options: VaultOptions = {}): VaultApp {
     ...(options.manifestKey !== undefined ? { manifestKey: options.manifestKey } : {}),
   });
   const challenges = new ChallengeStore();
+  const allowUnverifiedLiveness = options.allowUnverifiedLiveness === true;
   const serviceToken = options.serviceToken;
 
   const server = Fastify({ logger: options.logger ?? false, bodyLimit: 256 * 1024 });
@@ -97,7 +110,17 @@ export function buildVault(options: VaultOptions = {}): VaultApp {
     consentId: string;
     vector: number[];
     modelVersion?: string;
-    liveness: { challengeId: string; nonce: string; passiveScore: number; actionCompleted: boolean };
+    liveness: {
+      challengeId: string;
+      nonce: string;
+      passiveScore: number;
+      actionCompleted: boolean;
+      // The sampled capture the liveness claim is derived from. Read, judged
+      // and dropped — only the enrolled vector is ever sealed, so a capture
+      // that proves somebody was present does not become twelve more
+      // templates of them.
+      frames?: LivenessFrame[];
+    };
   }
 
   server.post<{ Body: EnrolBody }>('/v1/enrol', async (req, reply) => {
@@ -113,7 +136,26 @@ export function buildVault(options: VaultOptions = {}): VaultApp {
     const challenge = challenges.consume(b.liveness?.challengeId ?? '');
     const live = verifyChallenge(challenge, b.liveness, at);
     if (!live.ok) {
-      return bad(reply, 403, 'LIVENESS_FAILED', `Liveness check failed: ${live.reason}.`);
+      /*
+       * The development bypass, and the narrowest one that is useful.
+       *
+       * It forgives ONLY the evidence — a capture that could not be performed
+       * because the machine has no camera. An expired challenge, a wrong nonce
+       * or a replayed one still fails, because none of those are about hardware
+       * and forgiving them would quietly turn this flag into "no liveness".
+       */
+      const evidential =
+        live.reason === 'NO_EVIDENCE' ||
+        live.reason === 'TOO_FEW_FRAMES' ||
+        live.reason === 'TOO_BRIEF' ||
+        // The client honestly reporting that it could not perform the action,
+        // which on a machine with no camera is the truth rather than a refusal.
+        live.reason === 'ACTION_NOT_COMPLETED' ||
+        live.reason === 'PASSIVE_SCORE_TOO_LOW';
+      if (!(allowUnverifiedLiveness && evidential)) {
+        return bad(reply, 403, 'LIVENESS_FAILED', `Liveness check failed: ${live.reason}.`);
+      }
+      req.log.warn({ identityId: b.identityId, reason: live.reason }, 'enrolled without liveness evidence');
     }
 
     const modelVersion = b.modelVersion ?? PROTOTYPE_MODEL;
