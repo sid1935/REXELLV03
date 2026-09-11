@@ -30,7 +30,8 @@
     "backup": "node scripts/backup.js",
     "gen-secrets": "node scripts/gen-secrets.js",
     "build:netlify": "node scripts/build-netlify.js",
-    "site": "node apps/site/serve.js"
+    "site": "node apps/site/serve.js",
+    "seed:events": "tsx scripts/seed-events.ts"
   },
   "engines": {
     "node": ">=22.5"

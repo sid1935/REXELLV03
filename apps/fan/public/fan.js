@@ -38,6 +38,8 @@ const state = {
   view: 'tickets',
   tickets: [],
   events: [],
+  // Shown once, on the dashboard, immediately after enrolling.
+  newRecoveryCode: '',
 };
 
 const money = (p) => `₹${(p / 100).toLocaleString('en-IN', { maximumFractionDigits: 0 })}`;
@@ -234,10 +236,20 @@ function enrolSheet() {
       localStorage.setItem('rexell.fan.enrolled', 'true');
       stopCamera();
       await new Promise((r) => setTimeout(r, 400));
-      render();
-      // The last step of signing up, not an afterthought: this is the only
-      // time the code is ever shown.
-      recoveryCodeSheet(enrolment.recoveryCode, 'ready');
+      closeSheet();
+
+      /*
+       * Straight to the dashboard.
+       *
+       * Signing up ends where the product begins, not on another modal. The
+       * recovery code still has to be seen exactly once, so it rides along as
+       * the first card on that dashboard instead of as a door to get through
+       * — same information, without making somebody dismiss a sheet before
+       * they have seen what they signed up for.
+       */
+      state.newRecoveryCode = enrolment.recoveryCode ?? '';
+      go('tickets');
+      toast('Your ReXell ID is ready.');
     } catch (e) {
       toast(e.message, true);
       btn.disabled = false;
@@ -323,6 +335,50 @@ function setupPrompt(reason) {
   </div></div>`;
 }
 
+/**
+ * The recovery code, on the dashboard, once.
+ *
+ * Rendered above whatever else is there and dismissed by hand, because it
+ * cannot be shown again: no route returns it and no support tool can recover
+ * it, which is the rule the organizer API keys follow too.
+ */
+function recoveryBanner() {
+  if (!state.newRecoveryCode) return '';
+  return `
+    <section class="card" id="recoveryCard" style="border-color:var(--brand-line);margin-bottom:18px">
+      <div class="card-head"><h2>Write this down</h2></div>
+      <div class="pad">
+        <p class="lede" style="margin-bottom:12px">
+          Your recovery code. It is the only way back into your account from
+          another phone, and we cannot show it again or recover it for you.
+        </p>
+        <div class="num" id="recoveryCode" style="text-align:center;font-size:clamp(14px,4.4vw,19px);font-weight:600;letter-spacing:0.04em;background:var(--sunk);border:1px solid var(--brand-line);border-radius:var(--r);padding:16px 8px;word-break:normal;overflow-wrap:normal">${esc(state.newRecoveryCode)}</div>
+        <div class="row" style="margin-top:12px;gap:8px">
+          <button class="btn btn-quiet" id="copyRecovery">Copy</button>
+          <span class="spacer"></span>
+          <button class="btn btn-primary" id="recoveryDone">I have written it down</button>
+        </div>
+      </div>
+    </section>`;
+}
+
+function wireRecoveryBanner() {
+  const code = state.newRecoveryCode;
+  if (!code) return;
+  $('copyRecovery')?.addEventListener('click', async () => {
+    try {
+      await navigator.clipboard.writeText(code);
+      toast('Copied.');
+    } catch {
+      toast('Select the code and copy it by hand.', true);
+    }
+  });
+  $('recoveryDone')?.addEventListener('click', () => {
+    state.newRecoveryCode = '';
+    render();
+  });
+}
+
 async function renderTickets() {
   const host = $('view-tickets');
 
@@ -332,20 +388,23 @@ async function renderTickets() {
     return;
   }
 
-  host.innerHTML = '<div class="card" style="height:220px" class="skel"></div>';
+  host.innerHTML = `${recoveryBanner()}<div class="card" style="height:220px" class="skel"></div>`;
+  wireRecoveryBanner();
   await loadTickets();
   const live = state.tickets.filter((t) => t.state === 'issued' || t.state === 'listed');
 
   if (live.length === 0) {
-    host.innerHTML = `<div class="card"><div class="empty">
+    host.innerHTML = `${recoveryBanner()}<div class="card"><div class="empty">
       <h3>No tickets yet</h3><p>Find something to go to.</p>
       <div style="margin-top:18px"><button class="btn btn-primary" id="toDiscover">Discover events</button></div>
     </div></div>`;
+    wireRecoveryBanner();
     $('toDiscover').addEventListener('click', () => go('discover'));
     return;
   }
 
-  host.innerHTML = `<div class="stack gap-lg">${live.map(ticketCard).join('')}</div>`;
+  host.innerHTML = `${recoveryBanner()}<div class="stack gap-lg">${live.map(ticketCard).join('')}</div>`;
+  wireRecoveryBanner();
 }
 
 /**
