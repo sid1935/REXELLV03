@@ -33,7 +33,9 @@
     "site": "node apps/site/serve.js",
     "seed:events": "tsx scripts/seed-events.ts",
     "art:events": "tsx scripts/make-event-art.ts",
-    "backfill:venues": "tsx scripts/backfill-venues.ts"
+    "backfill:venues": "tsx scripts/backfill-venues.ts",
+    "art:photos": "tsx scripts/fetch-event-photos.ts",
+    "art:crop": "node scripts/crop-event-photos.mjs"
   },
   "engines": {
     "node": ">=22.5"

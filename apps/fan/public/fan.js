@@ -511,6 +511,7 @@ async function renderDiscover() {
   // The catalogue carries what a card needs; the tiers come from the event view
   // when somebody actually taps through.
   results.innerHTML = `<div class="stack gap-lg">${listing.events.map(discoverCard).join('')}</div>`;
+  wirePosters(results);
   document.querySelectorAll('[data-event]').forEach((b) =>
     b.addEventListener('click', () => openEvent(b.dataset.event)),
   );
@@ -530,10 +531,57 @@ const BAND_TAG = { available: '', limited: 'tag-warn', last_few: 'tag-warn', sol
  * worse than a card that never promised a picture.
  */
 function poster(e) {
+  const id = encodeURIComponent(e.id);
+  // The photograph first, the generated poster if there is not one. Two acts
+  // have no properly licensed photograph and keep the abstract rather than
+  // borrowing a picture of somebody else.
+  //
+  // The fallback is wired by wirePosters() rather than by an inline onerror.
+  // The Content-Security-Policy here is script-src 'self' with no
+  // 'unsafe-inline', so an inline handler is not merely discouraged — the
+  // browser refuses to run it, and the fallback silently never happens.
   return `<div class="event-poster">
-    <img src="/events/${encodeURIComponent(e.id)}.svg" alt="" loading="lazy"
-         onerror="this.style.display='none'">
+    <img src="/events/${id}.jpg" alt="" loading="lazy" data-fallback="/events/${id}.svg">
   </div>`;
+}
+
+/** Swap a missing photograph for the generated poster. */
+function wirePosters(root = document) {
+  for (const img of root.querySelectorAll('.event-poster img[data-fallback]')) {
+    const fallback = img.dataset.fallback;
+    delete img.dataset.fallback;
+    const swap = () => {
+      img.removeEventListener('error', swap);
+      img.src = fallback;
+    };
+    img.addEventListener('error', swap);
+    // A broken image that finished loading before the listener was attached
+    // never fires the event, so the state is checked once as well.
+    if (img.complete && img.naturalWidth === 0) swap();
+  }
+}
+
+/**
+ * Who took the photograph.
+ *
+ * Not decoration: these are CC BY and CC BY-SA images, and the licence that
+ * lets us use them requires the credit. Loaded once and cached.
+ */
+let creditsPromise;
+function loadCredits() {
+  creditsPromise ??= fetch('/events/credits.json')
+    .then((r) => (r.ok ? r.json() : []))
+    .catch(() => []);
+  return creditsPromise;
+}
+
+async function creditLine(eventId) {
+  const credit = (await loadCredits()).find((c) => c.event === eventId);
+  if (!credit) return '';
+  return `<p class="hint" style="margin-top:10px;font-size:11.5px">
+    Photo: <a href="${esc(credit.source)}" target="_blank" rel="noopener noreferrer">${esc(credit.author)}</a>,
+    ${esc(credit.licence)}, via Wikimedia Commons
+  </p>`;
 }
 
 function discoverCard(e) {
@@ -592,9 +640,18 @@ async function openEvent(eventId) {
 
     <p class="hint">Up to ${event.maxTicketsPerIdentity} per person. Terms anchored as <code style="font-size:10px">${esc(event.policyHash.slice(0, 12))}…</code> — they cannot change once tickets sell.</p>
     <button class="btn btn-quiet btn-block" style="margin-top:14px" id="closeEvent">Close</button>
+    <div id="photoCredit"></div>
   `);
 
+  wirePosters($('sheetHost'));
   $('closeEvent').addEventListener('click', closeSheet);
+
+  // Awaited after the sheet is up rather than before it, so the panel is not
+  // held back by a credits file that is only ever a few hundred bytes.
+  creditLine(eventId).then((html) => {
+    const host = $('photoCredit');
+    if (host) host.innerHTML = html;
+  });
   document.querySelectorAll('[data-tier]').forEach((b) =>
     b.addEventListener('click', () => buySheet(b.dataset.tier)),
   );
@@ -804,8 +861,9 @@ async function renderYou() {
           <div class="stat"><b>${new Date(result.receipt.deletedAt).toLocaleDateString()}</b><span>on</span></div>
         </div>
         <div class="field"><span>Receipt</span><div class="keyout num" style="font-size:11px;word-break:break-all;background:var(--sunk);border:1px solid var(--rule);border-radius:var(--r);padding:11px">${esc(result.receipt.receiptId)}<br>${esc(result.receipt.digest.slice(0, 48))}…</div></div>
-        <button class="btn btn-block" style="margin-top:16px" onclick="document.getElementById('sheetHost').innerHTML=''">Close</button>
+        <button class="btn btn-block" style="margin-top:16px" id="closeReceipt">Close</button>
       `);
+      $('closeReceipt')?.addEventListener('click', closeSheet);
       render();
     } catch (e) {
       toast(e.message, true);

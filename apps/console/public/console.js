@@ -225,10 +225,15 @@ async function loadEvents() {
 async function renderEvents() {
   await loadEvents();
   if (!key) {
-    return ($('eventsList').innerHTML = `<div class="card"><div class="empty">
+    // Attached rather than inline: the Content-Security-Policy is
+    // script-src 'self' with no 'unsafe-inline', so an onclick attribute is
+    // refused by the browser and the button quietly does nothing.
+    $('eventsList').innerHTML = `<div class="card"><div class="empty">
       <h3>Not signed in</h3><p>Create an account or paste an existing API key to begin.</p>
-      <div style="margin-top:16px"><button class="btn btn-primary" onclick="location.hash='account';location.reload()">Go to Account</button></div>
-    </div></div>`);
+      <div style="margin-top:16px"><button class="btn btn-primary" id="toAccount">Go to Account</button></div>
+    </div></div>`;
+    $('toAccount').addEventListener('click', () => go('account'));
+    return;
   }
   if (events.length === 0) {
     return ($('eventsList').innerHTML = `<div class="card"><div class="empty">
