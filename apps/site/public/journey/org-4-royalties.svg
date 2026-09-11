@@ -1,0 +1,79 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="12 40 616 286" width="616" height="286" role="img" aria-labelledby="t d">
+  <title id="t">Automatic royalties</title>
+  <desc id="d">Every resale down the chain returns a share to the organizer, paid out as it settles.</desc>
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#f97316"/><stop offset="1" stop-color="#ef4444"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.5" cy="0.72" r="0.6">
+      <stop offset="0" stop-color="#f97316" stop-opacity="0.26"/>
+      <stop offset="1" stop-color="#f97316" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <rect width="640" height="360" fill="#17070a"/>
+  <g stroke="#ffffff" stroke-opacity="0.05">
+    <path d="M0 60h640M0 120h640M0 180h640M0 240h640M0 300h640"/>
+    <path d="M80 0v360M160 0v360M240 0v360M320 0v360M400 0v360M480 0v360M560 0v360"/>
+  </g>
+  <rect width="640" height="360" fill="url(#glow)"/>
+
+  <!-- the resale chain -->
+  <g transform="translate(52 52)">
+    <g>
+      <rect width="116" height="72" rx="16" fill="#25101a" stroke="#ffffff" stroke-opacity="0.12"/>
+      <circle cx="30" cy="28" r="13" fill="url(#g)"/>
+      <rect x="52" y="22" width="44" height="8" rx="4" fill="#ffffff" opacity="0.4"/>
+      <rect x="20" y="50" width="56" height="8" rx="4" fill="#fdba74" opacity="0.6"/>
+    </g>
+    <g transform="translate(180 0)">
+      <rect width="116" height="72" rx="16" fill="#25101a" stroke="#ffffff" stroke-opacity="0.12"/>
+      <circle cx="30" cy="28" r="13" fill="url(#g)" opacity="0.8"/>
+      <rect x="52" y="22" width="44" height="8" rx="4" fill="#ffffff" opacity="0.4"/>
+      <rect x="20" y="50" width="56" height="8" rx="4" fill="#fdba74" opacity="0.6"/>
+    </g>
+    <g transform="translate(360 0)">
+      <rect width="116" height="72" rx="16" fill="#25101a" stroke="#ffffff" stroke-opacity="0.12"/>
+      <circle cx="30" cy="28" r="13" fill="url(#g)" opacity="0.6"/>
+      <rect x="52" y="22" width="44" height="8" rx="4" fill="#ffffff" opacity="0.4"/>
+      <rect x="20" y="50" width="56" height="8" rx="4" fill="#fdba74" opacity="0.6"/>
+    </g>
+
+    <g stroke="url(#g)" stroke-width="2.5" stroke-dasharray="7 7" fill="none">
+      <path d="M122 36h52M302 36h52"/>
+    </g>
+    <path d="M168 30l8 6-8 6M348 30l8 6-8 6" fill="none" stroke="#fdba74" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+
+  <!-- each hop pays a share back -->
+  <g fill="none" stroke="#fb923c" stroke-width="2.4" stroke-opacity="0.75">
+    <path d="M110 124C110 176 232 176 300 190"/>
+    <path d="M290 124C290 170 310 178 318 190"/>
+    <path d="M470 124C470 176 392 176 336 190"/>
+  </g>
+  <g fill="#fb923c">
+    <circle cx="200" cy="163" r="4"/><circle cx="300" cy="152" r="4"/><circle cx="428" cy="160" r="4"/>
+  </g>
+
+  <!-- the organizer's account, filling -->
+  <g transform="translate(150 194)">
+    <rect width="340" height="118" rx="20" fill="#2a0f14" stroke="url(#g)" stroke-opacity="0.5"/>
+    <g transform="translate(26 26)">
+      <rect width="46" height="46" rx="14" fill="url(#g)"/>
+      <g transform="translate(11 11)" fill="none" stroke="#2a0f14" stroke-width="3" stroke-linecap="round">
+        <path d="M4 20V8M12 20V3M20 20v-8"/>
+      </g>
+      <rect x="62" y="6" width="128" height="12" rx="6" fill="#ffffff" opacity="0.5"/>
+      <rect x="62" y="28" width="80" height="9" rx="4.5" fill="#ffffff" opacity="0.22"/>
+      <g transform="translate(212 4)">
+        <rect width="76" height="40" rx="12" fill="url(#g)" fill-opacity="0.2" stroke="url(#g)" stroke-opacity="0.55"/>
+        <rect x="16" y="16" width="44" height="9" rx="4.5" fill="#fdba74" opacity="0.9"/>
+      </g>
+    </g>
+    <!-- the running total -->
+    <g transform="translate(26 88)">
+      <rect width="288" height="10" rx="5" fill="#ffffff" fill-opacity="0.08"/>
+      <rect width="212" height="10" rx="5" fill="url(#g)"/>
+    </g>
+  </g>
+</svg>

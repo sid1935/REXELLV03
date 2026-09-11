@@ -158,6 +158,7 @@ if (CLIENT_ROUTED.has(surface)) {
       '/join              /join.html              200',
       '/assets/*          /assets/:splat          404',
       '/events/*          /events/:splat          404',
+      '/journey/*         /journey/:splat         404',
       '/team/*            /team/:splat            404',
       // A mounted app has its own routing and is not part of this site's.
       // Without these, a missing file under one comes back as the marketing
