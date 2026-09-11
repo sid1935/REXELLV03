@@ -19,7 +19,10 @@ export default defineConfig({
     },
   },
   test: {
-    include: ['**/test/**/*.test.ts'],
+    // .js as well as .ts: the browser surfaces are plain modules, and the
+    // capture loops went untested for months partly because the glob could not
+    // see them.
+    include: ['**/test/**/*.test.ts', '**/test/**/*.test.js'],
     // Contract tests run under hardhat, which supplies the EVM and the type
     // augmentation vitest has no way to provide. See `npm run test:contracts`.
     exclude: ['**/node_modules/**', 'packages/contracts/**'],

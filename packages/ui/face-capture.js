@@ -518,13 +518,24 @@ export async function captureAtGate(source, onProgress = () => {}, options = {})
 
     const geometry = faceGeometry(only.landmarks);
     frames.push(geometry);
-    if (frames.length > maxFrames) frames.shift();
+    // Never drop the opening frames: they are the resting pose the movement is
+    // measured against. Trimming from the front would slide the baseline along
+    // with the head, and the movement would vanish exactly as it happened.
+    if (frames.length > maxFrames) frames.splice(3, 1);
 
     // The most front-on frame is the one worth matching against, and it is
     // usually not the one where they are mid-turn.
     if (!best || Math.abs(geometry.yaw) < Math.abs(best.yaw)) {
       best = { ...geometry, vector: unit(only.descriptor) };
     }
+
+    const move = movementProgress(kind, frames, GATE_LIMITS);
+    onProgress(
+      move.progress > 0.2 && !move.done
+        ? `${CHALLENGE_INSTRUCTIONS[kind]} — keep going`
+        : CHALLENGE_INSTRUCTIONS[kind],
+    );
+
     if (frames.length >= 5 && move.done) {
       return {
         vector: best.vector,
