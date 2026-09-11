@@ -825,8 +825,19 @@ td.key { color: var(--ink); font-weight: 600; }
 
 /* ─── camera ──────────────────────────────────────────────────────────────── */
 
+/*
+ * The viewfinder is a place to put your face, not a backdrop.
+ *
+ * It used to be a square the full width of the sheet — up to 520px on a laptop
+ * — which with the consent copy above it and the buttons below meant the camera
+ * was most of the screen. Capped and centred, it reads as one element of a form
+ * rather than the form happening inside a camera, and 280px is still far more
+ * than the 96px of face the matcher needs.
+ */
 .viewfinder {
   position: relative;
+  width: min(280px, 100%);
+  margin-inline: auto;
   aspect-ratio: 1;
   border-radius: var(--r-lg);
   overflow: hidden;

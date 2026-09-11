@@ -381,17 +381,21 @@ $('createBtn').addEventListener('click', async () => {
  * devices opened from this page are two lanes rather than one lane fighting
  * itself over which of them already admitted somebody.
  */
-function laneConfig(eventId) {
+function laneConfig(eventId, scannerId, lane, gateGroup) {
   const suffix = Math.random().toString(36).slice(2, 8);
   return btoa(
     JSON.stringify({
       apiBase: API,
       eventId,
-      scannerId: `scn_${suffix}`,
-      lane: `Lane ${suffix.slice(0, 2).toUpperCase()}`,
-      // No gate group, so this lane admits any entrance. An event that splits
-      // its crowd by entrance sets this per device.
-      gateGroup: '',
+      // Reusing an id re-provisions that same lane — which is what the Open
+      // button next to an existing row has to do, or a device that reloads
+      // would register itself twice and the admissions it already made would
+      // belong to a lane nobody is watching.
+      scannerId: scannerId || `scn_${suffix}`,
+      lane: lane || suffix.slice(0, 2).toUpperCase(),
+      // Empty admits any entrance. An event that splits its crowd by gate sets
+      // this per device.
+      gateGroup: gateGroup || '',
       allowReentry: false,
       // 'challenge' asks each person for a small movement, which is what stops
       // a photograph. 'off' is for a lane behind a staffed turnstile, where a
@@ -403,6 +407,57 @@ function laneConfig(eventId) {
   );
 }
 
+/** One row per registered lane, with a link that re-provisions that same lane. */
+function laneTable(eventId, scanners) {
+  if (scanners.length === 0) {
+    return '<p class="hint" style="margin:0">No lane has registered yet. Opening one below registers the device it opens on.</p>';
+  }
+  const row = (sc) => {
+    const seen = sc.lastSeenAt ? new Date(sc.lastSeenAt) : null;
+    // Two minutes: a lane syncs every five seconds, so anything quieter than
+    // this is a device that has stopped rather than one that is merely idle.
+    const live = seen && Date.now() - seen.getTime() < 120_000;
+    const href = `/gate/?config=${encodeURIComponent(laneConfig(eventId, sc.scannerId, sc.lane, sc.gateGroup))}`;
+    return `<tr>
+      <td class="key">${esc(sc.lane || '—')}</td>
+      <td class="hint">${esc(sc.gateGroup || 'any')}</td>
+      <td class="num" style="font-size:12px">${esc(sc.scannerId)}</td>
+      <td>${seen ? `<span class="tag ${live ? 'tag-ok' : ''}">${seen.toLocaleTimeString()}</span>` : '<span class="hint">never</span>'}</td>
+      <td class="right"><a class="btn btn-sm" target="_blank" rel="noopener" href="${href}">Open</a></td>
+    </tr>`;
+  };
+  return `<table class="table"><thead><tr>
+    <th>Lane</th><th>Entrance</th><th>Device</th><th>Last seen</th><th class="right"></th>
+  </tr></thead><tbody>${scanners.map(row).join('')}</tbody></table>`;
+}
+
+function wireLanes(eventId) {
+  const link = () =>
+    `${location.origin}/gate/?config=${encodeURIComponent(
+      laneConfig(eventId, '', $('laneName').value.trim(), $('laneGate').value.trim()),
+    )}`;
+
+  $('newLane')?.addEventListener('click', () => {
+    window.open(link(), '_blank', 'noopener');
+    // The lane registers itself on provision, so the table is one refresh
+    // behind until it does.
+    setTimeout(renderLive, 2500);
+  });
+
+  $('copyLane')?.addEventListener('click', async () => {
+    const url = link();
+    try {
+      await navigator.clipboard.writeText(url);
+      toast('Link copied. Open it on the device that will run the lane.');
+    } catch {
+      // Clipboard access is refused often enough — an insecure origin, a
+      // permission prompt dismissed — that failing silently would look like
+      // the button does nothing.
+      prompt('Copy this link and open it on the lane device:', url);
+    }
+  });
+}
+
 async function renderLive() {
   const eventId = $('eventPicker').value;
   if (!eventId) {
@@ -411,6 +466,10 @@ async function renderLive() {
 
   try {
     const a = await call(`/v1/events/${eventId}/analytics`);
+    // Lanes register themselves with no key, so this route is public and a
+    // failure here is a network problem rather than a permission one. The rest
+    // of the page is still worth showing without it.
+    const lanes = await call(`/v1/events/${eventId}/scanners`).catch(() => ({ scanners: [] }));
     const hot = a.attendance.fallbackRate > 0.015;
     const hasScans = a.attendance.scans > 0;
 
@@ -469,21 +528,47 @@ async function renderLive() {
                 ? '<div class="note note-warn" style="margin-top:16px"><strong>Fallback is above 1.5%.</strong> The resolution desk is becoming the queue. Check lighting and camera angle at the busiest lane first.</div>'
                 : ''
             }
-            <!--
-              The lane app, from the page that reports on it.
+          </div>
+        </section>
 
-              It existed before this link did, at its own address, which meant
-              the one screen an organizer needs on the night was the one screen
-              they had to be told about separately. The numbers above are what
-              this button produces; they belong next to each other.
-            -->
-            <div class="row" style="margin-top:18px;gap:10px;align-items:center">
-              <a class="btn btn-primary" href="/gate/?config=${encodeURIComponent(laneConfig(eventId))}" target="_blank" rel="noopener">Open a gate lane</a>
-              <span class="hint">Registers this device as a lane, pulls the sealed manifest, and keeps deciding with the network off.</span>
+        <!--
+          The lanes, on the page that reports on them.
+
+          The gate app existed at its own address long before this panel did, so
+          the one screen an organizer needs on the night was the one screen they
+          had to be told about separately — and there was no way to see how many
+          lanes were open or when each last checked in. The numbers above are
+          what these devices produce; they belong next to each other.
+        -->
+        <section class="card" style="grid-column:1/-1">
+          <div class="card-head"><h2>Lanes</h2><span class="spacer"></span>
+            <span class="tag">${lanes.scanners.length} registered</span>
+          </div>
+          <div class="pad">
+            ${laneTable(eventId, lanes.scanners)}
+
+            <div class="row" style="margin-top:16px;gap:10px;align-items:end;flex-wrap:wrap">
+              <label class="field" style="margin:0">
+                <span>New lane</span>
+                <input id="laneName" class="input" placeholder="A" style="max-width:120px">
+              </label>
+              <label class="field" style="margin:0">
+                <span>Entrance (optional)</span>
+                <input id="laneGate" class="input" placeholder="any" style="max-width:160px">
+              </label>
+              <button class="btn btn-primary" id="newLane">Open on this device</button>
+              <button class="btn" id="copyLane">Copy link for another device</button>
             </div>
+            <p class="hint" style="margin:12px 0 0">
+              Opening a lane registers <em>this</em> device and pulls the sealed manifest for it.
+              For a phone at the door, copy the link and open it there instead.
+              An entrance name restricts the lane to tickets issued for that gate.
+            </p>
           </div>
         </section>
       </div>`;
+
+    wireLanes(eventId);
   } catch (e) {
     $('liveBody').innerHTML = `<div class="note note-bad">${esc(e.message)}</div>`;
   }
