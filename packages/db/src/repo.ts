@@ -972,6 +972,32 @@ export class OutboxRepo {
     );
   }
 
+  /**
+   * Put back work that was claimed and demonstrably never sent.
+   *
+   * Claiming a row before doing the work is what stops two drains doing it
+   * twice, but it means a process that dies mid-drain leaves rows claimed by
+   * nobody. That is not hypothetical: the deploy script restarts the API, the
+   * drain runs every five seconds, and the two will collide sooner or later.
+   * Without this, every deploy would quietly strand whatever was in flight.
+   *
+   * The safety hinges on `tx_hash`. A claimed row with no hash never reached
+   * `writeContract` — nothing was signed, nothing was broadcast, no token
+   * exists — so replaying it is free. A claimed row *with* a hash was sent, and
+   * that one stays exactly where it is: it may confirm at any moment, and
+   * re-sending it is how one seat becomes two tokens.
+   *
+   * Safe only at startup, when this process holds no claims of its own. A
+   * running drain's rows also have no hash yet, and releasing those would undo
+   * the claim while the work is still happening.
+   */
+  releaseUnsent(): number {
+    return this.db.run(
+      `UPDATE chain_outbox SET state = 'pending', submitted_at = 0
+         WHERE state = 'submitted' AND tx_hash IS NULL`,
+    );
+  }
+
   markConfirmed(opId: string, txHash: string, now: number): void {
     this.db.run(
       `UPDATE chain_outbox SET state = 'confirmed', tx_hash = ?, confirmed_at = ?, last_error = NULL WHERE op_id = ?`,

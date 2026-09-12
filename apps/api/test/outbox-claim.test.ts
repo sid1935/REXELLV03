@@ -122,6 +122,40 @@ describe('the outbox claims work before doing it', () => {
   });
 });
 
+describe('a restart puts back what it never sent', () => {
+  let chain: FakeChain;
+
+  beforeEach(async () => {
+    chain = new FakeChain();
+    await start(chain);
+  });
+
+  it('releases a claim that never reached the chain', async () => {
+    await buyTicket();
+    const [row] = app.repo.outbox.claimPending('mint', 50, now());
+    expect(row?.state).toBe('submitted');
+    expect(row?.tx_hash).toBeNull();
+
+    // The process dies here. Nothing was signed and nothing was broadcast, so
+    // the work is free to replay — and must, or every deploy that lands mid
+    // drain silently strands whatever was in flight.
+    expect(app.repo.outbox.releaseUnsent()).toBe(1);
+    expect(app.repo.outbox.claimPending('mint', 50, now())).toHaveLength(1);
+  });
+
+  it('leaves a claim that did reach the chain exactly where it is', async () => {
+    await buyTicket();
+    chain.uncertainNext(1);
+    await app.tokens!.drainMints();
+
+    // This one has a hash: it was sent, it may confirm, and replaying it would
+    // mint a second token for the seat.
+    expect(app.repo.outbox.releaseUnsent()).toBe(0);
+    expect(app.repo.outbox.claimPending('mint', 50, now())).toHaveLength(0);
+    expect(app.tokens!.status().submitted).toBe(1);
+  });
+});
+
 describe('two overlapping drains mint one token', () => {
   beforeEach(async () => {
     await start(new SlowChain(25));

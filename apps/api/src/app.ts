@@ -194,6 +194,9 @@ export function buildApp(options: AppOptions = {}): App {
   scannerRoutes(server, { repo, now, vault: options.vault });
 
   const tokens = options.chain ? new TokenService(repo, options.chain, now) : undefined;
+  // Anything claimed by the process that died here never left, or it would have
+  // a transaction hash. Put it back before the first drain.
+  if (tokens) repo.outbox.releaseUnsent();
   chainRoutes(server, { tokens, chain: options.chain, now });
   onsaleRoutes(server, { repo, now, queue }, risk);
   organizerRoutes(server, { repo, now });
