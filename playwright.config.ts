@@ -1,4 +1,24 @@
+import { existsSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { defineConfig, devices } from '@playwright/test';
+
+/**
+ * A face for the fake camera, if one has been made.
+ *
+ * Chromium will play a Y4M file as the webcam, which is the only way to put a
+ * real face in front of the real matcher. The file is not in the repository:
+ * the calibration photographs it is built from are Wikimedia Commons portraits
+ * of named people, and `.calibration/` is gitignored deliberately — a public
+ * repository is not the place for somebody's face, still less for the biometric
+ * template derived from it.
+ *
+ * So `npm run face:fixture` builds it locally from a calibration set, and the
+ * tests that need a face skip without it. Everything else about the camera —
+ * that it opens, that the weights load, that an empty frame is refused rather
+ * than turned into a vector — needs no likeness and runs everywhere.
+ */
+const FACE_VIDEO = resolve('.calibration/fixture/face.y4m');
+const HAS_FACE = existsSync(FACE_VIDEO);
 
 /**
  * The browser surfaces, in a browser.
@@ -30,7 +50,32 @@ export default defineConfig({
   use: {
     trace: process.env['CI'] ? 'retain-on-failure' : 'off',
   },
-  projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
+  projects: [
+    {
+      name: 'chromium',
+      use: { ...devices['Desktop Chrome'] },
+      // The camera flags change what `getUserMedia` does, so the surfaces that
+      // do not ask for one are kept on a plain browser.
+      testIgnore: '**/face-capture.spec.ts',
+    },
+    {
+      name: 'camera',
+      testMatch: '**/face-capture.spec.ts',
+      use: {
+        ...devices['Desktop Chrome'],
+        permissions: ['camera'],
+        launchOptions: {
+          args: [
+            // A synthetic stream instead of hardware: a rolling pattern with no
+            // face in it, which is exactly what the refusal tests need.
+            '--use-fake-device-for-media-stream',
+            '--use-fake-ui-for-media-stream',
+            ...(HAS_FACE ? [`--use-file-for-fake-video-capture=${FACE_VIDEO}`] : []),
+          ],
+        },
+      },
+    },
+  ],
   /*
    * Three static hosts, one per surface, on the ports they use everywhere else.
    *
