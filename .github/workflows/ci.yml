@@ -58,6 +58,8 @@ jobs:
       - name: Chain integration tests
         env:
           REXELL_RPC_URL: http://127.0.0.1:8545
+          # Turns a silent skip into a failure. See the guard in the test file.
+          REXELL_CHAIN_REQUIRED: '1'
         run: |
           set -euo pipefail
           npm run chain:node > /tmp/hardhat-node.log 2>&1 &

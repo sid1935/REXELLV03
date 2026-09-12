@@ -30,6 +30,18 @@ const KEY = (process.env['REXELL_CHAIN_KEY'] ??
 
 const CHAIN_ID = Number(process.env['REXELL_CHAIN_ID'] ?? 31337);
 
+/*
+ * A skipped suite reports success, which is the same colour as a passing one.
+ *
+ * That is fine on a laptop and not fine in CI, where a typo in the environment
+ * block would quietly turn this whole file off and leave a green tick claiming
+ * the chain client is covered. So the job that means to run these says so, and
+ * saying so without a node to talk to is an error rather than a skip.
+ */
+if (process.env['REXELL_CHAIN_REQUIRED'] && !RPC) {
+  throw new Error('REXELL_CHAIN_REQUIRED is set but REXELL_RPC_URL is not — these tests would have skipped silently');
+}
+
 const GA = {
   mode: 1,
   maxPriceBps: 11_000,
