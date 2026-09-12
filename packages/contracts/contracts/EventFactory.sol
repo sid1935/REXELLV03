@@ -65,9 +65,13 @@ contract EventFactory {
         if (!isOrganizer[msg.sender]) revert NotOrganizer();
         if (ticketContractOf[eventId] != address(0)) revert EventExists(eventId);
 
+        // The admin is forwarded, not inherited. A TicketNFT that took its admin
+        // from `msg.sender` would make this factory the admin, and this factory
+        // has no function that calls revoke().
         TicketNFT deployed = new TicketNFT(
             name,
             symbol,
+            admin,
             minter,
             gate,
             resaleController,

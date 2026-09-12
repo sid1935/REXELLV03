@@ -25,6 +25,7 @@ contract TicketNFT is ERC721 {
     error NotMinter();
     error NotGate();
     error NotAdmin();
+    error ZeroAdmin();
     error NotController();
     error TicketIsBound(uint256 tokenId);
     error TransfersMustGoThroughController(uint256 tokenId);
@@ -71,6 +72,7 @@ contract TicketNFT is ERC721 {
     constructor(
         string memory name_,
         string memory symbol_,
+        address admin_,
         address minter_,
         address gate_,
         address resaleController_,
@@ -79,7 +81,19 @@ contract TicketNFT is ERC721 {
         uint32 capacity_,
         TierPolicy[] memory tiers_
     ) ERC721(name_, symbol_) {
-        admin = msg.sender;
+        /*
+         * Passed in, never `msg.sender`.
+         *
+         * This contract is deployed by EventFactory, so `msg.sender` here is the
+         * factory — a contract with no function that calls revoke(). Taking the
+         * admin from the deployer handed the role to an address that could not
+         * use it, and every ticket issued through the factory was permanently
+         * unrevokable. The unit tests missed it for the oldest reason there is:
+         * they deploy this contract directly, so the admin was the test EOA and
+         * revocation worked in the one place nobody ships.
+         */
+        if (admin_ == address(0)) revert ZeroAdmin();
+        admin = admin_;
         minter = minter_;
         gate = gate_;
         resaleController = resaleController_;
@@ -177,8 +191,19 @@ contract TicketNFT is ERC721 {
         emit TicketRedeemed(tokenId, t.identityId, uint64(block.timestamp));
     }
 
+    /**
+     * Void a ticket: chargeback, fraud, a cancelled event.
+     *
+     * The minter may call this as well as the admin, and that is deliberate.
+     * Revocation is issuance-side lifecycle — the authority that can bring a
+     * ticket into existence is the authority that can void it — and it has to be
+     * reachable by an automated backend, because chargebacks arrive at volume
+     * and at unsociable hours. Reserving it to the admin alone would mean every
+     * refund waited on a multisig. The admin keeps the role as break-glass for
+     * the case where the minter key is the thing that has gone wrong.
+     */
     function revoke(uint256 tokenId, string calldata reason) external {
-        if (msg.sender != admin) revert NotAdmin();
+        if (msg.sender != admin && msg.sender != minter) revert NotAdmin();
         _requireOwned(tokenId);
         _tickets[tokenId].revoked = true;
         emit TicketRevoked(tokenId, reason);

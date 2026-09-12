@@ -48,10 +48,28 @@ export interface ResaleRequest {
   readonly tokenId?: string;
 }
 
+export interface RevokeRequest {
+  readonly ticketId: string;
+  readonly eventId: string;
+  /** Why, recorded on chain. Shown to nobody; auditable by everybody. */
+  readonly reason: string;
+  /** As with a resale: absent until the mint confirms, and retried until it does. */
+  readonly tokenId?: string;
+}
+
 export interface ChainClient {
   /** Batched, because one transaction per ticket is a bad trade at onsale volume. */
   mintBatch(requests: readonly MintRequest[]): Promise<readonly MintReceipt[]>;
   recordResale(request: ResaleRequest): Promise<{ txHash: string }>;
+  /**
+   * Void a ticket on chain: chargeback, fraud, a cancelled event.
+   *
+   * The database is what the gate reads, so a revoked ticket stops working the
+   * moment the row changes. This exists so the chain agrees — otherwise the
+   * token stays valid to anybody reading the contract, which is the one thing an
+   * on-chain ticket is supposed to make impossible.
+   */
+  revoke(request: RevokeRequest): Promise<{ txHash: string }>;
   health(): Promise<{ up: boolean; chainId?: number }>;
 }
 
@@ -75,7 +93,13 @@ export class FakeChain implements ChainClient {
   #nonce = 0;
   #minted = new Map<string, string>();
 
-  readonly calls: { mintBatch: number; recordResale: number } = { mintBatch: 0, recordResale: 0 };
+  #revoked = new Set<string>();
+
+  readonly calls: { mintBatch: number; recordResale: number; revoke: number } = {
+    mintBatch: 0,
+    recordResale: 0,
+    revoke: 0,
+  };
 
   stop(): void {
     this.#up = false;
@@ -117,6 +141,18 @@ export class FakeChain implements ChainClient {
     this.calls.recordResale += 1;
     this.#guard();
     return { txHash: `0x${(++this.#nonce).toString(16).padStart(64, '0')}` };
+  }
+
+  async revoke(request: RevokeRequest): Promise<{ txHash: string }> {
+    this.calls.revoke += 1;
+    this.#guard();
+    if (!request.tokenId) throw new ChainUnavailable(`${request.ticketId} has no token id yet`);
+    this.#revoked.add(request.ticketId);
+    return { txHash: `0x${(++this.#nonce).toString(16).padStart(64, '0')}` };
+  }
+
+  isRevoked(ticketId: string): boolean {
+    return this.#revoked.has(ticketId);
   }
 
   async health(): Promise<{ up: boolean; chainId?: number }> {

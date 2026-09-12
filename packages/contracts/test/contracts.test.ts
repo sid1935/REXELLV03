@@ -84,6 +84,7 @@ describe('ReXell contracts', () => {
     ticketNFT = await viem.deployContract('TicketNFT', [
       'Sunburn Weekender 2026',
       'SBW26',
+      deployer, // admin
       deployer, // minter
       deployer, // gate
       controller.address,
@@ -235,6 +236,7 @@ describe('ReXell contracts', () => {
         'TINY',
         deployer,
         deployer,
+        deployer,
         controller.address,
         registry.address,
         POLICY_HASH,
@@ -251,6 +253,7 @@ describe('ReXell contracts', () => {
         viem.deployContract('TicketNFT', [
           'Oversold',
           'OVER',
+          deployer,
           deployer,
           deployer,
           controller.address,
@@ -306,6 +309,7 @@ describe('ReXell contracts', () => {
       const limited = await viem.deployContract('TicketNFT', [
         'Limited',
         'LIM',
+        deployer,
         deployer,
         deployer,
         controller.address,
@@ -466,6 +470,35 @@ describe('ReXell contracts', () => {
       assert.equal(await ticketNFT.read.isValidForEntry([tokenId]), false);
     });
 
+    it('lets nobody but the admin or the minter revoke', async () => {
+      const tokenId = await mintGA(ALICE_ID);
+      const asAttacker = await viem.getContractAt('TicketNFT', ticketNFT.address, {
+        client: { wallet: (await viem.getWalletClients())[4] },
+      });
+      await assert.rejects(asAttacker.write.revoke([tokenId, 'because I said so']), /NotAdmin/);
+      assert.equal(await ticketNFT.read.isValidForEntry([tokenId]), true);
+    });
+
+    it('refuses to deploy with no admin at all', async () => {
+      // Otherwise a mis-wired deploy produces a contract whose tickets can never
+      // be voided, and nothing says so until the first chargeback.
+      await assert.rejects(
+        viem.deployContract('TicketNFT', [
+          'No Admin',
+          'NOAD',
+          ZERO,
+          deployer,
+          deployer,
+          controller.address,
+          registry.address,
+          POLICY_HASH,
+          100,
+          [GA],
+        ]),
+        /ZeroAdmin/,
+      );
+    });
+
     it('will not resell a redeemed ticket', async () => {
       const tokenId = await mintGA(ALICE_ID);
       await ticketNFT.write.redeem([tokenId]);
@@ -520,6 +553,42 @@ describe('ReXell contracts', () => {
         factory.write.createEvent([eventId, 'B', 'B', POLICY_HASH, 100, [GA]]),
         /EventExists/,
       );
+    });
+
+    /*
+     * The regression that mattered.
+     *
+     * Every other revocation test in this file deploys TicketNFT directly, which
+     * makes the test EOA the admin. Production never does that — the factory
+     * does — and when TicketNFT took its admin from `msg.sender`, the admin
+     * became the factory, a contract with no function that calls revoke(). The
+     * result was a ticket nobody could ever void, under a green test suite.
+     *
+     * So this asserts revocation through the path the product actually uses.
+     */
+    it('deploys tickets the admin can still revoke', async () => {
+      const factory = await viem.deployContract('EventFactory', [
+        registry.address,
+        deployer,
+        deployer,
+        controller.address,
+      ]);
+      const eventId = '0x' + '5e'.repeat(32);
+      await factory.write.createEvent([eventId, 'Sunburn', 'SBW', POLICY_HASH, 1000, [GA]]);
+      const nft = await viem.getContractAt('TicketNFT', await factory.read.ticketContractOf([eventId]));
+
+      assert.equal(
+        (await nft.read.admin()).toLowerCase(),
+        deployer.toLowerCase(),
+        'the factory made itself the admin — revoke() is unreachable',
+      );
+
+      // ALICE_ID is already bound by beforeEach; this contract shares the registry.
+      await nft.write.mintTo([ALICE_ID, 0]);
+      const tokenId = (await nft.read.nextTokenId()) - 1n;
+
+      await nft.write.revoke([tokenId, 'chargeback']);
+      assert.equal(await nft.read.isValidForEntry([tokenId]), false);
     });
 
     it('refuses a caller who is not an approved organizer', async () => {

@@ -123,8 +123,53 @@ export class TokenService {
     return { attempted: pending.length, confirmed, failed: pending.length - confirmed, errors };
   }
 
-  async drain(): Promise<{ mints: DrainResult; resales: DrainResult }> {
-    return { mints: await this.drainMints(), resales: await this.drainResales() };
+  /**
+   * Drain revocations.
+   *
+   * Unlike a mint, this one is not merely eventual. A revoked ticket stops
+   * opening gates the moment the database row changes — the gate reads the
+   * manifest, not the chain — so nobody is admitted while this is pending. What
+   * waits is agreement: until this lands, the token still reads as valid to
+   * anybody querying the contract, which is exactly the claim an on-chain ticket
+   * is supposed to make unfalsifiable.
+   *
+   * One transaction each rather than a batch. Revocations arrive in ones and
+   * twos as chargebacks land, not in the thousands that make batching a mint
+   * worth the complexity.
+   */
+  async drainRevocations(): Promise<DrainResult> {
+    const pending = this.repo.outbox.claimPending('revoke', this.batchSize);
+    let confirmed = 0;
+    const errors: string[] = [];
+
+    for (const row of pending) {
+      const payload = JSON.parse(row.payload) as { ticketId: string; eventId: string; reason: string };
+      try {
+        // Absent while the mint is still in flight. The row stays pending and
+        // the next pass tries again, by which time the mint has almost certainly
+        // confirmed — the same ordering the resale drain relies on.
+        const tokenId = this.repo.outbox.tokenIdFor(payload.ticketId);
+        if (!tokenId) throw new Error(`ticket ${payload.ticketId} has no confirmed mint yet`);
+
+        const { txHash } = await this.chain.revoke({ ...payload, tokenId });
+        this.repo.outbox.markConfirmed(row.op_id, txHash, this.now());
+        confirmed += 1;
+      } catch (e) {
+        const message = (e as Error).message;
+        this.repo.outbox.markFailed(row.op_id, message);
+        errors.push(message);
+      }
+    }
+
+    return { attempted: pending.length, confirmed, failed: pending.length - confirmed, errors };
+  }
+
+  async drain(): Promise<{ mints: DrainResult; resales: DrainResult; revocations: DrainResult }> {
+    return {
+      mints: await this.drainMints(),
+      resales: await this.drainResales(),
+      revocations: await this.drainRevocations(),
+    };
   }
 
   status() {

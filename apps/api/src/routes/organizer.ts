@@ -7,6 +7,7 @@ import {
   organizerId as toOrganizerId,
   resaleCeiling,
   validateEvent,
+  applyTicketEvent,
 } from '@rexell/domain';
 import type { EpochMs, EventDef } from '@rexell/domain';
 import { ALL_SCOPES } from '@rexell/db';
@@ -197,6 +198,70 @@ export function organizerRoutes(app: FastifyInstance, { repo, now }: Deps): void
    * One call rather than five, because a dashboard polling five endpoints at
    * onsale is five times the load for no benefit.
    */
+  /**
+   * Void a ticket.
+   *
+   * The gap this closes: the ticket state machine has had a `revoke` transition
+   * since M1, the manifest fold has applied revocation deltas since M2, the gate
+   * has refused revoked tickets since M2, and the contract has had `revoke()`
+   * since M3 — and nothing, anywhere, could put a ticket into that state. Every
+   * piece of the machinery was built and none of it was connected to a door.
+   *
+   * Three things happen, in one transaction and in this order:
+   *
+   *   1. The ticket moves to `revoked`, which is what the gate reads.
+   *   2. A delta goes out, so lanes already holding a manifest learn about it
+   *      without waiting for doors-open — the same path a resale uses.
+   *   3. The chain is told, eventually, through the outbox.
+   *
+   * Only the first two matter for entry, and both are synchronous. A chargeback
+   * at 3am stops working at the turnstile immediately, whatever the chain is
+   * doing.
+   */
+  app.post<{ Params: { id: string; ticketId: string }; Body: { reason?: string } }>(
+    '/v1/events/:id/tickets/:ticketId/revoke',
+    async (req, reply) => {
+      const principal = principalOf(req);
+      requireScope(principal, 'events:write');
+      requireOwnership(repo, principal, req.params.id);
+
+      const reason = req.body?.reason?.trim();
+      if (!reason) throw badRequest('`reason` is required — a revoked ticket must say why.');
+      if (reason.length > 200) throw badRequest('`reason` must be 200 characters or fewer.');
+
+      const ticket = repo.getTicket(req.params.ticketId);
+      if (!ticket) throw notFound('ticket', req.params.ticketId);
+      // Tenancy: the ownership check above covers the event, not the ticket, and
+      // a ticket id from another organizer's event would otherwise be revocable
+      // by anybody who owns any event.
+      if (ticket.eventId !== req.params.id) throw notFound('ticket', req.params.ticketId);
+
+      const at = now();
+      const revoked = applyTicketEvent(ticket, { kind: 'revoke', reason });
+      if (!revoked.ok) throw new HttpError(409, revoked.code, revoked.message);
+
+      const seq = repo.db.tx(() => {
+        repo.saveTicket(revoked.value);
+        const sequence = repo.appendDelta(
+          req.params.id,
+          'revoke',
+          { kind: 'revoke', ticketId: ticket.id, reason },
+          at,
+        );
+        repo.outbox.enqueue({
+          kind: 'revoke',
+          eventId: req.params.id,
+          refId: ticket.id,
+          payload: { ticketId: ticket.id, eventId: req.params.id, reason },
+          now: at,
+        });
+        return sequence;
+      });
+
+      return reply.code(200).send({ ticketId: ticket.id, state: 'revoked', reason, manifestSequence: seq });
+    },
+  );
+
   app.get<{ Params: { id: string } }>('/v1/events/:id/analytics', async (req) => {
     const principal = principalOf(req);
     requireScope(principal, 'analytics:read');

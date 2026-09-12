@@ -33,7 +33,7 @@ import { createPublicClient, createWalletClient, defineChain, http, keccak256, t
 import { privateKeyToAccount } from 'viem/accounts';
 import type { Address, Hex, PublicClient, WalletClient } from 'viem';
 import { ChainUnavailable } from './client.js';
-import type { ChainClient, MintReceipt, MintRequest, ResaleRequest } from './client.js';
+import type { ChainClient, MintReceipt, MintRequest, ResaleRequest, RevokeRequest } from './client.js';
 
 /**
  * Only the functions this client calls.
@@ -61,6 +61,7 @@ export const CONTROLLER_ABI = [
 export const TICKET_ABI = [
   { type: 'function', name: 'mintTo', stateMutability: 'nonpayable', inputs: [{ name: 'identityId', type: 'bytes32' }, { name: 'tierId', type: 'uint16' }], outputs: [{ name: 'tokenId', type: 'uint256' }] },
   { type: 'function', name: 'controllerTransfer', stateMutability: 'nonpayable', inputs: [{ name: 'tokenId', type: 'uint256' }, { name: 'toIdentity', type: 'bytes32' }], outputs: [{ type: 'address' }] },
+  { type: 'function', name: 'revoke', stateMutability: 'nonpayable', inputs: [{ name: 'tokenId', type: 'uint256' }, { name: 'reason', type: 'string' }], outputs: [] },
   { type: 'event', name: 'TicketMinted', inputs: [{ name: 'tokenId', type: 'uint256', indexed: true }, { name: 'identityId', type: 'bytes32', indexed: true }, { name: 'tierId', type: 'uint16', indexed: true }] },
 ] as const;
 
@@ -259,6 +260,29 @@ export class EvmChain implements ChainClient {
       abi: CONTROLLER_ABI,
       functionName: 'buy',
       args: [listingId, toBytes32(request.toIdentityId), price],
+    });
+    await this.#confirm(hash);
+    return { txHash: hash };
+  }
+
+  async revoke(request: RevokeRequest): Promise<{ txHash: string }> {
+    if (!request.tokenId) {
+      throw new ChainUnavailable(`revocation of ${request.ticketId} has no token id — its mint has not confirmed`);
+    }
+    /*
+     * Callable because the minter may revoke, not only the admin.
+     *
+     * TicketNFT used to take its admin from `msg.sender`, which meant the
+     * EventFactory that deployed it became the admin — a contract with no
+     * function that calls revoke(). Every ticket the product ever issued was
+     * unrevokable on chain, under a green test suite that deployed the contract
+     * directly and so never saw it.
+     */
+    const hash = await this.#send({
+      address: await this.#ticketContract(request.eventId),
+      abi: TICKET_ABI,
+      functionName: 'revoke',
+      args: [BigInt(request.tokenId), request.reason],
     });
     await this.#confirm(hash);
     return { txHash: hash };
