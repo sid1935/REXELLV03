@@ -21,6 +21,7 @@ import type { Page } from '@playwright/test';
  * they see it.
  */
 
+const CONSOLE = 'http://127.0.0.1:8110/';
 const HOUR = 3_600_000;
 
 const CHAIN = {
@@ -67,7 +68,7 @@ async function openConsole(page: Page, status: unknown, { signedIn = true } = {}
    * bug those tests exist to catch.
    */
   const asked = signedIn ? page.waitForResponse((r) => r.url().includes('/v1/chain/status')) : null;
-  await page.goto('/');
+  await page.goto(CONSOLE);
   if (asked) {
     await asked;
     // The handler resolves a promise and then writes the DOM; give it that turn.

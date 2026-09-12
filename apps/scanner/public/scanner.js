@@ -281,7 +281,8 @@ function render() {
   if (state.refused > 0) {
     // Ahead of the staleness warning: a lane that cannot file its decisions has
     // a worse problem than a lane that is a few seconds behind.
-    banner.textContent = `${state.refused} decision${state.refused === 1 ? '' : 's'} were refused by the server and are not in the record. Call the supervisor.`;
+    const one = state.refused === 1;
+    banner.textContent = `${state.refused} decision${one ? '' : 's'} ${one ? 'was' : 'were'} refused by the server and ${one ? 'is' : 'are'} not in the record. Call the supervisor.`;
     banner.classList.add('show');
   } else if (behind > 0) {
     banner.textContent = `This lane is ${behind} update${behind === 1 ? '' : 's'} behind. Resold tickets may still scan as valid.`;
