@@ -54,6 +54,8 @@ export const FACTORY_ABI = [
 
 export const CONTROLLER_ABI = [
   { type: 'function', name: 'list', stateMutability: 'nonpayable', inputs: [{ name: 'ticketContract', type: 'address' }, { name: 'tokenId', type: 'uint256' }, { name: 'sellerIdentity', type: 'bytes32' }, { name: 'price', type: 'uint96' }], outputs: [{ name: 'listingId', type: 'uint256' }] },
+  { type: 'function', name: 'activeListingOf', stateMutability: 'view', inputs: [{ name: '', type: 'address' }, { name: '', type: 'uint256' }], outputs: [{ type: 'uint256' }] },
+  { type: 'function', name: 'listings', stateMutability: 'view', inputs: [{ name: '', type: 'uint256' }], outputs: [{ name: 'ticketContract', type: 'address' }, { name: 'tokenId', type: 'uint256' }, { name: 'sellerIdentity', type: 'bytes32' }, { name: 'price', type: 'uint96' }, { name: 'active', type: 'bool' }] },
   { type: 'function', name: 'buy', stateMutability: 'nonpayable', inputs: [{ name: 'listingId', type: 'uint256' }, { name: 'buyerIdentity', type: 'bytes32' }, { name: 'expectedPrice', type: 'uint96' }], outputs: [{ name: 'saleId', type: 'bytes32' }] },
   { type: 'event', name: 'Listed', inputs: [{ name: 'listingId', type: 'uint256', indexed: true }, { name: 'tokenId', type: 'uint256', indexed: true }, { name: 'sellerIdentity', type: 'bytes32', indexed: true }, { name: 'price', type: 'uint96', indexed: false }] },
 ] as const;
@@ -254,16 +256,32 @@ export class EvmChain implements ChainClient {
     const tokenId = BigInt(request.tokenId);
     const price = BigInt(request.priceMinor);
 
-    const listHash = await this.#send({
-      address: this.#opts.resaleController,
-      abi: CONTROLLER_ABI,
-      functionName: 'list',
-      args: [ticketContract, tokenId, toBytes32(request.fromIdentityId), price],
-    });
-    const listed = await this.#confirm(listHash);
-    const listingId = this.#listedId(listed);
+    /*
+     * Resume, rather than start again.
+     *
+     * A resale is two transactions, and the gap between them is a real place to
+     * fail. If `list` landed and `buy` did not, the chain already holds an open
+     * listing for this token — and `list` refuses a second one, correctly, so
+     * every retry reverted with ListingNotActive for ever. The ticket stayed
+     * sold in our database against a listing on chain that nothing would ever
+     * close.
+     *
+     * So the drain asks the chain what it already did before doing it again.
+     */
+    let listingId = await this.#openListingFor(ticketContract, tokenId, request, price);
+
     if (listingId === undefined) {
-      throw new ChainUnavailable(`listing for ${request.ticketId} emitted no Listed event`);
+      const listHash = await this.#send({
+        address: this.#opts.resaleController,
+        abi: CONTROLLER_ABI,
+        functionName: 'list',
+        args: [ticketContract, tokenId, toBytes32(request.fromIdentityId), price],
+      });
+      const listed = await this.#confirm(listHash);
+      listingId = this.#listedId(listed);
+      if (listingId === undefined) {
+        throw new ChainUncertain(listHash, `listing for ${request.ticketId} emitted no Listed event`);
+      }
     }
 
     const hash = await this.#send({
@@ -297,6 +315,46 @@ export class EvmChain implements ChainClient {
     });
     await this.#confirm(hash);
     return { txHash: hash };
+  }
+
+  /**
+   * An open listing this platform already created for exactly this sale.
+   *
+   * Deliberately strict. Reusing a listing whose seller or price does not match
+   * what we are settling would close somebody else's trade on our terms, so
+   * anything that does not match is refused rather than bought — the chain
+   * would reject the price anyway, but by then the mistake has a hash.
+   */
+  async #openListingFor(
+    ticketContract: Address,
+    tokenId: bigint,
+    request: ResaleRequest,
+    price: bigint,
+  ): Promise<bigint | undefined> {
+    const existing = (await this.#pub.readContract({
+      address: this.#opts.resaleController,
+      abi: CONTROLLER_ABI,
+      functionName: 'activeListingOf',
+      args: [ticketContract, tokenId],
+    })) as bigint;
+    if (existing === 0n) return undefined;
+
+    const listing = (await this.#pub.readContract({
+      address: this.#opts.resaleController,
+      abi: CONTROLLER_ABI,
+      functionName: 'listings',
+      args: [existing],
+    })) as readonly [Address, bigint, Hex, bigint, boolean];
+
+    const [, , sellerIdentity, listedPrice, active] = listing;
+    if (!active) return undefined;
+
+    if (sellerIdentity !== toBytes32(request.fromIdentityId) || listedPrice !== price) {
+      throw new ChainUnavailable(
+        `listing ${existing} on token ${tokenId} is not the sale being settled for ${request.ticketId}`,
+      );
+    }
+    return existing;
   }
 
   /** The listing id out of the Listed log. */
