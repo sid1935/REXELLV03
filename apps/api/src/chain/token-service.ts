@@ -1,6 +1,6 @@
 import type { Repo } from '@rexell/db';
 import type { EpochMs } from '@rexell/domain';
-import { ChainUncertain } from './client.js';
+import { ChainUncertain, PartialBatch } from './client.js';
 import type { ChainClient, MintRequest } from './client.js';
 
 /**
@@ -79,17 +79,46 @@ export class TokenService {
 
       return { attempted: pending.length, confirmed, failed: pending.length - confirmed, errors: [] };
     } catch (e) {
-      const message = (e as Error).message;
-        // Uncertainty is not failure. A batch whose transaction was sent and
-      // never confirmed must not be retried — that is how one seat becomes two
-      // tokens — so those rows stay claimed and wait for a person.
+      /*
+       * A failure partway through is not a failure of everything before it.
+       *
+       * mintBatch is a batch by name and a loop by implementation — one
+       * transaction per ticket — so a break on the third of fifty leaves two
+       * tokens minted and confirmed. Marking all fifty for retry mints those
+       * two again. PartialBatch carries what landed, and it is confirmed here.
+       */
+      const partial = e instanceof PartialBatch ? e : undefined;
+      const reason = partial ? partial.reason : (e as Error);
+      const message = reason.message;
+      const at = this.now();
+      const byTicket = new Map((partial?.receipts ?? []).map((r) => [r.ticketId, r]));
+
+      let confirmed = 0;
       for (const row of pending) {
-        if (e instanceof ChainUncertain) this.repo.outbox.markUncertain(row.op_id, e.txHash, message);
-        else this.repo.outbox.markFailed(row.op_id, message);
+        const req = JSON.parse(row.payload) as MintRequest;
+        const receipt = byTicket.get(req.ticketId);
+        if (receipt) {
+          this.repo.outbox.markConfirmed(row.op_id, receipt.txHash, at);
+          this.repo.outbox.setTicketMintState(req.ticketId, 'confirmed', receipt.tokenId);
+          confirmed += 1;
+          continue;
+        }
+        /*
+         * Only the ticket in flight when it broke has an outcome in doubt.
+         * Everything behind it was never attempted, so it retries freely. And
+         * uncertainty is not failure: a transaction that was sent and never
+         * confirmed must not be retried, so that row stays claimed for a person.
+         */
+        const inFlight = partial ? req.ticketId === partial.inFlightTicketId : true;
+        if (inFlight && reason instanceof ChainUncertain) {
+          this.repo.outbox.markUncertain(row.op_id, reason.txHash, message);
+        } else {
+          this.repo.outbox.markFailed(row.op_id, message);
+        }
       }
       // Not thrown. A failed drain is an expected outcome that the caller logs
       // and retries; throwing here would take down whatever scheduled it.
-      return { attempted: pending.length, confirmed: 0, failed: pending.length, errors: [message] };
+      return { attempted: pending.length, confirmed, failed: pending.length - confirmed, errors: [message] };
     }
   }
 

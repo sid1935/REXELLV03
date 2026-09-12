@@ -92,6 +92,30 @@ export class ChainUnavailable extends Error {
  * So this is not a failure. It is a question, and the outbox stops rather than
  * guessing the answer.
  */
+/**
+ * Part of a batch landed, and then something went wrong.
+ *
+ * `mintBatch` is a batch by name and a loop by implementation: one transaction
+ * per ticket, because they go to different contracts. So a failure on the third
+ * ticket of fifty leaves two tokens minted and confirmed on chain. Throwing a
+ * bare error loses that fact, and the drain marks all fifty for retry — which
+ * mints the first two a second time.
+ *
+ * Carrying the receipts keeps the work. Naming the ticket that was in flight
+ * keeps the distinction that matters: it is the only one whose outcome is in
+ * doubt. Everything after it was never attempted and is plainly safe to retry.
+ */
+export class PartialBatch extends Error {
+  constructor(
+    readonly receipts: readonly MintReceipt[],
+    readonly inFlightTicketId: string,
+    readonly reason: Error,
+  ) {
+    super(reason.message);
+    this.name = 'PartialBatch';
+  }
+}
+
 export class ChainUncertain extends Error {
   constructor(
     readonly txHash: string | null,

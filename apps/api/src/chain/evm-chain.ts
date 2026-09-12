@@ -32,7 +32,7 @@
 import { createPublicClient, createWalletClient, defineChain, http, keccak256, toHex } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
 import type { Address, Hex, PublicClient, WalletClient } from 'viem';
-import { ChainUnavailable, ChainUncertain } from './client.js';
+import { ChainUnavailable, ChainUncertain, PartialBatch } from './client.js';
 import type { ChainClient, MintReceipt, MintRequest, ResaleRequest, RevokeRequest } from './client.js';
 
 /**
@@ -192,24 +192,35 @@ export class EvmChain implements ChainClient {
   async mintBatch(requests: readonly MintRequest[]): Promise<readonly MintReceipt[]> {
     const receipts: MintReceipt[] = [];
     for (const request of requests) {
-      const ticketContract = await this.#ticketContract(request.eventId);
-      await this.#ensureBound(request.identityId);
+      try {
+        const ticketContract = await this.#ticketContract(request.eventId);
+        await this.#ensureBound(request.identityId);
 
-      const hash = await this.#send({
-        address: ticketContract,
-        abi: TICKET_ABI,
-        functionName: 'mintTo',
-        args: [toBytes32(request.identityId), request.tierIndex],
-      });
+        const hash = await this.#send({
+          address: ticketContract,
+          abi: TICKET_ABI,
+          functionName: 'mintTo',
+          args: [toBytes32(request.identityId), request.tierIndex],
+        });
 
-      const receipt = await this.#confirm(hash);
-      const tokenId = this.#mintedTokenId(receipt);
-      if (tokenId === undefined) {
-        // The transaction landed and did not emit the event it must emit. Do
-        // not invent a token id: leave it pending and let a human look.
-        throw new ChainUnavailable(`mint for ${request.ticketId} emitted no TicketMinted`);
+        const receipt = await this.#confirm(hash);
+        const tokenId = this.#mintedTokenId(receipt);
+        if (tokenId === undefined) {
+          /*
+           * The transaction succeeded and did not emit the event it must emit.
+           * A token may well exist; we simply cannot name it. Uncertain rather
+           * than unavailable, because unavailable means retry, and retrying a
+           * mint that landed is how one seat becomes two tokens. This used to
+           * throw ChainUnavailable directly underneath a comment promising to
+           * leave it for a human.
+           */
+          throw new ChainUncertain(hash, `mint for ${request.ticketId} emitted no TicketMinted`);
+        }
+        receipts.push({ ticketId: request.ticketId, tokenId: tokenId.toString(), txHash: hash });
+      } catch (err) {
+        // Keep what landed. The caller confirms those and retries only the rest.
+        throw new PartialBatch(receipts, request.ticketId, err as Error);
       }
-      receipts.push({ ticketId: request.ticketId, tokenId: tokenId.toString(), txHash: hash });
     }
     return receipts;
   }

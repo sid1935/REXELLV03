@@ -3,7 +3,7 @@ import { DAY, HOUR, epochMs } from '@rexell/domain';
 import type { EpochMs } from '@rexell/domain';
 import { buildApp } from '../src/app.js';
 import type { App } from '../src/app.js';
-import { ChainUncertain, FakeChain } from '../src/chain/client.js';
+import { ChainUnavailable, ChainUncertain, FakeChain, PartialBatch } from '../src/chain/client.js';
 import type { MintReceipt, MintRequest } from '../src/chain/client.js';
 
 /**
@@ -63,6 +63,19 @@ const EVENT = {
     },
   ],
 };
+
+/** Mints `upTo` tickets, then breaks — the shape of a batch that half-lands. */
+class HalfChain extends FakeChain {
+  constructor(private readonly upTo: number) {
+    super();
+  }
+  override async mintBatch(requests: readonly MintRequest[]): Promise<readonly MintReceipt[]> {
+    const done = await super.mintBatch(requests.slice(0, this.upTo));
+    const next = requests[this.upTo];
+    if (!next) return done;
+    throw new PartialBatch(done, next.ticketId, new ChainUnavailable('sequencer went away'));
+  }
+}
 
 /** A chain that takes its time, so two drains genuinely overlap. */
 class SlowChain extends FakeChain {
@@ -175,6 +188,30 @@ describe('two overlapping drains mint one token', () => {
     expect(status.confirmed).toBe(1);
     expect(status.pending).toBe(0);
     expect(app.repo.outbox.tokenIdFor(ticketId)).toBeDefined();
+  });
+});
+
+describe('a batch that half-lands keeps what landed', () => {
+  beforeEach(async () => {
+    await start(new HalfChain(1));
+  });
+
+  it('confirms the minted ticket and retries only the rest', async () => {
+    const first = await buyTicket();
+    const second = await buyTicket();
+
+    const result = await app.tokens!.drainMints();
+    expect(result.attempted).toBe(2);
+    expect(result.confirmed).toBe(1);
+
+    // The one that minted is recorded, so a retry cannot mint it again.
+    expect(app.repo.outbox.tokenIdFor(first)).toBeDefined();
+    expect(app.repo.outbox.tokenIdFor(second)).toBeUndefined();
+
+    // And only the unminted one is still queued.
+    const claimed = app.repo.outbox.claimPending('mint', 50, now());
+    expect(claimed).toHaveLength(1);
+    expect(JSON.parse(claimed[0]!.payload).ticketId).toBe(second);
   });
 });
 
