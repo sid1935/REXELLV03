@@ -18,6 +18,22 @@
   .live-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--ok); box-shadow: 0 0 0 3px var(--ok-wash); }
   @keyframes pulse { 50% { opacity: 0.35; } }
   .live-dot { animation: pulse 2.4s ease-in-out infinite; }
+  .ledger-alert {
+    margin: 18px 26px -8px;
+    max-width: 1120px;
+    padding: 12px 15px;
+    border: 1px solid var(--warn);
+    border-left-width: 3px;
+    border-radius: var(--r);
+    background: var(--warn-wash);
+    color: var(--ink);
+    font-size: 13.5px;
+    line-height: 1.55;
+  }
+  .ledger-alert strong { color: var(--warn); font-weight: 700; }
+  .ledger-alert .quiet { color: var(--ink-2); }
+  .ledger-alert.is-bad { border-color: var(--bad); background: var(--bad-wash); }
+  .ledger-alert.is-bad strong { color: var(--bad); }
   .dial-preview { margin-top: 16px; }
   .dial-preview b { color: var(--brand); }
   .keyout {
@@ -87,6 +103,15 @@
         <select id="eventPicker" aria-label="Event"></select>
       </div>
     </header>
+
+    <!--
+      The ledger, when it needs a person.
+
+      Hidden unless something is genuinely wrong, because a warning that is
+      always on screen is furniture. It sits outside the views on purpose: a
+      stranded chain write is not about the event you happen to be looking at.
+    -->
+    <div class="ledger-alert" id="ledgerAlert" role="status" hidden></div>
 
     <!-- ── events ────────────────────────────────────────────────────────── -->
     <main class="page" id="view-events">

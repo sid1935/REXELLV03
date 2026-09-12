@@ -101,11 +101,102 @@ function go(view) {
   if (view === 'account') renderAccount();
 }
 document.querySelectorAll('#nav button').forEach((b) => b.addEventListener('click', () => go(b.dataset.view)));
+
 $('eventPicker').addEventListener('change', () => {
   if (!$('view-live').hidden) renderLive();
   if (!$('view-lanes').hidden) renderLanes();
   if (!$('view-settlement').hidden) renderSettlement();
 });
+
+// ─── the ledger, when it needs a person ──────────────────────────────────────
+
+/**
+ * Two conditions, and only two, are worth interrupting somebody for.
+ *
+ * A chain write that was sent and never confirmed will not retry itself — on
+ * purpose, because retrying a mint that may have landed is how one seat becomes
+ * two tokens. It sits there until a person resolves it, so a person has to know.
+ *
+ * A backlog is different: the outbox retries that on its own, for ever, and a
+ * chain being down for an hour is a Tuesday. It is only news when it stops
+ * catching up.
+ *
+ * Neither affects anything a fan or an organizer can see. Tickets sell, resell
+ * and open gates from the database, which is the source of truth for entry
+ * permanently. That is why this says so in as many words: an alert that reads
+ * like an outage, for a condition that is not one, teaches people to ignore it.
+ */
+const STRANDED_AFTER_MS = 60_000;
+const BEHIND_AFTER_MS = 10 * 60_000;
+let ledgerTimer;
+
+const roughly = (ms) => {
+  const m = Math.round(ms / 60_000);
+  if (m < 60) return `${m} minute${m === 1 ? '' : 's'}`;
+  const h = Math.round(m / 60);
+  if (h < 48) return `${h} hour${h === 1 ? '' : 's'}`;
+  return `${Math.round(h / 24)} days`;
+};
+
+/** Start or stop the watch. Called from `loadMe`, which every route in ends at. */
+function watchLedger() {
+  clearInterval(ledgerTimer);
+  if (!key) {
+    $('ledgerAlert').hidden = true;
+    return;
+  }
+  renderLedgerAlert();
+  // Slow on purpose. This changes on the scale of an incident, not a render.
+  ledgerTimer = setInterval(renderLedgerAlert, 30_000);
+}
+
+async function renderLedgerAlert() {
+  const el = $('ledgerAlert');
+  if (!el) return;
+
+  let status;
+  try {
+    status = await call('/v1/chain/status');
+  } catch {
+    // The alert is not the place to report its own failure. If the API is
+    // unreachable the rest of the console is already saying so, loudly.
+    el.hidden = true;
+    return;
+  }
+
+  if (!status.configured) {
+    el.hidden = true;
+    return;
+  }
+
+  const stranded = (status.submitted ?? 0) > 0 && (status.strandedMs ?? 0) > STRANDED_AFTER_MS;
+  const behind = (status.oldestPendingAgeMs ?? 0) > BEHIND_AFTER_MS;
+
+  if (!stranded && !behind) {
+    el.hidden = true;
+    return;
+  }
+
+  /*
+   * Counts are deliberately left out.
+   *
+   * /v1/chain/status is platform-wide, so the number of confirmed writes is
+   * roughly the number of tickets every organizer has sold. The age of the
+   * oldest one is what a reader here needs, and it gives nothing away.
+   */
+  el.classList.toggle('is-bad', stranded);
+  el.innerHTML = stranded
+    ? `<strong>A ledger write needs attention.</strong> Something has been in flight for
+       ${esc(roughly(status.strandedMs))} and will not retry on its own, because retrying a
+       write that may already have landed could issue a second token for one seat.
+       <span class="quiet">Your events, ticket sales and gates are unaffected — entry is
+       decided from the database, not the chain. Contact ReXell support.</span>`
+    : `<strong>The ledger is catching up.</strong> The oldest unwritten record is
+       ${esc(roughly(status.oldestPendingAgeMs))} old.
+       <span class="quiet">Nothing is blocked: tickets sell, resell and open gates as
+       normal. This is the on-chain copy lagging, and it resolves itself.</span>`;
+  el.hidden = false;
+}
 
 // ─── account ─────────────────────────────────────────────────────────────────
 
@@ -166,17 +257,25 @@ $('newKeyBtn').addEventListener('click', async () => {
 });
 
 async function loadMe() {
-  if (!key) return go('account');
+  if (!key) {
+    clearInterval(ledgerTimer);
+    $('ledgerAlert').hidden = true;
+    return go('account');
+  }
   try {
     const me = await call('/v1/me');
     $('whoami').innerHTML = `<strong style="color:var(--ink)">${esc(me.name)}</strong><br><span class="num" style="font-size:11px">${esc(me.organizerId)}</span>`;
     $('signupCard').hidden = true;
     $('pasteCard').hidden = true;
     await loadEvents();
+    watchLedger();
     return true;
   } catch {
     $('whoami').textContent = 'Key not accepted';
     $('signupCard').hidden = false;
+    // A key that is not accepted should not keep polling on its behalf.
+    clearInterval(ledgerTimer);
+    $('ledgerAlert').hidden = true;
     return false;
   }
 }
