@@ -42,7 +42,9 @@
     "seed:gate": "tsx scripts/seed-gate-demo.ts",
     "issue:key": "tsx scripts/issue-key.ts",
     "chain:node": "npm --workspace @rexell/contracts exec -- hardhat node",
-    "chain:deploy": "npm --workspace @rexell/contracts exec -- hardhat run scripts/deploy.ts --network localhost"
+    "chain:deploy": "npm --workspace @rexell/contracts exec -- hardhat run scripts/deploy.ts --network localhost",
+    "test:chain": "vitest run apps/api/test/chain-integration.test.ts",
+    "test:browser": "playwright test"
   },
   "engines": {
     "node": ">=22.5"
@@ -50,6 +52,7 @@
   "devDependencies": {
     "@nomicfoundation/hardhat-toolbox-viem": "^5.0.7",
     "@openzeppelin/contracts": "^5.6.1",
+    "@playwright/test": "^1.63.0",
     "@types/node": "^26.5.0",
     "hardhat": "^3.16.0",
     "tsx": "^4.23.13",

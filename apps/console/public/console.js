@@ -154,18 +154,32 @@ async function renderLedgerAlert() {
   const el = $('ledgerAlert');
   if (!el) return;
 
+  /*
+   * Records that this ran, whatever it decided.
+   *
+   * The browser test asserts the banner stays hidden for a healthy ledger, and
+   * without a signal it would be asserting against a page that had not looked
+   * yet — which passes just as well when the alert is broken and never renders
+   * at all. Cheap here, and it makes the difference between a test and a
+   * decoration.
+   */
+  const settled = (hidden) => {
+    el.hidden = hidden;
+    el.dataset.rendered = '1';
+  };
+
   let status;
   try {
     status = await call('/v1/chain/status');
   } catch {
     // The alert is not the place to report its own failure. If the API is
     // unreachable the rest of the console is already saying so, loudly.
-    el.hidden = true;
+    settled(true);
     return;
   }
 
   if (!status.configured) {
-    el.hidden = true;
+    settled(true);
     return;
   }
 
@@ -173,7 +187,7 @@ async function renderLedgerAlert() {
   const behind = (status.oldestPendingAgeMs ?? 0) > BEHIND_AFTER_MS;
 
   if (!stranded && !behind) {
-    el.hidden = true;
+    settled(true);
     return;
   }
 
@@ -195,7 +209,7 @@ async function renderLedgerAlert() {
        ${esc(roughly(status.oldestPendingAgeMs))} old.
        <span class="quiet">Nothing is blocked: tickets sell, resell and open gates as
        normal. This is the on-chain copy lagging, and it resolves itself.</span>`;
-  el.hidden = false;
+  settled(false);
 }
 
 // ─── account ─────────────────────────────────────────────────────────────────

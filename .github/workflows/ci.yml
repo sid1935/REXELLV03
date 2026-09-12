@@ -13,7 +13,7 @@ concurrency:
 jobs:
   check:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
 
     steps:
       - uses: actions/checkout@v4
@@ -43,6 +43,52 @@ jobs:
       - name: Contract tests
         run: npm run test:contracts
 
+      # ── the chain client, against an actual chain ───────────────────────────
+      #
+      # Everything above runs against FakeChain, which cannot disagree with a
+      # contract — and every serious bug in this client has been exactly that:
+      # an ABI that encoded what the contract read differently, a token id
+      # guessed from a ticket id, a transfer the contract was always going to
+      # refuse, a listing that could never be reused. None were reachable
+      # without a node, so here is one. It reuses the artifacts and the solc
+      # cache from the step above.
+      #
+      # One step and one shell, because a node backgrounded in an earlier step
+      # is not reliably still alive in a later one.
+      - name: Chain integration tests
+        env:
+          REXELL_RPC_URL: http://127.0.0.1:8545
+        run: |
+          set -euo pipefail
+          npm run chain:node > /tmp/hardhat-node.log 2>&1 &
+          node_pid=$!
+          trap 'kill $node_pid 2>/dev/null || true' EXIT
+
+          up=0
+          for i in $(seq 1 60); do
+            if curl -sf -X POST -H 'content-type: application/json' \
+                 --data '{"jsonrpc":"2.0","method":"eth_chainId","params":[],"id":1}' \
+                 http://127.0.0.1:8545 > /dev/null; then
+              echo "node up after ${i}s"
+              up=1
+              break
+            fi
+            sleep 1
+          done
+
+          if [ "$up" -ne 1 ]; then
+            echo "the node never came up"
+            cat /tmp/hardhat-node.log
+            exit 1
+          fi
+
+          npm run chain:deploy
+          npm run test:chain
+
+      - name: Chain log on failure
+        if: failure()
+        run: tail -50 /tmp/hardhat-node.log || true
+
       # Not an assertion, a report. The p95 that matters is measured on an
       # Android device, and this only catches an accidental O(n²).
       - name: Gate latency
@@ -50,3 +96,51 @@ jobs:
 
       - name: Seed runs end to end
         run: npm run seed
+
+  # ── the browser surfaces, in a browser ───────────────────────────────────────
+  #
+  # Separate from `check` because it needs a browser download and nothing else
+  # here does, and because a Chromium failure should not hide a unit test one.
+  # These pages are static ES modules whose state lives in the DOM and whose
+  # inputs arrive over fetch, which puts them beyond vitest entirely.
+  browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+
+      - run: npm ci
+
+      # Keyed on the Playwright version rather than the whole lockfile: the
+      # browser only changes when that does, and a cache miss here is a large
+      # download.
+      - name: Playwright version
+        id: pw
+        run: echo "version=$(node -p "require('@playwright/test/package.json').version")" >> "$GITHUB_OUTPUT"
+
+      - name: Cache the browser
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.pw.outputs.version }}
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Browser tests
+        run: npm run test:browser
+
+      - name: Traces on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-traces
+          path: test-results/
+          retention-days: 7
+          if-no-files-found: ignore

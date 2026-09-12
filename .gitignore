@@ -25,3 +25,7 @@ vault.sqlite*
 # Deployment addresses ARE committed: they are how the API finds the contracts,
 # and a deploy nobody recorded is a deploy nobody can point anything at.
 !packages/contracts/deployments/
+
+# Playwright
+test-results/
+playwright-report/
