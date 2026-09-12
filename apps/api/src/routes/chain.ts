@@ -28,6 +28,15 @@ export function chainRoutes(app: FastifyInstance, { tokens, chain, now }: Deps):
       configured: true,
       chainUp: health.up,
       ...status,
+      /*
+       * Work that was claimed and never resolved.
+       *
+       * A row submitted a moment ago is a drain in progress. One submitted an
+       * hour ago is a transaction whose fate nobody established, and it will
+       * never retry itself on purpose — retrying a mint that may have landed is
+       * how one seat becomes two tokens. This is the number that needs a human.
+       */
+      strandedMs: status.oldestSubmittedAt === null ? 0 : at - status.oldestSubmittedAt,
       // How far behind the ledger is. This is the number to alert on — not
       // "chain down", which is routine, but "chain down and not catching up".
       oldestPendingAgeMs: status.oldestPendingAt === null ? 0 : at - status.oldestPendingAt,

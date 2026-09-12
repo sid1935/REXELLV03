@@ -1,5 +1,6 @@
 import type { Repo } from '@rexell/db';
 import type { EpochMs } from '@rexell/domain';
+import { ChainUncertain } from './client.js';
 import type { ChainClient, MintRequest } from './client.js';
 
 /**
@@ -27,6 +28,14 @@ export interface DrainResult {
 }
 
 export class TokenService {
+  /*
+   * The drain runs on a five-second timer and the call is not awaited, so a
+   * drain that takes longer than the interval used to overlap with the next
+   * one. The atomic claim in `claimPending` is what makes that safe; this only
+   * stops the pointless second pass.
+   */
+  #draining = false;
+
   constructor(
     private readonly repo: Repo,
     private readonly chain: ChainClient,
@@ -43,7 +52,7 @@ export class TokenService {
    * precisely because minting is keyed on ticket id.
    */
   async drainMints(): Promise<DrainResult> {
-    const pending = this.repo.outbox.claimPending('mint', this.batchSize);
+    const pending = this.repo.outbox.claimPending('mint', this.batchSize, this.now());
     if (pending.length === 0) return { attempted: 0, confirmed: 0, failed: 0, errors: [] };
 
     const requests: MintRequest[] = pending.map((row) => JSON.parse(row.payload) as MintRequest);
@@ -71,7 +80,13 @@ export class TokenService {
       return { attempted: pending.length, confirmed, failed: pending.length - confirmed, errors: [] };
     } catch (e) {
       const message = (e as Error).message;
-      for (const row of pending) this.repo.outbox.markFailed(row.op_id, message);
+        // Uncertainty is not failure. A batch whose transaction was sent and
+      // never confirmed must not be retried — that is how one seat becomes two
+      // tokens — so those rows stay claimed and wait for a person.
+      for (const row of pending) {
+        if (e instanceof ChainUncertain) this.repo.outbox.markUncertain(row.op_id, e.txHash, message);
+        else this.repo.outbox.markFailed(row.op_id, message);
+      }
       // Not thrown. A failed drain is an expected outcome that the caller logs
       // and retries; throwing here would take down whatever scheduled it.
       return { attempted: pending.length, confirmed: 0, failed: pending.length, errors: [message] };
@@ -79,7 +94,7 @@ export class TokenService {
   }
 
   async drainResales(): Promise<DrainResult> {
-    const pending = this.repo.outbox.claimPending('resale', this.batchSize);
+    const pending = this.repo.outbox.claimPending('resale', this.batchSize, this.now());
     let confirmed = 0;
     const errors: string[] = [];
 
@@ -115,7 +130,8 @@ export class TokenService {
         confirmed += 1;
       } catch (e) {
         const message = (e as Error).message;
-        this.repo.outbox.markFailed(row.op_id, message);
+        if (e instanceof ChainUncertain) this.repo.outbox.markUncertain(row.op_id, e.txHash, message);
+        else this.repo.outbox.markFailed(row.op_id, message);
         errors.push(message);
       }
     }
@@ -138,7 +154,7 @@ export class TokenService {
    * worth the complexity.
    */
   async drainRevocations(): Promise<DrainResult> {
-    const pending = this.repo.outbox.claimPending('revoke', this.batchSize);
+    const pending = this.repo.outbox.claimPending('revoke', this.batchSize, this.now());
     let confirmed = 0;
     const errors: string[] = [];
 
@@ -156,7 +172,8 @@ export class TokenService {
         confirmed += 1;
       } catch (e) {
         const message = (e as Error).message;
-        this.repo.outbox.markFailed(row.op_id, message);
+        if (e instanceof ChainUncertain) this.repo.outbox.markUncertain(row.op_id, e.txHash, message);
+        else this.repo.outbox.markFailed(row.op_id, message);
         errors.push(message);
       }
     }
@@ -165,11 +182,18 @@ export class TokenService {
   }
 
   async drain(): Promise<{ mints: DrainResult; resales: DrainResult; revocations: DrainResult }> {
-    return {
-      mints: await this.drainMints(),
-      resales: await this.drainResales(),
-      revocations: await this.drainRevocations(),
-    };
+    const idle = { attempted: 0, confirmed: 0, failed: 0, errors: [] };
+    if (this.#draining) return { mints: idle, resales: idle, revocations: idle };
+    this.#draining = true;
+    try {
+      return {
+        mints: await this.drainMints(),
+        resales: await this.drainResales(),
+        revocations: await this.drainRevocations(),
+      };
+    } finally {
+      this.#draining = false;
+    }
   }
 
   status() {

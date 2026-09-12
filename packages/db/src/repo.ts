@@ -921,12 +921,54 @@ export class OutboxRepo {
     return changed === 1 ? id : null;
   }
 
-  /** Oldest first, so a stuck batch does not starve everything behind it. */
-  claimPending(kind: OutboxKind, limit: number): OutboxRow[] {
-    return this.db.all<OutboxRow>(
-      `SELECT * FROM chain_outbox WHERE kind = ? AND state IN ('pending','failed') ORDER BY created_at, rowid LIMIT ?`,
-      kind,
-      limit,
+  /**
+   * Take ownership of a batch. Oldest first, so a stuck batch does not starve
+   * everything behind it.
+   *
+   * The claim is the point, and it used to be missing: this was a bare SELECT
+   * that marked nothing, so two overlapping drains read the same rows and sent
+   * the same transactions twice. That needed no crash to happen. The drain runs
+   * on a five-second timer and the call is not awaited, so any drain slower
+   * than five seconds — a batch of fifty mints, or exactly the congested chain
+   * that makes draining slow — starts a second drain over rows the first is
+   * still working on. `mintTo` has no idempotency key, so the second one mints
+   * a second token: two tokens in circulation for one seat, which is the
+   * failure the unique index above was written to prevent. That index guards
+   * enqueue. Nothing guarded this.
+   *
+   * Claiming moves the rows to 'submitted' in the same transaction that reads
+   * them, so a concurrent drain sees nothing to do.
+   */
+  claimPending(kind: OutboxKind, limit: number, now: number): OutboxRow[] {
+    return this.db.tx(() => {
+      const rows = this.db.all<OutboxRow>(
+        `SELECT * FROM chain_outbox WHERE kind = ? AND state IN ('pending','failed') ORDER BY created_at, rowid LIMIT ?`,
+        kind,
+        limit,
+      );
+      for (const row of rows) {
+        this.db.run(`UPDATE chain_outbox SET state = 'submitted', submitted_at = ? WHERE op_id = ?`, now, row.op_id);
+      }
+      return rows.map((r) => ({ ...r, state: 'submitted' as OutboxState, submitted_at: now }));
+    });
+  }
+
+  /**
+   * A transaction was sent and we do not know what happened to it.
+   *
+   * Distinct from failure, and the distinction is the whole safety property. A
+   * send that never left — a simulation revert, a refused connection — can be
+   * retried freely. A send that reached the mempool and then timed out may yet
+   * confirm, and retrying it mints a second token for the same seat. So the row
+   * stays 'submitted' with its hash recorded, is never re-claimed, and waits for
+   * somebody to look. Stranded work that is visible beats silent duplication.
+   */
+  markUncertain(opId: string, txHash: string | null, error: string): void {
+    this.db.run(
+      `UPDATE chain_outbox SET state = 'submitted', attempts = attempts + 1, tx_hash = ?, last_error = ? WHERE op_id = ?`,
+      txHash,
+      error.slice(0, 500),
+      opId,
     );
   }
 
@@ -947,7 +989,14 @@ export class OutboxRepo {
     );
   }
 
-  status(): { pending: number; confirmed: number; failed: number; oldestPendingAt: number | null } {
+  status(): {
+    pending: number;
+    confirmed: number;
+    failed: number;
+    submitted: number;
+    oldestSubmittedAt: number | null;
+    oldestPendingAt: number | null;
+  } {
     const counts = this.db.all<{ state: OutboxState; n: number }>(
       'SELECT state, COUNT(*) AS n FROM chain_outbox GROUP BY state',
     );
@@ -955,10 +1004,18 @@ export class OutboxRepo {
     const oldest = this.db.get<{ created_at: number }>(
       `SELECT created_at FROM chain_outbox WHERE state IN ('pending','failed') ORDER BY created_at LIMIT 1`,
     );
+    const oldestSubmitted = this.db.get<{ submitted_at: number }>(
+      `SELECT submitted_at FROM chain_outbox WHERE state = 'submitted' ORDER BY submitted_at LIMIT 1`,
+    );
     return {
       pending: by('pending') + by('failed'),
       confirmed: by('confirmed'),
       failed: by('failed'),
+      // In flight, or stranded by a process that died mid-send. The caller has
+      // the clock and decides which, because a row submitted two seconds ago is
+      // a drain in progress and one submitted an hour ago is an incident.
+      submitted: by('submitted'),
+      oldestSubmittedAt: oldestSubmitted?.submitted_at ?? null,
       oldestPendingAt: oldest?.created_at ?? null,
     };
   }

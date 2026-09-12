@@ -81,6 +81,28 @@ export class ChainUnavailable extends Error {
 }
 
 /**
+ * A transaction was sent, and its outcome is unknown.
+ *
+ * The difference from `ChainUnavailable` is whether anything left this process.
+ * A simulation that reverted, a node that refused the connection — nothing was
+ * sent, so a retry is free. A transaction that reached the mempool and then
+ * timed out waiting for a receipt may still confirm, and retrying it mints a
+ * second token for the same seat.
+ *
+ * So this is not a failure. It is a question, and the outbox stops rather than
+ * guessing the answer.
+ */
+export class ChainUncertain extends Error {
+  constructor(
+    readonly txHash: string | null,
+    cause: string,
+  ) {
+    super(`chain outcome unknown${txHash ? ` for ${txHash}` : ''}: ${cause}`);
+    this.name = 'ChainUncertain';
+  }
+}
+
+/**
  * An in-process stand-in.
  *
  * It exists to make the failure modes testable: `stop()` simulates a sequencer
@@ -90,6 +112,7 @@ export class ChainUnavailable extends Error {
 export class FakeChain implements ChainClient {
   #up = true;
   #failures = 0;
+  #uncertain = 0;
   #nonce = 0;
   #minted = new Map<string, string>();
 
@@ -111,6 +134,16 @@ export class FakeChain implements ChainClient {
   failNext(n: number): void {
     this.#failures = n;
   }
+
+  /**
+   * The next `n` operations send a transaction and never learn its fate.
+   *
+   * The failure mode that matters most, because it is the one where retrying is
+   * wrong: the transaction may well confirm later.
+   */
+  uncertainNext(n: number): void {
+    this.#uncertain = n;
+  }
   get mintedCount(): number {
     return this.#minted.size;
   }
@@ -123,6 +156,10 @@ export class FakeChain implements ChainClient {
     if (this.#failures > 0) {
       this.#failures -= 1;
       throw new ChainUnavailable('transaction reverted');
+    }
+    if (this.#uncertain > 0) {
+      this.#uncertain -= 1;
+      throw new ChainUncertain(`0x${(++this.#nonce).toString(16).padStart(64, '0')}`, 'timed out waiting for a receipt');
     }
   }
 

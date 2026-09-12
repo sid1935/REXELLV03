@@ -32,7 +32,7 @@
 import { createPublicClient, createWalletClient, defineChain, http, keccak256, toHex } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
 import type { Address, Hex, PublicClient, WalletClient } from 'viem';
-import { ChainUnavailable } from './client.js';
+import { ChainUnavailable, ChainUncertain } from './client.js';
 import type { ChainClient, MintReceipt, MintRequest, ResaleRequest, RevokeRequest } from './client.js';
 
 /**
@@ -333,10 +333,20 @@ export class EvmChain implements ChainClient {
         hash,
         timeout: this.#opts.confirmTimeoutMs ?? 60_000,
       });
-      if (receipt.status !== 'success') throw new Error('transaction reverted');
+      /*
+       * A revert is a definite answer, and a safe one to retry: the transaction
+       * was mined and changed nothing, so no token exists.
+       */
+      if (receipt.status !== 'success') throw new ChainUnavailable(`${hash}: transaction reverted`);
       return receipt;
     } catch (e) {
-      throw new ChainUnavailable(`${hash}: ${(e as Error).message.split('\n')[0]}`);
+      if (e instanceof ChainUnavailable) throw e;
+      /*
+       * Anything else here — a timeout above all — means the transaction is out
+       * there with an unknown fate. Reporting it as unavailable would put the
+       * row back in the queue and mint the ticket twice.
+       */
+      throw new ChainUncertain(hash, (e as Error).message.split('\n')[0] ?? 'no receipt');
     }
   }
 
