@@ -46,7 +46,16 @@ export default defineConfig({
   // something. Retries would hide it.
   retries: 0,
   forbidOnly: !!process.env['CI'],
-  reporter: 'list',
+  /*
+   * A machine-readable copy in CI, so a later step can check that the projects
+   * it means to run actually ran.
+   *
+   * A project whose testMatch stops matching runs nothing and reports success,
+   * which looks exactly like passing. That has been the most expensive failure
+   * mode in this repository — a green tick over a suite that had quietly turned
+   * itself off — and it is cheap to rule out.
+   */
+  reporter: process.env['CI'] ? [['list'], ['json', { outputFile: 'playwright-report.json' }]] : 'list',
   use: {
     trace: process.env['CI'] ? 'retain-on-failure' : 'off',
   },

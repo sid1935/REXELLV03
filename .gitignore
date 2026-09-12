@@ -29,3 +29,4 @@ vault.sqlite*
 # Playwright
 test-results/
 playwright-report/
+playwright-report.json

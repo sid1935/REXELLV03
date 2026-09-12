@@ -45,7 +45,8 @@
     "chain:deploy": "npm --workspace @rexell/contracts exec -- hardhat run scripts/deploy.ts --network localhost",
     "test:chain": "vitest run apps/api/test/chain-integration.test.ts",
     "test:browser": "playwright test",
-    "face:fixture": "node scripts/face-fixture.mjs"
+    "face:fixture": "node scripts/face-fixture.mjs",
+    "test:browser:check": "node scripts/check-browser-coverage.mjs"
   },
   "engines": {
     "node": ">=22.5"
