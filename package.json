@@ -46,7 +46,9 @@
     "test:chain": "vitest run apps/api/test/chain-integration.test.ts",
     "test:browser": "playwright test",
     "face:fixture": "node scripts/face-fixture.mjs",
-    "test:browser:check": "node scripts/check-browser-coverage.mjs"
+    "test:browser:check": "node scripts/check-browser-coverage.mjs",
+    "face:sweep": "node scripts/face-size-sweep.mjs",
+    "face:videocheck": "node scripts/face-video-check.mjs"
   },
   "engines": {
     "node": ">=22.5"

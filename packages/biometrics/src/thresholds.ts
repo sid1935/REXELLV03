@@ -21,6 +21,25 @@
  * plugged in: at the old match threshold of 0.78 the measured false-accept rate
  * on that sample was 100%.
  *
+ * Face size is not the weak axis, and that was worth establishing rather than
+ * assuming. `npm run face:sweep` renders all five people at face widths from
+ * 64px to 240px inside a 640x480 frame and scores every pair against a 240px
+ * reference. Across everything it could capture — roughly 113px upward, since
+ * smaller faces are refused outright rather than accepted badly — the worst
+ * genuine pair stayed between 0.617 and 0.635 while the best impostor stayed at
+ * or below 0.530. The separation holds; it does not narrow as the face shrinks.
+ *
+ * Nor does a camera cost anything. `npm run face:videocheck` puts the same
+ * faces through a real capture — YUV 4:2:0, a decoder, a scaled video element —
+ * and at matched sizes the two paths agree to within noise: 0.778 on canvas
+ * against 0.781 through the camera at 160px, 0.783 against 0.764 at 240px.
+ *
+ * This was prompted by a reading of 0.24 to 0.70 between two captures of one
+ * person, taken from an eight-sample run against a three-frame fixture. It does
+ * not reproduce under either measurement above, and MIN_FACE_PX was left at 96
+ * on that basis. What the small reading was actually measuring is not
+ * established, which is the honest state of it.
+ *
  * What is still missing is scale. Five people produce four impostors per face;
  * an event gallery has twelve thousand, and the highest impostor score over
  * twelve thousand candidates is much higher than the highest over four. That is
